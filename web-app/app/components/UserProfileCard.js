@@ -1,6 +1,15 @@
 'use client';
 
+import { useState, useRef } from 'react';
+import { useAuth } from '../context/AuthContext';
+
 export default function UserProfileCard({ user, loading }) {
+    const { updateProfileImage, isVerified, connectGoogleDrive } = useAuth();
+    const fileInputRef = useRef(null);
+    const [isHovered, setIsHovered] = useState(false);
+    const [uploading, setUploading] = useState(false);
+    const [verifying, setVerifying] = useState(false);
+
     if (loading) {
         return <UserProfileSkeleton />;
     }
@@ -9,6 +18,73 @@ export default function UserProfileCard({ user, loading }) {
 
     const statusColor = user.userstatus === 'Y' ? '#4ade80' : '#f87171';
     const statusBg = user.userstatus === 'Y' ? 'rgba(74, 222, 128, 0.15)' : 'rgba(248, 113, 113, 0.15)';
+
+    // Check if current image is custom
+    const isCustomImage = user.img?.startsWith('data:') || user.img?.startsWith('/uploads/');
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File too large (max 5MB)');
+            return;
+        }
+
+        setUploading(true);
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                const MAX_SIZE = 500;
+
+                if (width > height) {
+                    if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
+                } else {
+                    if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                updateProfileImage(dataUrl);
+                setUploading(false);
+            };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleReset = (e) => {
+        e.stopPropagation();
+        if (confirm('Revert to original student photo?')) {
+            updateProfileImage(null);
+        }
+    };
+
+    const handleVerify = async () => {
+        if (isVerified) return;
+        setVerifying(true);
+        const success = await connectGoogleDrive();
+        setVerifying(false);
+        if (success) {
+            alert('Google Drive connected! You can now change your profile picture.');
+        }
+    };
+
+    const handleProfileClick = () => {
+        if (!isVerified) {
+            alert('Please verify your account (connect Google Drive) to change your profile picture.');
+            return;
+        }
+        fileInputRef.current?.click();
+    };
 
     return (
         <div className="profile-card" style={{
@@ -22,66 +98,144 @@ export default function UserProfileCard({ user, loading }) {
             gap: '20px',
         }}>
             {/* Header: Photo + Name */}
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '18px',
-            }}>
-                {/* Profile Image */}
-                <div style={{
-                    width: '72px',
-                    height: '72px',
-                    borderRadius: '50%',
-                    overflow: 'hidden',
-                    border: '3px solid rgba(255, 255, 255, 0.3)',
-                    flexShrink: 0,
-                    background: 'rgba(255, 255, 255, 0.1)',
-                }}>
-                    {user.img ? (
-                        <img
-                            src={user.img}
-                            alt={user.name || 'Profile'}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            onError={(e) => { e.target.style.display = 'none'; }}
-                        />
-                    ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
+                {/* Profile Image Container */}
+                <div
+                    style={{
+                        position: 'relative',
+                        width: '72px',
+                        height: '72px',
+                        cursor: isVerified ? 'pointer' : 'not-allowed',
+                    }}
+                    onMouseEnter={() => setIsHovered(true)}
+                    onMouseLeave={() => setIsHovered(false)}
+                    onClick={handleProfileClick}
+                >
+                    <div style={{
+                        width: '100%', height: '100%',
+                        borderRadius: '50%', overflow: 'hidden',
+                        border: '3px solid rgba(255, 255, 255, 0.3)',
+                        flexShrink: 0,
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        position: 'relative',
+                    }}>
+                        {user.img ? (
+                            <img
+                                src={user.img}
+                                alt={user.name || 'Profile'}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                onError={(e) => { e.target.style.display = 'none'; }}
+                            />
+                        ) : (
+                            <div style={{
+                                width: '100%', height: '100%',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                color: 'rgba(255, 255, 255, 0.5)', fontSize: '28px', fontWeight: 600,
+                            }}>
+                                {(user.usernameeng || user.username || '?').charAt(0).toUpperCase()}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Hover Overlay */}
+                    {(isHovered || uploading) && (
                         <div style={{
-                            width: '100%', height: '100%',
+                            position: 'absolute', inset: 0,
+                            borderRadius: '50%',
+                            background: 'rgba(0,0,0,0.5)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            color: 'rgba(255, 255, 255, 0.5)', fontSize: '28px', fontWeight: 600,
+                            color: 'white', fontSize: '10px', flexDirection: 'column',
+                            backdropFilter: 'blur(2px)',
                         }}>
-                            {(user.usernameeng || user.username || '?').charAt(0).toUpperCase()}
+                            {uploading ? '...' : (isVerified ? 'Edit' : 'Locked')}
                         </div>
                     )}
+
+                    {/* Hidden Input */}
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        style={{ display: 'none' }}
+                        accept="image/*"
+                        onChange={handleFileChange}
+                    />
                 </div>
 
                 {/* Name & Code */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                    <h2 style={{
-                        color: 'white', fontSize: '1.15rem', fontWeight: 600,
-                        margin: 0, lineHeight: 1.3,
-                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                    }}>
-                        {user.name || user.username || 'N/A'}
-                    </h2>
-                    <p style={{
-                        color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.85rem',
-                        margin: '2px 0 0', fontFamily: 'Montserrat, sans-serif',
-                    }}>
-                        {user.nameeng || user.usernameeng || ''}
-                    </p>
-                    <div style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '6px',
-                        background: statusBg, borderRadius: '20px',
-                        padding: '3px 10px', marginTop: '6px',
-                    }}>
-                        <span style={{
-                            width: '7px', height: '7px', borderRadius: '50%',
-                            background: statusColor,
-                        }} />
-                        <span style={{ color: statusColor, fontSize: '0.75rem', fontWeight: 500 }}>
-                            {user.statusdes || user.userstatusdes || 'N/A'}
-                        </span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                            <h2 style={{
+                                color: 'white', fontSize: '1.15rem', fontWeight: 600,
+                                margin: 0, lineHeight: 1.3,
+                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                            }}>
+                                {user.name || user.username || 'N/A'}
+                            </h2>
+                            <p style={{
+                                color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.85rem',
+                                margin: '2px 0 0', fontFamily: 'Montserrat, sans-serif',
+                            }}>
+                                {user.nameeng || user.usernameeng || ''}
+                            </p>
+                        </div>
+
+                        {/* Reset Button (only if custom image and verified) */}
+                        {isCustomImage && isVerified && (
+                            <button
+                                onClick={handleReset}
+                                style={{
+                                    background: 'rgba(255,255,255,0.1)',
+                                    border: 'none', borderRadius: '4px',
+                                    color: 'rgba(255,255,255,0.6)',
+                                    fontSize: '10px', padding: '2px 6px',
+                                    cursor: 'pointer', marginLeft: '8px'
+                                }}
+                                title="Reset to original photo"
+                            >
+                                Reset
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Status + Verify Row */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                        {/* Status Badge */}
+                        <div style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '6px',
+                            background: statusBg, borderRadius: '20px',
+                            padding: '3px 10px',
+                        }}>
+                            <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: statusColor }} />
+                            <span style={{ color: statusColor, fontSize: '0.75rem', fontWeight: 500 }}>
+                                {user.statusdes || user.userstatusdes || 'N/A'}
+                            </span>
+                        </div>
+
+                        {/* Verify Badge/Button */}
+                        <button
+                            onClick={handleVerify}
+                            disabled={isVerified || verifying}
+                            style={{
+                                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                background: isVerified ? 'rgba(74, 222, 128, 0.15)' : 'rgba(250, 204, 21, 0.15)',
+                                borderRadius: '20px', padding: '3px 10px',
+                                border: 'none',
+                                cursor: isVerified ? 'default' : 'pointer',
+                                transition: 'all 0.2s',
+                            }}
+                            title={isVerified ? 'Verified (Google Drive Connected)' : 'Click to Verify and Connect Drive'}
+                        >
+                            <span style={{ fontSize: '12px' }}>
+                                {isVerified ? '✓' : (verifying ? '...' : '⚠')}
+                            </span>
+                            <span style={{
+                                color: isVerified ? '#4ade80' : '#facc15',
+                                fontSize: '0.75rem', fontWeight: 500,
+                            }}>
+                                {isVerified ? 'Verified' : 'Verify'}
+                            </span>
+                        </button>
                     </div>
                 </div>
             </div>

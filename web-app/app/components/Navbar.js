@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { useGuest } from '../context/GuestContext';
 import { useRouter } from 'next/navigation';
 import {
     navbarSlideDown,
@@ -32,7 +33,16 @@ const MENU_ITEMS = [
     },
     { id: 'search', icon: 'search', label: 'ค้นหาระบบ', active: false, href: '#' },
     { id: 'manual', icon: 'manual', label: 'คู่มือการใช้งาน', active: false, href: '#' },
-    { id: 'others', icon: 'others', label: 'อื่นๆ', active: false, href: '#' }
+    {
+        id: 'others',
+        icon: 'others',
+        label: 'อื่นๆ',
+        active: false,
+        href: '#',
+        submenu: [
+            { id: 'portfolio-settings', label: 'กำหนดการมองเห็น', href: '/portfolio' }
+        ]
+    }
 ];
 
 // Icons
@@ -81,11 +91,18 @@ const Icons = {
 
 export default function Navbar({ activePage = 'profile' }) {
     const { user, logout: handleLogout } = useAuth();
+    const { isGuest, allowedModules, guestName } = useGuest();
     const [menuOpen, setMenuOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const router = useRouter();
 
     const toggleMenu = () => setMenuOpen(!menuOpen);
+
+    // Check if a menu item is accessible
+    const isMenuAccessible = (itemId) => {
+        if (!isGuest) return true; // Owner can access everything
+        return allowedModules.includes(itemId);
+    };
 
     // Detect scroll for frosted glass navbar effect
     useEffect(() => {
@@ -143,42 +160,87 @@ export default function Navbar({ activePage = 'profile' }) {
                         const IconComponent = Icons[item.icon];
                         const hasSubmenu = item.submenu && item.submenu.length > 0;
 
+                        const accessible = isMenuAccessible(item.id);
+
                         return (
                             <motion.li
                                 key={item.id}
                                 variants={staggerItem}
-                                className={`relative group ${hasSubmenu ? 'has-submenu' : ''}`}
+                                className={`relative group ${hasSubmenu ? 'has-submenu' : ''} ${!accessible ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                                <motion.a
-                                    href={item.href}
-                                    className={`nav-link min-h-[44px] flex items-center ${item.active ? 'active' : ''}`}
-                                    {...menuItemSlide}
-                                    transition={{ delay: index * TIMING.stagger }}
-                                >
-                                    <IconComponent />
-                                    {item.label}
-                                    {hasSubmenu && (
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="ml-1 opacity-70 group-hover:rotate-180 transition-transform">
-                                            <path d="M6 9l6 6 6-6" />
-                                        </svg>
-                                    )}
-                                </motion.a>
+                                {accessible ? (
+                                    <>
+                                        <motion.a
+                                            href={item.href}
+                                            className={`nav-link min-h-[44px] flex items-center ${item.active ? 'active' : ''}`}
+                                            {...menuItemSlide}
+                                            transition={{ delay: index * TIMING.stagger }}
+                                        >
+                                            <IconComponent />
+                                            {item.label}
+                                            {hasSubmenu && (
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="ml-1 opacity-70 group-hover:rotate-180 transition-transform">
+                                                    <path d="M6 9l6 6 6-6" />
+                                                </svg>
+                                            )}
+                                        </motion.a>
 
-                                {/* Dropdown Menu */}
-                                {hasSubmenu && (
-                                    <div className="absolute top-full left-0 pt-2 hidden group-hover:block min-w-[200px] z-50">
-                                        <div className="bg-[rgba(15,23,42,0.95)] backdrop-blur-xl border border-[rgba(255,255,255,0.1)] rounded-xl py-2 shadow-xl overflow-hidden">
-                                            {item.submenu.map((subItem) => (
-                                                <a
-                                                    key={subItem.id}
-                                                    href={subItem.href}
-                                                    className="block px-4 py-3 text-sm text-[rgba(255,255,255,0.8)] hover:text-white hover:bg-[rgba(255,255,255,0.1)] transition-colors"
-                                                >
-                                                    {subItem.label}
-                                                </a>
-                                            ))}
-                                        </div>
-                                    </div>
+                                        {/* Dropdown Menu */}
+                                        {hasSubmenu && (
+                                            <div className="absolute top-full left-0 pt-2 hidden group-hover:block min-w-[200px] z-50">
+                                                <div className="bg-[rgba(15,23,42,0.95)] backdrop-blur-xl border border-[rgba(255,255,255,0.1)] rounded-xl py-2 shadow-xl overflow-hidden">
+                                                    {item.submenu.map((subItem) => {
+                                                        // Portfolio settings should not be accessible to guests
+                                                        const isPortfolioSettings = subItem.id === 'portfolio-settings';
+                                                        const canAccessSubmenu = !isGuest || !isPortfolioSettings;
+
+                                                        return canAccessSubmenu ? (
+                                                            <a
+                                                                key={subItem.id}
+                                                                href={subItem.href}
+                                                                className="block px-4 py-3 text-sm text-[rgba(255,255,255,0.8)] hover:text-white hover:bg-[rgba(255,255,255,0.1)] transition-colors"
+                                                            >
+                                                                {subItem.label}
+                                                            </a>
+                                                        ) : (
+                                                            <div
+                                                                key={subItem.id}
+                                                                className="block px-4 py-3 text-sm text-[rgba(255,255,255,0.4)] cursor-not-allowed flex items-center justify-between"
+                                                                title="ไม่ได้รับอนุญาตให้เข้าถึง"
+                                                            >
+                                                                <span>{subItem.label}</span>
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2">
+                                                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                                                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                                                </svg>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    <motion.a
+                                        href="#"
+                                        onClick={(e) => e.preventDefault()}
+                                        className={`nav-link min-h-[44px] flex items-center ${item.active ? 'active' : ''}`}
+                                        title="ไม่ได้รับอนุญาตให้ดู"
+                                        {...menuItemSlide}
+                                        transition={{ delay: index * TIMING.stagger }}
+                                    >
+                                        <IconComponent />
+                                        {item.label}
+                                        {hasSubmenu && (
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="ml-1 opacity-70">
+                                                <path d="M6 9l6 6 6-6" />
+                                            </svg>
+                                        )}
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" className="ml-2">
+                                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                        </svg>
+                                    </motion.a>
                                 )}
                             </motion.li>
                         );
@@ -186,13 +248,32 @@ export default function Navbar({ activePage = 'profile' }) {
                 </motion.ul>
 
                 <div className="nav-right">
-                    <motion.span
-                        className="nav-user-name min-h-[44px] flex items-center"
-                        {...fadeInUp}
-                        transition={{ delay: TIMING.normal + TIMING.normal }}
+                    <motion.div
+                        className="flex items-center gap-3 mr-4"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: TIMING.normal }}
                     >
-                        {user?.name || user?.username || 'User'}
-                    </motion.span>
+                        {/* Profile Image in Navbar */}
+                        <div className="h-10 w-10 rounded-full overflow-hidden border border-white/20 bg-white/10 relative">
+                            {user?.img ? (
+                                <img
+                                    src={user.img}
+                                    alt="Profile"
+                                    className="h-full w-full object-cover"
+                                    onError={(e) => { e.target.style.display = 'none'; }}
+                                />
+                            ) : (
+                                <div className="h-full w-full flex items-center justify-center text-white/50 text-sm font-bold">
+                                    {(user?.username || 'U').charAt(0).toUpperCase()}
+                                </div>
+                            )}
+                        </div>
+
+                        <span className="text-white text-sm font-medium hidden md:block font-prompt">
+                            {user?.name || user?.username || 'User'}
+                        </span>
+                    </motion.div>
                     <motion.button
                         className="nav-login-btn min-h-[44px]"
                         onClick={handleLogout}

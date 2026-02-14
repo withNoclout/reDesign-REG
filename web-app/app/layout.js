@@ -1,4 +1,5 @@
 import { AuthProvider } from './context/AuthContext';
+import { GuestProvider } from './context/GuestContext';
 
 export const metadata = {
     title: 'ระบบลงทะเบียนนักศึกษา - KMUTNB',
@@ -15,7 +16,9 @@ export default function RootLayout({ children }) {
             </head>
             <body>
                 <AuthProvider>
-                    {children}
+                    <GuestProvider>
+                        {children}
+                    </GuestProvider>
                 </AuthProvider>
             </body>
         </html>

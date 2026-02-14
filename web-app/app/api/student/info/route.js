@@ -16,15 +16,15 @@ export async function GET() {
             );
         }
 
-        // Call the real KMUTNB API
-        const response = await axios.get(`${BASE_URL}/Schg/Getacadstd`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            },
-            validateStatus: status => status < 500
+        // Fetch from University API
+        console.time('StudentInfo-ExternalAPI');
+        const apiRes = await axios.get(`${BASE_URL}/Schg/Getstudentinfo`, {
+            headers: { 'token': token },
+            timeout: 10000
         });
+        console.timeEnd('StudentInfo-ExternalAPI');
 
-        if (response.status === 200 && response.data) {
+        if (apiRes.status === 200 && apiRes.data) {
             return NextResponse.json({
                 success: true,
                 data: response.data

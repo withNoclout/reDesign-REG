@@ -84,7 +84,7 @@ export async function POST(request) {
 
         // Encryption function using native Node.js crypto (matches .NET server-side decryption)
         function encryptData(plaintext) {
-            const ENCRYPT_SECRET_KEY = 'mySecretKeyHere';
+            const ENCRYPT_SECRET_KEY = process.env.ENCRYPT_SECRET_KEY || 'mySecretKeyHere';
             const salt = crypto.randomBytes(16);
             // PBKDF2 with SHA1, 32 bytes (256-bit key), 100 iterations
             const derivedKey = crypto.pbkdf2Sync(ENCRYPT_SECRET_KEY, salt, 100, 32, 'sha1');
@@ -108,9 +108,11 @@ export async function POST(request) {
 
             // Step 1: Get JWT Token from tokenservice
             console.log('[API] 1. Calling tokenservice...');
+            console.time('Login-TokenService'); // Start timer for token service
             const tokenResponse = await axios.get(`${BASE_URL}/Validate/tokenservice`, {
                 validateStatus: status => status < 500
             });
+            console.timeEnd('Login-TokenService'); // End timer for token service
 
             console.log('[API] Token Service Status:', tokenResponse.status);
             const token = tokenResponse.data?.token;
@@ -244,38 +246,7 @@ export async function POST(request) {
         }
 
 
-        // --- FALLBACK / MOCK LOGIC (For Verification) ---
-        // Use environment variables for mock credentials in production
-        const MOCK_USERNAME = process.env.REG_USERNAME || 'admin';
-        const MOCK_PASSWORD = process.env.REG_PASSWORD || '1234';
 
-        // Check against mock credentials (Fallback or Dev Test)
-        // STRICT MODE: Fallback Disabled by User Request
-        if (false && username === MOCK_USERNAME && password === MOCK_PASSWORD) {
-            console.log('[API] Login successful (Mock mode)');
-
-            // Increment rate limit counter on success (optional, depends on policy)
-            incrementRateLimit(ip);
-
-            // Create response with Set-Cookie
-            const response = NextResponse.json({
-                success: true,
-                message: 'เข้าสู่ระบบสำเร็จ'
-            });
-
-            // Set HttpOnly, Secure, SameSite Cookie
-            const sessionToken = generateSecureToken();
-            response.cookies.set('session_id', sessionToken, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
-                path: '/',
-                maxAge: 60 * 60 * 24, // 1 Day
-                domain: process.env.NODE_ENV === 'production' ? undefined : 'localhost'
-            });
-
-            return response;
-        }
 
         // --- REAL API SUCCESS HANDLER (Future) ---
         // if (apiResponse && apiResponse.status === 200) { ... }

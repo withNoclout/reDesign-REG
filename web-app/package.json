@@ -10,11 +10,15 @@
     "lint:fix": "next lint --fix"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.95.3",
     "axios": "^1.13.5",
     "crypto-js": "^4.2.0",
+    "jsonwebtoken": "^9.0.3",
     "next": "16.1.6",
+    "pg": "^8.18.0",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@types/node": "^20",

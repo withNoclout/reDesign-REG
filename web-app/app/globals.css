@@ -7,8 +7,8 @@
   /* Lighter, clearer glass */
   --glass-border: rgba(255, 255, 255, 0.25);
   /* Crisper border */
-  --glass-blur: 24px;
   /* Premium soft blur */
+  --glass-blur: 40px;
   --primary-color: #ff5722;
   /* KMUTNB Orange */
   --text-color: #ffffff;
@@ -38,7 +38,7 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background-image: url('/BG_image/loginpage.png');
+  background-image: url('/BG_image/loginpage.webp');
   background-size: cover;
   background-position: center;
   z-index: -2;

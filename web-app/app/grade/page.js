@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { useGuest } from '../context/GuestContext';
 import Navbar from '../components/Navbar';
+import GuestBanner from '../components/GuestBanner';
 import { fadeInUp, staggerContainer, staggerItem } from '../lib/animations';
 import '../globals.css';
 
@@ -87,23 +89,31 @@ const IDEAL_ACADEMIC_RECORD = {
 
 export default function GradePage() {
     const router = useRouter();
-    const { isAuthenticated, loading: authLoading } = useAuth();
+    const { user, isAuthenticated, loading: authLoading } = useAuth();
+    const { isGuest, allowedModules, guestName, loading: guestLoading } = useGuest();
     const [academicRecord, setAcademicRecord] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    // Check if this page is accessible
+    const canAccess = isGuest ? allowedModules.includes('grade') : isAuthenticated;
+
+    // Redirect if not authenticated and not a guest
     useEffect(() => {
-        if (!authLoading && !isAuthenticated) {
+        if (!authLoading && !guestLoading && !isAuthenticated && !isGuest) {
             router.push('/');
         }
-    }, [isAuthenticated, authLoading, router]);
+    }, [isAuthenticated, isGuest, authLoading, guestLoading, router]);
 
     useEffect(() => {
         const fetchGrades = async () => {
             if (!isAuthenticated) return;
 
-            // 🔥 DEMO MODE: Override with Ideal Grades if enabled
-            if (SHOW_IDEAL_GRADES) {
+            // 🔥 DEMO MODE: Override with Ideal Grades if enabled AND user matches specific ID
+            const DEMO_USER_ID = 's6701091611290';
+            const currentUserCode = user?.usercode || '';
+
+            if (SHOW_IDEAL_GRADES && currentUserCode === DEMO_USER_ID) {
                 setTimeout(() => {
                     setAcademicRecord(IDEAL_ACADEMIC_RECORD);
                     setLoading(false);
@@ -214,9 +224,40 @@ export default function GradePage() {
         };
 
         fetchGrades();
-    }, [isAuthenticated]);
+    }, [isAuthenticated, user]);
 
-    if (authLoading || !isAuthenticated) return null;
+    // Handle loading state
+    if (authLoading || guestLoading) {
+        return (
+            <main className="main-content">
+                <div className="bg-image"></div>
+                <div className="bg-overlay"></div>
+                <div className="flex items-center justify-center min-h-screen">
+                    <div className="text-white text-center">
+                        <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+                        <p className="mt-4">กำลังโหลด...</p>
+                    </div>
+                </div>
+            </main>
+        );
+    }
+
+    // Handle access denied
+    if (!canAccess) {
+        return (
+            <main className="main-content">
+                <div className="bg-image"></div>
+                <div className="bg-overlay"></div>
+                <div className="flex items-center justify-center min-h-screen">
+                    <div className="text-white text-center">
+                        <div className="text-6xl mb-4">🔒</div>
+                        <h1 className="text-2xl font-bold mb-2">ไม่มีสิทธิ์เข้าถึง</h1>
+                        <p className="text-white/60">คุณไม่ได้รับอนุญาตให้ดูหน้านี้</p>
+                    </div>
+                </div>
+            </main>
+        );
+    }
 
     return (
         <main className="main-content">
@@ -224,6 +265,9 @@ export default function GradePage() {
             <div className="bg-overlay"></div>
 
             <Navbar activePage="grade" />
+
+            {/* Guest Banner - only show when in guest mode */}
+            {isGuest && <GuestBanner guestName={guestName} />}
 
             <div className="landing-container pt-32 pb-20 px-4 md:px-8 max-w-7xl mx-auto flex flex-col gap-8">
                 {/* Header Section */}

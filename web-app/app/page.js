@@ -230,12 +230,7 @@ export default function Home() {
                 <div className={`login-box ${error ? 'animate-shake' : ''}`}>
                     <div className="login-header">
                         <div className="university-crest">
-                            <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <circle cx="40" cy="40" r="36" stroke="rgba(255,255,255,0.6)" strokeWidth="2" fill="rgba(255,255,255,0.08)" />
-                                <circle cx="40" cy="40" r="28" stroke="rgba(255,255,255,0.3)" strokeWidth="1" fill="none" />
-                                <text x="40" y="36" textAnchor="middle" fill="white" fontSize="10" fontWeight="600" fontFamily="Montserrat">KMUTNB</text>
-                                <text x="40" y="50" textAnchor="middle" fill="rgba(255,255,255,0.7)" fontSize="7" fontFamily="Prompt">ทะเบียน</text>
-                            </svg>
+                            <img src="/BG_image/logo_transparent.png" alt="University Logo" className="w-full h-full object-contain" />
                         </div>
                         <h1 className="login-title">ระบบลงทะเบียนนักศึกษา</h1>
                         <p className="login-subtitle">King Mongkut's University of Technology North Bangkok</p>

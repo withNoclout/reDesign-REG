@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: './',
+  },
   reactCompiler: true,
   poweredByHeader: false,
   async headers() {
