@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function PortfolioEditorModal({ isOpen, onClose, onRefresh }) {
-    const [description, setDescription] = useState('');
+    const [topic, setTopic] = useState('');
     const [imageFile, setImageFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -100,6 +100,7 @@ export default function PortfolioEditorModal({ isOpen, onClose, onRefresh }) {
         try {
             const formData = new FormData();
             formData.append('description', description);
+            formData.append('topic', topic); // Add topic to formData
             if (imageFile) formData.append('image', imageFile);
 
             const res = await fetch('/api/portfolio/content', {
@@ -213,14 +214,38 @@ export default function PortfolioEditorModal({ isOpen, onClose, onRefresh }) {
 
                                 {/* Description Input */}
                                 <div>
-                                    <label className="text-white/70 text-sm font-medium mb-2 block">Description</label>
-                                    <textarea
-                                        value={description}
-                                        onChange={(e) => setDescription(e.target.value)}
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white focus:outline-none focus:border-[#ff5722] min-h-[120px] transition-colors resize-none"
-                                        placeholder="Write something about this moment..."
-                                        required
-                                    />
+                                    <table className="w-full">
+                                        <tbody>
+                                            <tr className="border-b border-white/10">
+                                                <td className="py-2 pr-4 align-top w-24">
+                                                    <label className="text-white/70 text-sm font-medium pt-2 block">Topic</label>
+                                                </td>
+                                                <td className="py-2">
+                                                    <input
+                                                        type="text"
+                                                        value={topic}
+                                                        onChange={(e) => setTopic(e.target.value)}
+                                                        className="w-full bg-transparent text-white font-prompt font-bold text-lg focus:outline-none placeholder-white/30"
+                                                        placeholder="หัวข้อเรื่อง..."
+                                                    />
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td className="py-2 pr-4 align-top">
+                                                    <label className="text-white/70 text-sm font-medium pt-2 block">Content</label>
+                                                </td>
+                                                <td className="py-2">
+                                                    <textarea
+                                                        value={description}
+                                                        onChange={(e) => setDescription(e.target.value)}
+                                                        className="w-full bg-transparent text-white/90 focus:outline-none min-h-[100px] resize-none placeholder-white/30 leading-relaxed font-light"
+                                                        placeholder="รายละเอียด..."
+                                                        required
+                                                    />
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
 
                                 {/* Actions */}

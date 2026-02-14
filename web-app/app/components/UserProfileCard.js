@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 export default function UserProfileCard({ user, loading }) {
@@ -9,6 +9,21 @@ export default function UserProfileCard({ user, loading }) {
     const [isHovered, setIsHovered] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [verifying, setVerifying] = useState(false);
+    const [extraInfo, setExtraInfo] = useState(null);
+
+    useEffect(() => {
+        if (user) {
+            // Fetch extra profile data
+            fetch('/api/student/profile')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        setExtraInfo(data.data);
+                    }
+                })
+                .catch(err => console.error('Failed to fetch student profile:', err));
+        }
+    }, [user]);
 
     if (loading) {
         return <UserProfileSkeleton />;
@@ -251,6 +266,74 @@ export default function UserProfileCard({ user, loading }) {
                 <InfoItem icon="🎓" label="บทบาท" value={formatRole(user.role)} />
                 <InfoItem icon="📅" label="วันรายงานตัว" value={formatDate(user.reportdate)} />
             </div>
+
+            {/* Extra Student Profile Data */}
+            {extraInfo && (
+                <div style={{
+                    marginTop: '0px',
+                    borderTop: '1px solid rgba(255,255,255,0.1)',
+                    paddingTop: '20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '16px'
+                }}>
+                    <h3 style={{
+                        color: 'white', fontSize: '0.95rem', fontWeight: 600, margin: 0,
+                        display: 'flex', alignItems: 'center', gap: '8px'
+                    }}>
+                        <span style={{ opacity: 0.7 }}>📚</span> ข้อมูลทางวิชาการ
+                    </h3>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
+                        <InfoItem icon="🏛️" label="คณะ" value={extraInfo.faculty} />
+                        <InfoItem icon="⚙️" label="ภาควิชา" value={extraInfo.department} />
+                        <InfoItem icon="📖" label="หลักสูตร" value={extraInfo.major} />
+                    </div>
+
+                    {(extraInfo.advisor1 || extraInfo.advisor2) && (
+                        <>
+                            <h3 style={{
+                                color: 'white', fontSize: '0.95rem', fontWeight: 600, margin: '8px 0 0',
+                                display: 'flex', alignItems: 'center', gap: '8px'
+                            }}>
+                                <span style={{ opacity: 0.7 }}>👨‍🏫</span> อาจารย์ที่ปรึกษา
+                            </h3>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {extraInfo.advisor1 && <AdvisorItem name={extraInfo.advisor1} index={1} />}
+                                {extraInfo.advisor2 && <AdvisorItem name={extraInfo.advisor2} index={2} />}
+                                {extraInfo.advisor3 && <AdvisorItem name={extraInfo.advisor3} index={3} />}
+                            </div>
+                        </>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function AdvisorItem({ name, index }) {
+    return (
+        <div style={{
+            background: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '10px',
+            padding: '10px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+        }}>
+            <div style={{
+                width: '24px', height: '24px',
+                borderRadius: '50%',
+                background: 'rgba(255,255,255,0.1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '10px', color: 'rgba(255,255,255,0.6)',
+                fontWeight: 600
+            }}>
+                {index}
+            </div>
+            <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.85rem' }}>
+                {name}
+            </div>
         </div>
     );
 }
@@ -274,7 +357,8 @@ function InfoItem({ icon, label, value, mono }) {
             <div style={{
                 color: 'white', fontSize: '0.85rem', fontWeight: 500,
                 fontFamily: mono ? 'Montserrat, monospace' : 'inherit',
-                wordBreak: 'break-all',
+                wordBreak: 'break-word',
+                lineHeight: 1.4
             }}>
                 {value || '—'}
             </div>
@@ -292,10 +376,15 @@ function UserProfileSkeleton() {
                     <div className="h-3 w-2/5 bg-white/8 rounded-md" />
                 </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 mb-5">
                 {[1, 2, 3, 4].map(i => (
                     <div key={i} className="h-[60px] bg-white/6 rounded-xl" />
                 ))}
+            </div>
+            <div className="h-4 w-1/3 bg-white/12 rounded-lg mb-4" />
+            <div className="flex flex-col gap-3">
+                <div className="h-10 bg-white/6 rounded-xl" />
+                <div className="h-10 bg-white/6 rounded-xl" />
             </div>
         </div>
     );

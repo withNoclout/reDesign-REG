@@ -89,7 +89,7 @@ async function runTest() {
             });
             console.log(`Status: ${res1.status}`);
             if (res1.status === 200) {
-                console.log('✅ SUCCESS! Data:', JSON.stringify(res1.data).substring(0, 100));
+                console.log('✅ SUCCESS! Getacadstd Data:', JSON.stringify(res1.data, null, 2));
             } else {
                 console.log('❌ FAILED. Response:', JSON.stringify(res1.data).substring(0, 100));
             }
@@ -110,6 +110,92 @@ async function runTest() {
                 console.log('✅ SUCCESS! Data:', JSON.stringify(res2.data).substring(0, 100));
             } else {
                 console.log('❌ FAILED. Response:', JSON.stringify(res2.data).substring(0, 100));
+            }
+        } catch (e) {
+            console.log('❌ Error:', e.message);
+        }
+
+        // 5. Test Getstudentinfo with Bearer
+        console.log('\n5️⃣ Testing Getstudentinfo (Bearer)...');
+        try {
+            const res3 = await axios.get(`${BASE_URL}/Schg/Getstudentinfo`, {
+                headers: { 'Authorization': `Bearer ${userToken}` },
+                httpsAgent: agent,
+                validateStatus: status => true
+            });
+            console.log(`Status: ${res3.status}`);
+            if (res3.status === 200) {
+                console.log('✅ SUCCESS! Student Info Data:', JSON.stringify(res3.data, null, 2));
+            } else {
+                console.log('❌ FAILED. Response:', JSON.stringify(res3.data).substring(0, 200));
+            }
+        } catch (e) {
+            console.log('❌ Error:', e.message);
+        }
+
+        // 8. Test Schg/All
+        console.log('\n8️⃣ Testing Schg/All (Bearer)...');
+        try {
+            const res6 = await axios.get(`${BASE_URL}/Schg/All`, {
+                headers: { 'Authorization': `Bearer ${userToken}` },
+                httpsAgent: agent,
+                validateStatus: status => true
+            });
+            console.log(`Status: ${res6.status}`);
+            if (res6.status === 200 && res6.data) {
+                console.log(`✅ SUCCESS! Body length: ${JSON.stringify(res6.data).length}`);
+                console.log('Sample Data (Keys):', Object.keys(res6.data));
+            } else {
+                console.log('❌ FAILED/EMPTY. Response:', JSON.stringify(res6.data).substring(0, 100));
+            }
+        } catch (e) {
+            console.log('❌ Error:', e.message);
+        }
+
+        // 9. Test Schg/Getacad
+        console.log('\n9️⃣ Testing Schg/Getacad (Bearer)...');
+        try {
+            const res7 = await axios.get(`${BASE_URL}/Schg/Getacad`, {
+                headers: { 'Authorization': `Bearer ${userToken}` },
+                httpsAgent: agent,
+                validateStatus: status => true
+            });
+            console.log(`Status: ${res7.status}`);
+            if (res7.status === 200 && res7.data) {
+                console.log(`✅ SUCCESS! Body length: ${JSON.stringify(res7.data).length}`);
+                console.log('Sample Data (Keys):', Object.keys(res7.data));
+            } else {
+                console.log('❌ FAILED/EMPTY. Response:', JSON.stringify(res7.data).substring(0, 100));
+            }
+        } catch (e) {
+            console.log('❌ Error:', e.message);
+        }
+
+        // 10. Test Bioentryconfig/Getbioentryconfig/I (User Suggested)
+        console.log('\n🔟 Testing Bioentryconfig/Getbioentryconfig/I (Bearer)...');
+        try {
+            // Note: The screenshot showed reg1, but we use reg4. They are mirrors.
+            const res8 = await axios.get(`${BASE_URL}/Bioentryconfig/Getbioentryconfig/I`, {
+                headers: { 'Authorization': `Bearer ${userToken}` },
+                httpsAgent: agent,
+                validateStatus: status => true
+            });
+            console.log(`Status: ${res8.status}`);
+            if (res8.status === 200 && Array.isArray(res8.data)) {
+                console.log(`✅ SUCCESS! Body length: ${JSON.stringify(res8.data).length}`);
+                console.log(`✅ SUCCESS! Found ${res8.data.length} items.`);
+
+                // Search for keywords
+                const keywords = ['ที่ปรึกษา', 'Advisor', 'คณะ', 'Faculty', 'สาขา', 'Department', 'Major', 'ปี', 'Year'];
+                const found = res8.data.filter(item => {
+                    const val = JSON.stringify(item);
+                    return keywords.some(k => val.includes(k));
+                });
+
+                console.log(`Found ${found.length} items matching keywords:`, JSON.stringify(found, null, 2));
+
+            } else {
+                console.log('❌ FAILED/EMPTY. Response:', JSON.stringify(res8.data).substring(0, 100));
             }
         } catch (e) {
             console.log('❌ Error:', e.message);

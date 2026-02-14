@@ -1,24 +1,46 @@
-'use client';
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { usePortfolioSettings } from '../hooks/usePortfolioSettings';
 import AddContentCard from './AddContentCard';
 import PortfolioEditorModal from './PortfolioEditorModal';
+import CustomPortfolioGrid from './CustomPortfolioGrid';
 
 export default function PortfolioGrid() {
     const { user } = useAuth();
     const [items, setItems] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // New Hook Integration
+    const {
+        settings,
+        updateSetting,
+        saveSettings,
+        isLoading: isSettingsLoading,
+        isSaving
+    } = usePortfolioSettings();
+
+    const [showControls, setShowControls] = useState(false);
+    const [isManageMode, setIsManageMode] = useState(false);
     const [retryingItem, setRetryingItem] = useState(null);
 
-    // Check if user is specific admin
-    const isAdmin = user?.username === 's6701091611290';
+    // Derived values for layout
+    const columnClass = (() => {
+        const cols = settings.fixedConfig?.columnCount || 3;
+        if (cols === 1) return 'columns-1';
+        if (cols === 2) return 'columns-1 md:columns-2';
+        if (cols === 3) return 'columns-1 md:columns-2 lg:columns-3';
+        if (cols === 4) return 'columns-1 md:columns-2 lg:columns-4';
+        return 'columns-1 md:columns-3 lg:columns-5';
+    })();
 
-    const fetchContent = async () => {
+    const gapClass = (settings.fixedConfig?.gapSize || 'normal') === 'compact' ? 'gap-1.5 space-y-1.5' : 'gap-6 space-y-6';
+
+    // FIX: Define fetchContent with useCallback
+    const fetchContent = useCallback(async () => {
         try {
-            const res = await fetch('/api/portfolio/content');
+            const res = await fetch(`/api/portfolio/content?t=${Date.now()}`);
             const json = await res.json();
             if (json.success) {
                 setItems(json.data);
@@ -28,127 +50,327 @@ export default function PortfolioGrid() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         fetchContent();
-    }, []);
+    }, [fetchContent]);
 
     const handleRetryItem = async (itemId) => {
         setRetryingItem(itemId);
-
         try {
             const res = await fetch('/api/portfolio/retry-upload', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ itemId }),
             });
-
             const data = await res.json();
-
             if (data.success) {
-                // Refresh the grid
                 await fetchContent();
                 alert('✅ อัพโหลดสำเร็จ');
             } else {
-                alert('❌ อัพโหลดไม่สำเร็จ: ' + (data.message || 'Unknown error'));
+                alert('❌ อัพโหลดไม่สำเร็จ');
             }
         } catch (error) {
-            console.error('Retry error:', error);
             alert('❌ เกิดข้อผิดพลาด: ' + error.message);
         } finally {
             setRetryingItem(null);
         }
     };
 
+    const handleToggleVisibility = async (id, currentVisibility) => {
+        const newVisibility = !currentVisibility;
+        setItems(prev => prev.map(item => item.id === id ? { ...item, is_visible: newVisibility } : item));
+        try {
+            const res = await fetch('/api/portfolio/content', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, is_visible: newVisibility }),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.message);
+        } catch (err) {
+            setItems(prev => prev.map(item => item.id === id ? { ...item, is_visible: currentVisibility } : item));
+            alert('❌ Failed to update visibility');
+        }
+    };
+
+    const handleDelete = async (id) => {
+        if (!confirm('ยืนยันการลบ?')) return;
+        const previousItems = [...items];
+        setItems(prev => prev.filter(item => item.id !== id));
+        try {
+            const res = await fetch(`/api/portfolio/content?id=${id}`, { method: 'DELETE' });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.message);
+        } catch (err) {
+            setItems(previousItems);
+            alert('❌ Failed to delete item');
+        }
+    };
+
+    const handleSaveSettings = async () => {
+        await saveSettings(settings);
+    };
+
+    const updateFixedConfig = (key, value) => {
+        updateSetting('fixedConfig', { ...settings.fixedConfig, [key]: value });
+    };
+
+    const handleCustomLayoutChange = (newLayout) => {
+        updateSetting('customLayout', newLayout);
+    };
+
+    const isCustomMode = settings.mode === 'custom';
+
     return (
-        <section className="py-12">
-            <div className="flex items-center justify-between mb-8 px-4">
-                <h2 className="text-3xl font-bold text-white font-prompt flex items-center gap-3">
-                    <span className="w-2 h-8 bg-[#ff5722] rounded-full"></span>
-                    Portfolio Gallery
-                </h2>
-                <div className="text-white/40 text-sm">{items.length} Posts</div>
+        <section className="relative pt-0">
+            {/* View Controls (Absolute Top Right) */}
+            <div className="absolute -top-12 right-4 z-20 flex items-center gap-2">
+                <AnimatePresence>
+                    {showControls && (
+                        <motion.div
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 20 }}
+                            className="bg-black/80 backdrop-blur-md border border-white/10 rounded-full p-2 flex items-center gap-4 pr-6"
+                        >
+                            {/* Manage Mode Toggle */}
+                            <button
+                                onClick={() => setIsManageMode(!isManageMode)}
+                                className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold transition-all ${isManageMode ? 'bg-orange-500 text-white' : 'bg-white/10 text-white/60 hover:text-white'}`}
+                            >
+                                {isManageMode ? 'Done' : 'Manage'}
+                            </button>
+                            <div className="w-px h-4 bg-white/20"></div>
+
+                            {/* Mode Toggle: Fixed / Custom */}
+                            <div className="flex bg-white/10 rounded-lg p-0.5">
+                                <button
+                                    onClick={() => updateSetting('mode', 'fixed')}
+                                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${!isCustomMode ? 'bg-white text-black shadow-sm' : 'text-white/60 hover:text-white'}`}
+                                >
+                                    Fixed
+                                </button>
+                                <button
+                                    onClick={() => updateSetting('mode', 'custom')}
+                                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${isCustomMode ? 'bg-white text-black shadow-sm' : 'text-white/60 hover:text-white'}`}
+                                >
+                                    Custom
+                                </button>
+                            </div>
+
+                            <div className="w-px h-4 bg-white/20"></div>
+
+                            {/* Column Slider (Only for Fixed Mode) */}
+                            {!isCustomMode && (
+                                <div className="flex items-center gap-2 pl-2">
+                                    <span className="text-xs text-white/50">Cols</span>
+                                    <input
+                                        type="range"
+                                        min="2"
+                                        max="5"
+                                        value={settings.fixedConfig?.columnCount || 3}
+                                        onChange={(e) => updateFixedConfig('columnCount', parseInt(e.target.value))}
+                                        className="w-20 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer accent-[#ff5722]"
+                                    />
+                                    <span className="text-xs text-white font-bold w-3">{settings.fixedConfig?.columnCount || 3}</span>
+                                </div>
+                            )}
+
+                            {/* Gap Toggle (Only for Fixed Mode) */}
+                            {!isCustomMode && (
+                                <>
+                                    <div className="w-px h-4 bg-white/20"></div>
+                                    <button
+                                        onClick={() => updateFixedConfig('gapSize', (settings.fixedConfig?.gapSize || 'normal') === 'normal' ? 'compact' : 'normal')}
+                                        className={`text-xs font-medium transition-colors ${(settings.fixedConfig?.gapSize || 'normal') === 'compact' ? 'text-[#ff5722]' : 'text-white/60 hover:text-white'}`}
+                                    >
+                                        {(settings.fixedConfig?.gapSize || 'normal') === 'compact' ? 'Compact' : 'Comfy'}
+                                    </button>
+                                </>
+                            )}
+
+
+                            <div className="w-px h-4 bg-white/20"></div>
+
+                            {/* Save Button */}
+                            <button
+                                onClick={handleSaveSettings}
+                                disabled={isSaving}
+                                className="text-xs font-bold text-white/80 hover:text-white transition-colors"
+                            >
+                                {isSaving ? 'Saving...' : 'Save'}
+                            </button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                <button
+                    onClick={() => setShowControls(!showControls)}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${showControls ? 'bg-[#ff5722] text-white' : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'}`}
+                >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="3" />
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    </svg>
+                </button>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 px-4">
-                {/* Add Trigger (Visible to all users for their own portfolio) */}
-                <AddContentCard onClick={() => setIsModalOpen(true)} className="col-span-2 aspect-[2/1]" />
+            {/* Layout Rendering */}
+            {isCustomMode ? (
+                <CustomPortfolioGrid
+                    items={items.slice(0, settings.maxItemsPerPage || 12)}
+                    savedLayout={settings.customLayout}
+                    onLayoutChange={handleCustomLayoutChange}
+                    isManageMode={isManageMode}
+                    onAddNew={() => setIsModalOpen(true)}
+                    maxRows={4}
+                />
+            ) : (
+                /* Masonry Layout using CSS Columns */
+                <div className={`transition-all duration-500 ease-in-out ${columnClass} ${gapClass} px-4`}>
 
-                {/* Content Items */}
-                <AnimatePresence>
-                    {items.map((item, index) => (
-                        <motion.div
-                            key={item.id}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: index * 0.05 }}
-                            className="group relative aspect-square rounded-2xl overflow-hidden bg-white/5 border border-white/5"
-                        >
-                            {/* Image */}
-                            {item.image_url && item.uploaded_to_supabase ? (
-                                <img
-                                    src={item.image_url}
-                                    alt={item.description}
-                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                />
-                            ) : (
-                                <div className="w-full h-full flex flex-col items-center justify-center bg-white/5 text-white/20 p-4">
-                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mb-2">
-                                        <circle cx="12" cy="12" r="10" />
-                                        <line x1="12" y1="8" x2="12" y2="12" />
-                                        <line x1="12" y1="16" x2="12.01" y2="16" />
-                                    </svg>
-                                    <span className="text-sm">Not Uploaded</span>
-                                </div>
-                            )}
+                    {/* Add Trigger (Fits in flow) */}
+                    <div className="break-inside-avoid mb-6">
+                        <AddContentCard onClick={() => setIsModalOpen(true)} className="w-full aspect-[2/1] shadow-xl hover:shadow-[#ff5722]/10" />
+                    </div>
 
-                            {/* Upload Status Indicator */}
-                            {!item.uploaded_to_supabase && (
-                                <div className="absolute top-3 right-3 bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg z-10">
-                                    Upload Pending
-                                </div>
-                            )}
-
-                            {/* Overlay */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-6">
-                                <p className="text-white font-prompt text-sm line-clamp-3">
-                                    {item.description}
-                                </p>
-                                <div className="flex items-center justify-between mt-2">
-                                    <span className="text-white/40 text-xs">
-                                        {new Date(item.created_at).toLocaleDateString()}
-                                    </span>
-
-                                    {/* Retry Button for Failed Uploads */}
-                                    {!item.uploaded_to_supabase && item.temp_path && (
+                    {/* Content Items */}
+                    <AnimatePresence>
+                        {items.slice(0, settings.maxItemsPerPage || 12).map((item, index) => (
+                            <motion.div
+                                key={item.id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: item.is_visible === false && !isManageMode ? 0.3 : 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                transition={{ delay: index * 0.05 }}
+                                className={`break-inside-avoid ${settings.fixedConfig?.gapSize === 'compact' ? 'mb-1.5 p-3 rounded-xl' : 'mb-6 p-4 rounded-3xl'} group relative bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 ${item.is_visible === false && !isManageMode ? 'grayscale opacity-50' : ''}`}
+                            >
+                                {/* Management Overlays */}
+                                {isManageMode && (
+                                    <div className="absolute top-2 right-2 z-30 flex items-center gap-2">
+                                        {/* Visibility Toggle */}
                                         <button
-                                            onClick={() => handleRetryItem(item.id)}
-                                            disabled={retryingItem === item.id}
-                                            className="px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleToggleVisibility(item.id, item.is_visible);
+                                            }}
+                                            className={`p-2 rounded-full backdrop-blur-md shadow-lg transition-all ${item.is_visible !== false ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'}`}
+                                            title={item.is_visible !== false ? "Visible" : "Hidden"}
                                         >
-                                            {retryingItem === item.id ? (
-                                                <>
-                                                    <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                                    <span>Uploading...</span>
-                                                </>
+                                            {item.is_visible !== false ? (
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
                                             ) : (
-                                                <>
-                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                        <path d="M23 4v6h-6" />
-                                                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-                                                    </svg>
-                                                    <span>Retry</span>
-                                                </>
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
                                             )}
                                         </button>
+
+                                        {/* Delete Button */}
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDelete(item.id);
+                                            }}
+                                            className="p-2 rounded-full bg-red-500/20 text-red-500 hover:bg-red-500 hover:text-white backdrop-blur-md shadow-lg transition-all"
+                                            title="Delete"
+                                        >
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* Image Container with Natural Aspect Ratio */}
+                                <div className={`relative overflow-hidden ${settings.fixedConfig?.gapSize === 'compact' ? 'rounded-lg mb-2' : 'rounded-2xl mb-4'} bg-black/20`}>
+                                    {item.is_visible === false && (
+                                        <div className="absolute inset-0 z-10 bg-black/50 flex items-center justify-center pointer-events-none">
+                                            <span className="bg-black/50 backdrop-blur px-2 py-1 rounded text-xs text-white/70 font-bold border border-white/10">Hidden</span>
+                                        </div>
+                                    )}
+                                    {item.image_url && item.uploaded_to_supabase ? (
+                                        <img
+                                            src={item.image_url}
+                                            alt={item.description}
+                                            className="w-full h-auto object-cover"
+                                            loading="lazy"
+                                        />
+                                    ) : (
+                                        <div className="w-full aspect-[4/3] flex flex-col items-center justify-center text-white/20">
+                                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mb-2">
+                                                <circle cx="12" cy="12" r="10" />
+                                                <line x1="12" y1="8" x2="12" y2="12" />
+                                                <line x1="12" y1="16" x2="12.01" y2="16" />
+                                            </svg>
+                                            <span className="text-sm">Not Uploaded</span>
+                                        </div>
+                                    )}
+
+                                    {/* Status Badges */}
+                                    {!item.uploaded_to_supabase && (
+                                        <div className="absolute top-3 right-3 bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg z-10 backdrop-blur-md bg-opacity-90">
+                                            Upload Pending
+                                        </div>
                                     )}
                                 </div>
-                            </div>
-                        </motion.div>
-                    ))}
-                </AnimatePresence>
-            </div>
+
+                                {/* Content Below Image */}
+                                <div className={settings.fixedConfig?.gapSize === 'compact' ? 'space-y-1' : 'space-y-3'}>
+
+                                    {/* Topic (New Field) */}
+                                    {item.topic && (
+                                        <h3 className={`font-prompt font-bold text-white leading-tight ${settings.fixedConfig?.gapSize === 'compact' ? 'text-sm' : 'text-lg'}`}>
+                                            {item.topic}
+                                        </h3>
+                                    )}
+
+                                    {/* Description */}
+                                    <p className={`text-white font-prompt font-light text-white/80 ${settings.fixedConfig?.gapSize === 'compact' ? 'text-xs line-clamp-2' : 'text-sm leading-relaxed'}`}>
+                                        {item.description}
+                                    </p>
+
+                                    {/* Metadata & Actions */}
+                                    <div className={`flex items-center justify-between border-t border-white/5 ${settings.fixedConfig?.gapSize === 'compact' ? 'pt-2' : 'pt-3'}`}>
+                                        <span className="text-white/40 text-xs font-light">
+                                            {new Date(item.created_at).toLocaleDateString('th-TH', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric'
+                                            })}
+                                        </span>
+
+                                        {/* Retry Button */}
+                                        {!item.uploaded_to_supabase && item.temp_path && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleRetryItem(item.id);
+                                                }}
+                                                disabled={retryingItem === item.id}
+                                                className="px-3 py-1.5 bg-orange-500/10 hover:bg-orange-500 text-orange-400 hover:text-white border border-orange-500/20 hover:border-orange-500 rounded-lg text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                                            >
+                                                {retryingItem === item.id ? (
+                                                    <>
+                                                        <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                                                        <span>Uploading...</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                            <path d="M23 4v6h-6" />
+                                                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                                                        </svg>
+                                                        <span>Retry</span>
+                                                    </>
+                                                )}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </AnimatePresence>
+                </div>
+            )}
 
             <PortfolioEditorModal
                 isOpen={isModalOpen}

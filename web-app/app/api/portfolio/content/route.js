@@ -177,3 +177,101 @@ export async function POST(request) {
         return NextResponse.json({ success: false, message: error.message }, { status: 500 });
     }
 }
+
+export async function PATCH(request) {
+    try {
+        const userId = await getAuthUser();
+        if (!userId) {
+            return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+        }
+
+        const body = await request.json();
+        const { id, is_visible } = body;
+
+        if (!id) {
+            return NextResponse.json({ success: false, message: 'ID is required' }, { status: 400 });
+        }
+
+        const supabase = getServiceSupabase();
+
+        // Verify ownership
+        const { data: item, error: fetchError } = await supabase
+            .from('news_items')
+            .select('created_by')
+            .eq('id', id)
+            .single();
+
+        if (fetchError || !item) {
+            return NextResponse.json({ success: false, message: 'Item not found' }, { status: 404 });
+        }
+
+        if (item.created_by !== String(userId)) {
+            return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 403 });
+        }
+
+        // Update
+        const { error } = await supabase
+            .from('news_items')
+            .update({ is_visible })
+            .eq('id', id);
+
+        if (error) throw error;
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    }
+}
+
+export async function DELETE(request) {
+    try {
+        // Parse ID from URL query params or body? Standard is usually URL path but here we are in same route file.
+        // Let's use searchParams since it's cleaner for DELETE without body in some clients, 
+        // OR use body. Let's support body for consistency with PATCH, or searchParams.
+        // Let's use searchParams.
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+
+        const userId = await getAuthUser();
+        if (!userId) {
+            return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+        }
+
+        if (!id) {
+            return NextResponse.json({ success: false, message: 'ID is required' }, { status: 400 });
+        }
+
+        const supabase = getServiceSupabase();
+
+        // Verify ownership
+        const { data: item, error: fetchError } = await supabase
+            .from('news_items')
+            .select('created_by, image_url')
+            .eq('id', id)
+            .single();
+
+        if (fetchError || !item) {
+            return NextResponse.json({ success: false, message: 'Item not found' }, { status: 404 });
+        }
+
+        if (item.created_by !== String(userId)) {
+            return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 403 });
+        }
+
+        // Delete from DB
+        const { error } = await supabase
+            .from('news_items')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+
+        // Optional: Delete file from storage if you want to be clean
+        // But the image_url might be a temp path or a Supabase Storage path.
+        // For now, let's just delete the DB record.
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    }
+}
