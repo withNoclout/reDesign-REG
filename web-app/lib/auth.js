@@ -15,7 +15,8 @@ export async function getAuthUser() {
     // Note: In production, ensure MOCK_AUTH is NOT set or set to false.
     if (process.env.MOCK_AUTH === 'true') {
         console.warn('[Auth] ⚠️ Using MOCK_AUTH mode. Bypassing external API.');
-        return 'mock_student_67'; // Constant ID for testing
+        const mockId = '00000000-0000-0000-0000-000000000067'; // Valid UUID for testing
+        return mockId;
     }
 
     // 2. Real Auth Check

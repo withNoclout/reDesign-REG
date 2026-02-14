@@ -52,7 +52,7 @@ export async function POST(request) {
         let userId;
 
         if (process.env.MOCK_AUTH === 'true') {
-            const mockId = 'mock_student_67';
+            const mockId = '00000000-0000-0000-0000-000000000067';
             console.log('[Portfolio API] Mock Auth Enabled. User ID:', mockId);
             userId = mockId;
         } else {

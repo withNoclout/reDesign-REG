@@ -1,8 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import * as ReactGridLayout from 'react-grid-layout';
-const Responsive = ReactGridLayout.Responsive || ReactGridLayout.default.Responsive;
-const WidthProvider = ReactGridLayout.WidthProvider || ReactGridLayout.default.WidthProvider;
+import { WidthProvider, Responsive } from 'react-grid-layout/legacy';
 const ResponsiveGridLayout = WidthProvider(Responsive);
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';

@@ -5,7 +5,7 @@ const { Pool } = require('pg');
 
 // Configuration
 // Using the Mock ID from `lib/auth.js`
-const USER_ID = 'mock_student_67';
+const USER_ID = '00000000-0000-0000-0000-000000000067';
 const SOURCE_IMAGE_PATH = path.resolve(__dirname, '../../BG_image/login logo.png');
 const BUCKET_NAME = 'portfolio-assets';
 const TABLE_NAME = 'news_items';
