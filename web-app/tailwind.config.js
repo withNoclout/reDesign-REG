@@ -14,6 +14,7 @@ module.exports = {
                     'orange-light': '#ff8700',
                     'orange-dark': '#bf360c',
                 },
+                primary: '#ff5722', // Semantic alias for KMUTNB Orange
             },
             backdropBlur: {
                 'card': '20px',

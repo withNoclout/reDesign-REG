@@ -110,14 +110,12 @@ export default function GradePage() {
             if (!isAuthenticated) return;
 
             // 🔥 DEMO MODE: Override with Ideal Grades if enabled AND user matches specific ID
-            const DEMO_USER_ID = 's6701091611290';
-            const currentUserCode = user?.usercode || '';
-
-            if (SHOW_IDEAL_GRADES && currentUserCode === DEMO_USER_ID) {
+            if (SHOW_IDEAL_GRADES) {
+                // Simulate network delay
                 setTimeout(() => {
                     setAcademicRecord(IDEAL_ACADEMIC_RECORD);
                     setLoading(false);
-                }, 800); // Fake delay for realism
+                }, 800);
                 return;
             }
 

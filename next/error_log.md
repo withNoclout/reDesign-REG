@@ -86,5 +86,127 @@ A tree hydrated but some attributes of the server rendered HTML didn't match the
 - **Severity**: Medium
 - **Resolution Time**: ~10 minutes
 - **Affected Files**: 2
+- **Error ID**: ERR-2026-02-14-002
+
+---
+
+## 2026-02-14: Missing Dependency - jsonwebtoken
+
+**Severity**: Critical (Build Break)
+**Status**: ✅ Resolved
+
+### Error Message
+```
+Module not found: Can't resolve 'jsonwebtoken'
+
+./utils/jwt.js:1:1
+> 1 | import jwt from 'jsonwebtoken';
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+```
+
+### Context
+- **File**: `web-app/utils/jwt.js`
+- **Import Statement**: `import jwt from 'jsonwebtoken';`
+- **Issue**: The `jsonwebtoken` package was imported but never installed
+
+### Root Cause
+The portfolio feature implementation created a new file `utils/jwt.js` that imports the `jsonwebtoken` package for JWT token generation and verification. However, the package was not installed in `node_modules` via `npm install`, causing the build to fail.
+
+### Solution Applied
+Installed the missing dependency:
+```bash
+npm install jsonwebtoken --prefix web-app
+```
+
+This added the package to `package.json` dependencies and downloaded it to `node_modules`.
+
+### Prevention Plan
+1. **Checklist Before Importing**: Always verify package is installed before using it:
+   - Run `npm list [package-name]` to check if installed
+   - If not found, run `npm install [package-name]`
+   
+2. **Document Dependencies**: Create a dependencies checklist when planning features:
+   - List all required npm packages
+   - Mark installation status
+   - Install all at once: `npm install pkg1 pkg2 pkg3`
+
+3. **Pre-Commit Hook**: Add script to check for missing dependencies:
+   ```json
+   {
+     "scripts": {
+       "precommit": "node scripts/check-deps.js"
+     }
+   }
+   ```
+
+4. **Build Verification**: Always run `npm run build` after adding new imports
+   - This catches missing dependencies immediately
+   - Prevents deployment with broken code
+
+5. **Dependency Documentation**: Created `MISSING_DEPENDENCY_PREVENTION_GUIDE.md` with:
+   - Common dependency scenarios
+   - Installation commands
+   - Troubleshooting steps
+   - Best practices for team members
+
+### 📊 Error Metrics
+- **Severity**: Critical (Build Break)
+- **Impact**: High (Prevented development/preview)
+- **Resolution Time**: ~5 minutes (after identification)
+- **Total Affected Files**: 1 (utils/jwt.js)
+- **Root Cause**: Forgot to install npm package after importing
+- **Error ID**: ERR-2026-02-14-003
+
+### 🔗 Related Documents
+- **Prevention Guide**: [web-app/MISSING_DEPENDENCY_PREVENTION_GUIDE.md](../web-app/MISSING_DEPENDENCY_PREVENTION_GUIDE.md)
+- **Implementation Summary**: [web-app/PORTFOLIO_IMPLEMENTATION_SUMMARY.md](../web-app/PORTFOLIO_IMPLEMENTATION_SUMMARY.md)
+- **npm Documentation**: https://docs.npmjs.com/
+
+### Lessons Learned
+1. **Always install dependencies immediately after importing** in code
+2. **Use package.json as source of truth** - if imported, must be listed
+3. **Run `npm install` first thing** when cloning repository
+4. **Check build output** for module resolution errors
+5. **Document external dependencies** in project documentation
+
+---
+
+## Error Prevention Workflow (New Standard)
+
+### Before Adding New Imports
+1. [ ] Search for correct package name on npmjs.com
+2. [ ] Run `npm list [package-name]` to check if already installed
+3. [ ] If not installed: `npm install [package-name]`
+4. [ ] Verify in `package.json` dependencies section
+5. [ ] Test import in code
+6. [ ] Run `npm run build` to verify no errors
+
+### When Implementing New Features
+1. [ ] Identify all required packages upfront
+2. [ ] Create dependency checklist
+3. [ ] Install all dependencies at once: `npm install pkg1 pkg2 pkg3`
+4. [ ] Verify all appear in `package.json`
+5. [ ] Run `npm list --depth=0` to confirm installation
+6. [ ] Run `npm run build` before committing
+
+### Before Code Review
+1. [ ] Check `package.json` for new dependencies
+2. [ ] Verify all are necessary and no unused packages
+3. [ ] Run `npm audit` for security vulnerabilities
+4. [ ] Ensure version constraints are appropriate
+
+---
+
+## Summary of All Errors (2026-02-14)
+
+| Error ID | Type | Severity | Status | Resolution Time |
+|-----------|------|----------|---------|----------------|
+| ERR-2026-02-14-001 | Import/Export Mismatch | Critical | ✅ Resolved | ~20 min |
+| ERR-2026-02-14-002 | Hydration Mismatch | Medium | ✅ Resolved | ~10 min |
+| ERR-2026-02-14-003 | Missing Dependency | Critical | ✅ Resolved | ~5 min |
+
+**Total Errors**: 3
+**Total Resolution Time**: ~35 minutes
+**Prevention Documents Created**: 3
 
 

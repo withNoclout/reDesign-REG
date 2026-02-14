@@ -186,39 +186,50 @@ export default function Navbar({ activePage = 'profile' }) {
                                         </motion.a>
 
                                         {/* Dropdown Menu */}
-                                        {hasSubmenu && (
-                                            <div className="absolute top-full left-0 pt-2 hidden group-hover:block min-w-[200px] z-50">
-                                                <div className="bg-[rgba(15,23,42,0.95)] backdrop-blur-xl border border-[rgba(255,255,255,0.1)] rounded-xl py-2 shadow-xl overflow-hidden">
-                                                    {item.submenu.map((subItem) => {
-                                                        // Portfolio settings should not be accessible to guests
-                                                        const isPortfolioSettings = subItem.id === 'portfolio-settings';
-                                                        const canAccessSubmenu = !isGuest || !isPortfolioSettings;
+                                        <AnimatePresence>
+                                            {hasSubmenu && (
+                                                <div className="absolute top-full left-0 pt-2 hidden group-hover:block min-w-[200px] z-50">
+                                                    <motion.div
+                                                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                        exit={{ opacity: 0, y: -10 }}
+                                                        transition={{ duration: 0.2 }}
+                                                        className="bg-[rgba(15,23,42,0.95)] backdrop-blur-xl border border-[rgba(255,255,255,0.1)] rounded-xl py-2 shadow-xl overflow-hidden"
+                                                    >
+                                                        {item.submenu.map((subItem) => {
+                                                            // Portfolio settings should not be accessible to guests
+                                                            const isPortfolioSettings = subItem.id === 'portfolio-settings';
+                                                            const canAccessSubmenu = !isGuest || !isPortfolioSettings;
 
-                                                        return canAccessSubmenu ? (
-                                                            <a
-                                                                key={subItem.id}
-                                                                href={subItem.href}
-                                                                className="block px-4 py-3 text-sm text-[rgba(255,255,255,0.8)] hover:text-white hover:bg-[rgba(255,255,255,0.1)] transition-colors"
-                                                            >
-                                                                {subItem.label}
-                                                            </a>
-                                                        ) : (
-                                                            <div
-                                                                key={subItem.id}
-                                                                className="block px-4 py-3 text-sm text-[rgba(255,255,255,0.4)] cursor-not-allowed flex items-center justify-between"
-                                                                title="ไม่ได้รับอนุญาตให้เข้าถึง"
-                                                            >
-                                                                <span>{subItem.label}</span>
-                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2">
-                                                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                                                                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                                                                </svg>
-                                                            </div>
-                                                        );
-                                                    })}
+                                                            return canAccessSubmenu ? (
+                                                                <a
+                                                                    key={subItem.id}
+                                                                    href={subItem.href}
+                                                                    className="block px-4 py-3 text-sm text-[rgba(255,255,255,0.8)] hover:text-[#ff5722] hover:bg-[rgba(255,255,255,0.05)] transition-colors flex items-center justify-between group/sub"
+                                                                >
+                                                                    {subItem.label}
+                                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="opacity-0 group-hover/sub:opacity-100 -translate-x-2 group-hover/sub:translate-x-0 transition-all text-[#ff5722]">
+                                                                        <polyline points="9 18 15 12 9 6" />
+                                                                    </svg>
+                                                                </a>
+                                                            ) : (
+                                                                <div
+                                                                    key={subItem.id}
+                                                                    className="block px-4 py-3 text-sm text-[rgba(255,255,255,0.4)] cursor-not-allowed flex items-center justify-between"
+                                                                    title="ไม่ได้รับอนุญาตให้เข้าถึง"
+                                                                >
+                                                                    <span>{subItem.label}</span>
+                                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2">
+                                                                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                                                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                                                    </svg>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </motion.div>
                                                 </div>
-                                            </div>
-                                        )}
+                                            )}
+                                        </AnimatePresence>
                                     </>
                                 ) : (
                                     <motion.a

@@ -287,3 +287,24 @@ The team is now better equipped to prevent similar errors in the future through:
 **Last Updated**: February 14, 2026  
 **Author**: AI Assistant  
 **Review Status**: Ready for Team Review
+
+---
+
+## 🚨 Recent Resolution Log
+
+### [2026-02-14] Module not found: Can't resolve '../../../lib/auth'
+
+**Problem:**
+Build error `Module not found: Can't resolve '../../../lib/auth'` in `./app/api/portfolio/content/route.js`.
+
+**Root Cause:**
+The import path `../../../lib/auth` resolved to `web-app/app/lib/auth`, but the authentication module is located in the project root's library folder `web-app/lib/auth.js`.
+
+**Solution:**
+Updated the import in `app/api/portfolio/content/route.js` to use the project root alias:
+```javascript
+import { getAuthUser } from '@/lib/auth';
+```
+
+**Result:**
+The module is now correctly resolved during the build process.

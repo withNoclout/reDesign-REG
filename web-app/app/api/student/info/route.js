@@ -27,12 +27,12 @@ export async function GET() {
         if (apiRes.status === 200 && apiRes.data) {
             return NextResponse.json({
                 success: true,
-                data: response.data
+                data: apiRes.data
             });
         }
 
         // Token expired or invalid
-        if (response.status === 401) {
+        if (apiRes.status === 401) {
             return NextResponse.json(
                 { success: false, message: 'Session หมดอายุ กรุณาเข้าสู่ระบบใหม่' },
                 { status: 401 }
@@ -40,8 +40,8 @@ export async function GET() {
         }
 
         return NextResponse.json(
-            { success: false, message: 'ไม่สามารถดึงข้อมูลได้', apiStatus: response.status },
-            { status: response.status }
+            { success: false, message: 'ไม่สามารถดึงข้อมูลได้', apiStatus: apiRes.status },
+            { status: apiRes.status }
         );
 
     } catch (error) {
