@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ระบบสารสนเทศเพื่องานทะเบียนนักศึกษา มหาวิทยาลัยเทคโนโลยีพระจอมเกล้าพระนครเหนือ - KMUTNB Registration System">
+    <title>KMUTNB REG — ระบบลงทะเบียนนักศึกษา</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- ===== NAVBAR (Frosted Glass, Sticky Top) ===== -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <!-- Left: Logo + Brand -->
+            <a href="#" class="nav-brand">
+                <svg class="nav-logo" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="20" cy="20" r="18" stroke="white" stroke-width="2" fill="rgba(255,255,255,0.15)"/>
+                    <text x="20" y="26" text-anchor="middle" fill="white" font-size="14" font-weight="700" font-family="Montserrat">R</text>
+                </svg>
+                <span class="brand-text">REG <span class="brand-accent">KMUTNB</span></span>
+            </a>
+
+            <!-- Center: Menu Items -->
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="#" class="nav-link active" data-page="home">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    Menu
+                </a></li>
+                <li><a href="#" class="nav-link" data-page="transcript">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    Transcript
+                </a></li>
+                <li><a href="#" class="nav-link" data-page="schedule">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    Schedule
+                </a></li>
+                <li><a href="#" class="nav-link" data-page="structure">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                    Structure
+                </a></li>
+                <li><a href="#" class="nav-link" data-page="room">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    Room Available
+                </a></li>
+                <li><a href="#" class="nav-link" data-page="information">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    Information
+                </a></li>
+                <li><a href="#" class="nav-link" data-page="qa">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Q&A
+                </a></li>
+            </ul>
+
+            <!-- Right: Login Button + Hamburger -->
+            <div class="nav-right">
+                <button class="nav-login-btn" id="navLoginBtn" onclick="focusLogin()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                    Login
+                </button>
+                <button class="hamburger" id="hamburger" onclick="toggleMenu()">
+                    <span></span><span></span><span></span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <main class="main-content">
+        <!-- Background Image -->
+        <div class="bg-image"></div>
+        <div class="bg-overlay"></div>
+
+        <!-- Login Container -->
+        <div class="login-wrapper">
+            <div class="login-box" id="loginBox">
+                <!-- University Crest -->
+                <div class="login-header">
+                    <div class="university-crest">
+                        <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="40" cy="40" r="36" stroke="rgba(255,255,255,0.6)" stroke-width="2" fill="rgba(255,255,255,0.08)"/>
+                            <circle cx="40" cy="40" r="28" stroke="rgba(255,255,255,0.3)" stroke-width="1" fill="none"/>
+                            <text x="40" y="36" text-anchor="middle" fill="white" font-size="10" font-weight="600" font-family="Montserrat">KMUTNB</text>
+                            <text x="40" y="50" text-anchor="middle" fill="rgba(255,255,255,0.7)" font-size="7" font-family="Prompt">ทะเบียน</text>
+                        </svg>
+                    </div>
+                    <h1 class="login-title">ระบบลงทะเบียนนักศึกษา</h1>
+                    <p class="login-subtitle">King Mongkut's University of Technology North Bangkok</p>
+                </div>
+
+                <!-- Login Form -->
+                <form class="login-form" id="loginForm" onsubmit="handleLogin(event)">
+                    <div class="input-group">
+                        <div class="input-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        </div>
+                        <input type="text" class="glass-input" id="username" placeholder="รหัสนักศึกษา / Username" required autocomplete="username">
+                        <label class="floating-label" for="username">รหัสนักศึกษา</label>
+                    </div>
+
+                    <div class="input-group">
+                        <div class="input-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        </div>
+                        <input type="password" class="glass-input" id="password" placeholder="รหัสผ่าน / Password" required autocomplete="current-password">
+                        <label class="floating-label" for="password">รหัสผ่าน</label>
+                        <button type="button" class="toggle-password" onclick="togglePassword()" aria-label="Toggle password visibility">
+                            <svg id="eyeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
+
+                    <!-- Error Message -->
+                    <div class="error-message" id="errorMsg">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                        <span id="errorText">รหัสผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</span>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="login-submit" id="submitBtn">
+                        <span class="btn-text">เข้าสู่ระบบ</span>
+                        <div class="btn-loader" id="btnLoader">
+                            <div class="spinner"></div>
+                        </div>
+                        <svg class="btn-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                    </button>
+
+                    <!-- Links -->
+                    <div class="login-links">
+                        <a href="#" class="link-forgot">ลืมรหัสผ่าน?</a>
+                        <span class="link-divider">|</span>
+                        <a href="#" class="link-manual">คู่มือการใช้งาน</a>
+                    </div>
+                </form>
+
+                <!-- Footer -->
+                <div class="login-footer">
+                    <p>Powered by <strong>Vision Net</strong> · Redesigned with ❤️</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

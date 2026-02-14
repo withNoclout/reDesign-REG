@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KMUTNB REG — ข่าวสารประชาสัมพันธ์</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .landing-container {
+            padding: 100px 20px 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .news-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .news-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            height: 350px;
+            /* Placeholder height */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+
+        .news-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .news-image-placeholder {
+            height: 200px;
+            background: rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 3rem;
+        }
+
+        .news-content {
+            padding: 20px;
+            color: white;
+            flex: 1;
+        }
+
+        .news-title {
+            height: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            margin-bottom: 10px;
+            width: 80%;
+        }
+
+        .news-desc {
+            height: 14px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        .section-title {
+            color: white;
+            font-size: 2rem;
+            margin-bottom: 30px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navbar (Same as Index) -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-brand">
+                <svg class="nav-logo" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="20" cy="20" r="18" stroke="white" stroke-width="2" fill="rgba(255,255,255,0.15)" />
+                    <text x="20" y="26" text-anchor="middle" fill="white" font-size="14" font-weight="700"
+                        font-family="Montserrat">R</text>
+                </svg>
+                <span class="brand-text">REG <span class="brand-accent">KMUTNB</span></span>
+            </a>
+            <div class="nav-right">
+                <span style="color: white; font-weight: 500;">Admin User</span>
+                <button class="nav-login-btn" onclick="window.location.href='index.html'">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="bg-image"></div>
+    <div class="bg-overlay"></div>
+
+    <main class="landing-container">
+        <h1 class="section-title">ข่าวสารประชาสัมพันธ์</h1>
+
+        <div class="news-grid">
+            <!-- Mock Items -->
+            <div class="news-card">
+                <div class="news-image-placeholder">IMG</div>
+                <div class="news-content">
+                    <div class="news-title"></div>
+                    <div class="news-desc"></div>
+                    <div class="news-desc" style="width: 60%"></div>
+                </div>
+            </div>
+            <div class="news-card">
+                <div class="news-image-placeholder">IMG</div>
+                <div class="news-content">
+                    <div class="news-title" style="width: 70%"></div>
+                    <div class="news-desc"></div>
+                    <div class="news-desc" style="width: 80%"></div>
+                </div>
+            </div>
+            <div class="news-card">
+                <div class="news-image-placeholder">IMG</div>
+                <div class="news-content">
+                    <div class="news-title"></div>
+                    <div class="news-desc"></div>
+                    <div class="news-desc" style="width: 50%"></div>
+                </div>
+            </div>
+            <div class="news-card">
+                <div class="news-image-placeholder">IMG</div>
+                <div class="news-content">
+                    <div class="news-title" style="width: 60%"></div>
+                    <div class="news-desc"></div>
+                    <div class="news-desc" style="width: 70%"></div>
+                </div>
+            </div>
+            <div class="news-card">
+                <div class="news-image-placeholder">IMG</div>
+                <div class="news-content">
+                    <div class="news-title"></div>
+                    <div class="news-desc"></div>
+                    <div class="news-desc" style="width: 60%"></div>
+                </div>
+            </div>
+            <div class="news-card">
+                <div class="news-image-placeholder">IMG</div>
+                <div class="news-content">
+                    <div class="news-title" style="width: 70%"></div>
+                    <div class="news-desc"></div>
+                    <div class="news-desc" style="width: 80%"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
