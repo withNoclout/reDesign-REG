@@ -130,29 +130,19 @@ function InfoItem({ icon, label, value, mono }) {
 
 function UserProfileSkeleton() {
     return (
-        <div style={{
-            background: 'rgba(255, 255, 255, 0.08)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255, 255, 255, 0.12)',
-            borderRadius: '20px',
-            padding: '28px',
-            animation: 'pulse 1.8s ease-in-out infinite',
-        }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '18px', marginBottom: '20px' }}>
-                <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'rgba(255,255,255,0.12)' }} />
-                <div style={{ flex: 1 }}>
-                    <div style={{ height: 16, width: '60%', background: 'rgba(255,255,255,0.12)', borderRadius: 8, marginBottom: 8 }} />
-                    <div style={{ height: 12, width: '40%', background: 'rgba(255,255,255,0.08)', borderRadius: 6 }} />
+        <div className="relative p-7 rounded-[20px] border border-white/12 bg-white/8 backdrop-blur-[20px] animate-pulse">
+            <div className="flex items-center gap-[18px] mb-5">
+                <div className="w-[72px] h-[72px] rounded-full bg-white/12" />
+                <div className="flex-1">
+                    <div className="h-4 w-3/5 bg-white/12 rounded-lg mb-2" />
+                    <div className="h-3 w-2/5 bg-white/8 rounded-md" />
                 </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="grid grid-cols-2 gap-3">
                 {[1, 2, 3, 4].map(i => (
-                    <div key={i} style={{ height: 60, background: 'rgba(255,255,255,0.06)', borderRadius: 12 }} />
+                    <div key={i} className="h-[60px] bg-white/6 rounded-xl" />
                 ))}
             </div>
-            <style jsx>{`
-                @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-            `}</style>
         </div>
     );
 }

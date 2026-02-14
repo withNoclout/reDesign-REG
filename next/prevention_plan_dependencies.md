@@ -30,4 +30,20 @@ To upgrade to Tailwind v4 in the future:
 1.  Install `@tailwindcss/postcss`.
 2.  Update `postcss.config.js` to use `@tailwindcss/postcss`.
 3.  Migrate `tailwind.config.js` to CSS variables or the new config format.
-4.  Reference: [Tailwind Upgrade Guide](https://tailwindcss.com/docs/upgrade-guide).
+3.  Example: [Tailwind Upgrade Guide](https://tailwindcss.com/docs/upgrade-guide).
+
+## 💧 Hydration Anti-Patterns (React/Next.js)
+
+### 1. No Randomness in Render
+- **Rule**: Do not use `Math.random()`, `Date.now()`, or `new Date()` directly in JSX or functional component bodies.
+- **Why**: Server render ≠ Client hydration render. React will throw a hydration mismatch error.
+- **Solution**:
+    - Use deterministic values (e.g., `index % 5`).
+    - Generate random values in `useEffect` (client-only).
+    - Use a seeded random generator if consistency is needed.
+
+### 2. Avoid `styled-jsx` in Components
+- **Rule**: Avoid `<style jsx>` blocks. Use Tailwind CSS utility classes instead.
+- **Why**: `styled-jsx` can generate dynamic class names that differ between server and client, causing mismatches.
+- **Action**: Refactor styles to Tailwind classes (e.g., `animate-pulse`, `backdrop-blur`).
+

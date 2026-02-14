@@ -54,38 +54,37 @@ Same fix applied for `UserProfileCard`.
 
 ---
 
-## 2026-02-14: Tailwind CSS Version Conflict (v4 vs v3)
+## 2026-02-14: Hydration Mismatch in Skeleton Components
 
-**Severity**: High (Build Failure)
-**Status**: 🔄 In Progress
+**Severity**: Medium (Console Error)
+**Status**: ✅ Resolved
 
 ### Error Message
 ```
-Error: It looks like you're trying to use `tailwindcss` directly as a PostCSS plugin. 
-The PostCSS plugin has moved to a separate package...
+A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. 
+... className="jsx-..."
 ```
 
 ### Context
-- **Action**: User installed `tailwindcss` manually (`npm install -D tailwindcss`).
-- **Config**: Created `tailwind.config.js` with v3 syntax (`module.exports = { content: ... }`).
-- **Conflict**: `npm install tailwindcss` installs **v4.0+** by default, which is not backward compatible with v3 config/postcss usage.
+- **Components**: `UserProfileCard.js`, `SkeletonCard.js`
+- **Issue**: React's client-side hydration found different DOM attributes than what the server rendered.
 
 ### Root Cause
-**Version Mismatch**: Tailwind v4 was released recently (2024/2025) and changes how it integrates with PostCSS. The project configuration (`tailwind.config.js`) was written for v3.
+1.  **`styled-jsx`**: Next.js sometimes generates different class names (`jsx-...`) on server vs client for inline styles.
+2.  **`Math.random()`**: `SkeletonCard` used `Math.random()` to generate random widths for lines. This value is different on the server (initial render) and the client (hydration), causing a mismatch.
 
 ### Solution Applied
-Downgraded to the latest stable v3 version:
-```bash
-npm install -D tailwindcss@3.4.1 postcss autoprefixer
-```
+1.  **Refactored to Tailwind CSS**: Removed all `<style jsx>` blocks and inline styles, replacing them with standard Tailwind classes (e.g., `animate-pulse`, `backdrop-blur`).
+2.  **Removed Non-Deterministic Logic**: Replaced `Math.random()` with deterministic width calculations based on the index (e.g., `width: ${65 + (i * 10) % 30}%`).
 
 ### Prevention Plan
-1.  **Strict Versioning**: Always specify version when installing core libraries (e.g., `npm install tailwindcss@3`).
-2.  **Package.json Review**: Check `package.json` to ensure `tailwindcss` is `^3.x.x` not `^4.x.x`.
-3.  **Migration Guide**: If upgrading to v4, follow the [official migration guide](https://tailwindcss.com/docs/upgrade-guide) (requires `@tailwindcss/postcss`).
+1.  **Avoid `Math.random()` in Render**: Never use non-deterministic functions directly in the returned JSX. If randomness is needed, generate it in `useEffect` (client-only) or use a seeded random generator.
+2.  **Prefer Tailwind over `styled-jsx`**: Use utility classes for animations and styling to ensure consistency across environments.
+3.  **Check Console for Hydration Errors**: React provides specific details about mismatches—always check the console during development.
 
 ### 📊 Error Metrics
-- **Severity**: High
-- **Resolution Time**: ~5 minutes
-- **Affected Files**: `package.json`, `node_modules`
+- **Severity**: Medium
+- **Resolution Time**: ~10 minutes
+- **Affected Files**: 2
+
 

@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+
+const LAST_USERS_KEY = 'reg_last_users';
+const MAX_SAVED_USERS = 3;
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { useAuth } from './context/AuthContext';
@@ -17,11 +20,40 @@ export default function Home() {
     const [menuOpen, setMenuOpen] = useState(false);
     const [shakeTrigger, setShakeTrigger] = useState(0);
 
+    // Last-login suggestion state
+    const [lastUsers, setLastUsers] = useState([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const usernameGroupRef = useRef(null);
+
     // Ref for axios cancellation
     const axiosSourceRef = useRef(null);
 
     // Navigation path from environment
     const LANDING_PATH = process.env.NEXT_PUBLIC_LANDING_PATH || '/landing';
+
+    // Load last users from localStorage on mount
+    useEffect(() => {
+        try {
+            const stored = localStorage.getItem(LAST_USERS_KEY);
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed)) setLastUsers(parsed.slice(0, MAX_SAVED_USERS));
+            }
+        } catch (e) {
+            console.warn('[Login] Failed to load last users:', e.message);
+        }
+    }, []);
+
+    // Click-outside to close suggestions
+    useEffect(() => {
+        function handleClickOutside(e) {
+            if (usernameGroupRef.current && !usernameGroupRef.current.contains(e.target)) {
+                setShowSuggestions(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     // Cleanup on unmount
     useEffect(() => {
@@ -87,6 +119,15 @@ export default function Home() {
             if (response.data.success) {
                 // Store user profile in AuthContext
                 auth.login(response.data.data);
+
+                // Save username to last-login list
+                try {
+                    const trimmed = username.trim();
+                    const prev = JSON.parse(localStorage.getItem(LAST_USERS_KEY) || '[]');
+                    const updated = [trimmed, ...prev.filter(u => u !== trimmed)].slice(0, MAX_SAVED_USERS);
+                    localStorage.setItem(LAST_USERS_KEY, JSON.stringify(updated));
+                    setLastUsers(updated);
+                } catch (e) { /* ignore */ }
 
                 // Clear sensitive data from state
                 setPassword('');
@@ -201,7 +242,7 @@ export default function Home() {
                     </div>
 
                     <form className="login-form" onSubmit={handleLogin}>
-                        <div className="input-group">
+                        <div className="input-group" ref={usernameGroupRef}>
                             <div className="input-icon">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
                             </div>
@@ -212,7 +253,48 @@ export default function Home() {
                                 required
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
+                                onFocus={() => lastUsers.length > 0 && setShowSuggestions(true)}
+                                autoComplete="username"
                             />
+
+                            {/* Last-login suggestion dropdown */}
+                            {showSuggestions && lastUsers.length > 0 && (
+                                <div className="username-suggestions">
+                                    <div className="suggestions-header">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                                        <span>เข้าสู่ระบบล่าสุด</span>
+                                    </div>
+                                    {lastUsers.map((savedUser) => (
+                                        <div key={savedUser} className="suggestion-item">
+                                            <button
+                                                type="button"
+                                                className="suggestion-btn"
+                                                onClick={() => {
+                                                    setUsername(savedUser);
+                                                    setShowSuggestions(false);
+                                                }}
+                                            >
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                                                <span>{savedUser}</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="suggestion-remove"
+                                                title="ลบ"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    const updated = lastUsers.filter(u => u !== savedUser);
+                                                    setLastUsers(updated);
+                                                    localStorage.setItem(LAST_USERS_KEY, JSON.stringify(updated));
+                                                    if (updated.length === 0) setShowSuggestions(false);
+                                                }}
+                                            >
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         <div className="input-group">
@@ -226,6 +308,7 @@ export default function Home() {
                                 required
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
+                                autoComplete="current-password"
                             />
                             <button type="button" className="toggle-password min-h-[44px] min-w-[44px]" onClick={togglePassword}>
                                 {showPassword ? (
