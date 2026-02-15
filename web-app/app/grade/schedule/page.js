@@ -403,18 +403,17 @@ export default function SchedulePage() {
                             className="hidden md:block bg-[rgba(255,255,255,0.06)] backdrop-blur-xl border border-[rgba(255,255,255,0.1)] rounded-3xl overflow-hidden shadow-2xl"
                         >
                             <div className="overflow-x-auto">
-                                <table className="w-full border-collapse" style={{ minWidth: `${timeSlots.length * 120 + 100}px` }}>
+                                <table className="w-full border-collapse">
                                     {/* Time header */}
                                     <thead>
                                         <tr>
-                                            <th className="sticky left-0 z-10 bg-[rgba(20,20,30,0.95)] backdrop-blur-xl p-3 text-xs text-white/50 uppercase tracking-wider font-light text-center border-b border-r border-[rgba(255,255,255,0.06)]" style={{ minWidth: '100px' }}>
+                                            <th className="sticky left-0 z-10 bg-[rgba(20,20,30,0.95)] backdrop-blur-xl p-3 text-xs text-white/50 uppercase tracking-wider font-light text-center border-b border-r border-[rgba(255,255,255,0.06)]" style={{ minWidth: '80px' }}>
                                                 วัน
                                             </th>
                                             {timeSlots.map((slot) => (
                                                 <th
                                                     key={slot}
                                                     className="p-3 text-xs text-white/50 uppercase tracking-wider font-light text-center border-b border-r border-[rgba(255,255,255,0.06)] font-montserrat"
-                                                    style={{ minWidth: '120px' }}
                                                 >
                                                     {slot}
                                                 </th>
@@ -584,7 +583,7 @@ export default function SchedulePage() {
                                 </div>
                             </div>
                             <div className="overflow-x-auto">
-                                <table className="w-full border-collapse" style={{ minWidth: `${timeSlots.length * 120 + 100}px` }}>
+                                <table className="w-full border-collapse">
                                     <thead>
                                         <tr className="bg-[rgba(20,20,30,0.95)]">
                                             <SortHeader field="subject_id" className="font-montserrat">รหัสวิชา</SortHeader>
