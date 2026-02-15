@@ -95,11 +95,17 @@ function shortenTitle(name) {
 function splitInstructors(name) {
     if (!name) return [];
     const shortened = shortenTitle(name);
-    // Split before each title prefix (รศ., ผศ., ศ., อ., ดร.)
+    // Split before each title prefix
     const parts = shortened.split(/(?=(?:รศ\.|ผศ\.|ศ\.|อ\.|ดร\.))/g)
         .map(s => s.trim())
         .filter(Boolean);
-    return parts.length ? parts : [shortened];
+    const list = parts.length ? parts : [shortened];
+    // Separate title prefix from actual name
+    return list.map(s => {
+        const m = s.match(/^((?:รศ\.|ผศ\.|ศ\.|อ\.|ดร\.)+)\s*(.*)/);
+        if (m) return { title: m[1], name: m[2] };
+        return { title: '', name: s };
+    });
 }
 
 export default function SchedulePage() {
@@ -562,7 +568,7 @@ export default function SchedulePage() {
                                                                 {entry.course.teach_name && (
                                                                     <>
                                                                         <span>·</span>
-                                                                        <span className="truncate">{splitInstructors(entry.course.teach_name).join(', ')}</span>
+                                                                        <span className="truncate">{splitInstructors(entry.course.teach_name).map(i => `${i.title}${i.name}`).join(', ')}</span>
                                                                     </>
                                                                 )}
                                                             </div>
@@ -618,11 +624,14 @@ export default function SchedulePage() {
                                                     <td className="p-3 text-sm text-white/90 font-prompt max-w-[220px]">
                                                         {course.subject_name_th || course.subject_name_en}
                                                     </td>
-                                                    <td className="p-3 text-sm text-white/70 font-prompt max-w-[200px]">
+                                                    <td className="p-3 text-sm text-white/70 font-prompt">
                                                         {course.teach_name ? (
                                                             <div className="space-y-0.5">
                                                                 {splitInstructors(course.teach_name).map((inst, i) => (
-                                                                    <p key={i} className="whitespace-nowrap">{inst}</p>
+                                                                    <div key={i} className="flex whitespace-nowrap">
+                                                                        <span className="w-16 shrink-0 text-white/40">{inst.title}</span>
+                                                                        <span>{inst.name}</span>
+                                                                    </div>
                                                                 ))}
                                                             </div>
                                                         ) : '—'}
@@ -683,9 +692,11 @@ export default function SchedulePage() {
                                         {course.teach_name && (
                                             <div className="text-xs text-white/60 font-prompt mb-2 space-y-0.5">
                                                 {splitInstructors(course.teach_name).map((inst, i) => (
-                                                    <p key={i} className="flex items-center gap-1">
-                                                        <UserIcon size={12} className="shrink-0" /> {inst}
-                                                    </p>
+                                                    <div key={i} className="flex items-center gap-1">
+                                                        <UserIcon size={12} className="shrink-0" />
+                                                        <span className="w-12 shrink-0 text-white/40">{inst.title}</span>
+                                                        <span>{inst.name}</span>
+                                                    </div>
                                                 ))}
                                             </div>
                                         )}
