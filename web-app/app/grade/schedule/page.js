@@ -567,7 +567,7 @@ export default function SchedulePage() {
                                 </div>
                             </div>
                             <div className="overflow-x-auto">
-                                <table className="w-full border-collapse">
+                                <table className="w-full border-collapse" style={{ minWidth: `${timeSlots.length * 120 + 100}px` }}>
                                     <thead>
                                         <tr className="bg-[rgba(20,20,30,0.95)]">
                                             <SortHeader field="subject_id" className="font-montserrat">รหัสวิชา</SortHeader>
