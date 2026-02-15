@@ -11,6 +11,37 @@ const loginLimiter = createRateLimiter({
     windowMs: 15 * 60 * 1000,
 });
 
+// Server IP cache with promise locking (ipify.org returns the server's outbound IP, same for all requests)
+const IP_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+let _ipCache = { value: '', timestamp: 0, promise: null };
+
+async function getServerIp() {
+    const now = Date.now();
+    if (_ipCache.value && (now - _ipCache.timestamp) < IP_CACHE_TTL) {
+        console.log('[API] IP cache hit:', _ipCache.value);
+        return _ipCache.value;
+    }
+    // Promise lock: reuse in-flight request for concurrent callers
+    if (_ipCache.promise) {
+        console.log('[API] IP cache: awaiting in-flight request');
+        return _ipCache.promise;
+    }
+    console.log('[API] IP cache miss — fetching from ipify.org');
+    _ipCache.promise = axios.get('https://api.ipify.org/?format=json', { timeout: 2000 })
+        .then(res => {
+            _ipCache.value = res.data?.ip || '';
+            _ipCache.timestamp = Date.now();
+            console.log('[API] IP cached:', _ipCache.value);
+            return _ipCache.value;
+        })
+        .catch(err => {
+            console.warn('[API] ipify.org failed, using fallback:', err.message);
+            return '';
+        })
+        .finally(() => { _ipCache.promise = null; });
+    return _ipCache.promise;
+}
+
 function generateSecureToken() {
     const array = new Uint8Array(32);
     crypto.getRandomValues(array);
@@ -85,14 +116,10 @@ export async function POST(request) {
         }
 
         try {
-            // Step 0: Get client's public IP (same as Angular app)
-            let clientIp = '';
-            try {
-                const ipResponse = await axios.get('https://api.ipify.org/?format=json', { timeout: 3000 });
-                clientIp = ipResponse.data?.ip || '';
-            } catch (ipErr) {
-                console.warn('[API] Could not get public IP:', ipErr.message);
-            }
+            // Step 0: Get server's public IP (cached, with promise locking)
+            console.time('Login-GetIP');
+            const serverIp = await getServerIp();
+            console.timeEnd('Login-GetIP');
 
             // Step 1: Get JWT Token from tokenservice
             console.log('[API] 1. Calling tokenservice...');
@@ -111,8 +138,8 @@ export async function POST(request) {
             }
             console.log('[API] Got JWT token:', token.substring(0, 30) + '...');
 
-            // Step 2: Encrypt credentials with IP (matches Angular app's user object)
-            const credentialsJson = JSON.stringify({ username, password, ip: clientIp });
+            // Step 2: Encrypt credentials with server IP (matches Angular app's user object)
+            const credentialsJson = JSON.stringify({ username, password, ip: serverIp });
             const encryptedParam = encryptData(credentialsJson);
             console.log('[API] 2. Encrypted param length:', encryptedParam.length);
 
