@@ -3,27 +3,49 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 
-export default function UserProfileCard({ user, loading }) {
-    const { updateProfileImage, isVerified, connectGoogleDrive } = useAuth();
-    const fileInputRef = useRef(null);
+export default function UserProfileCard({ user, loading, profileData }) {
+    const { updateProfileImage, isVerified, connectGoogleDrive, logout } = useAuth();
+
+    // State declarations
     const [isHovered, setIsHovered] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [verifying, setVerifying] = useState(false);
-    const [extraInfo, setExtraInfo] = useState(null);
+    const [extraInfo, setExtraInfo] = useState(profileData || null);
+    const fileInputRef = useRef(null);
 
+    // Update extraInfo if profileData prop changes
     useEffect(() => {
-        if (user) {
+        if (profileData) {
+            setExtraInfo(profileData);
+        }
+    }, [profileData]);
+
+    // Fetch if no profileData provided
+    useEffect(() => {
+        if (user && !profileData) {
             // Fetch extra profile data
             fetch('/api/student/profile')
-                .then(res => res.json())
+                // ... rest of fetch logic
+                .then(async res => {
+                    if (res.status === 401) {
+                        console.warn('[UserProfileCard] Session Expired from Profile API. Logging out...');
+                        if (logout) logout();
+                        // Note: useAuth provides 'logout' (was handleLogout in page.js, check context)
+                        // In page.js it destructured: { logout: handleLogout }.
+                        // In UserProfileCard it destructured: { ... }. 
+                        // Let's check Context.
+                        return null;
+                    }
+                    return res.json();
+                })
                 .then(data => {
-                    if (data.success) {
+                    if (data && data.success) {
                         setExtraInfo(data.data);
                     }
                 })
                 .catch(err => console.error('Failed to fetch student profile:', err));
         }
-    }, [user]);
+    }, [user, logout]);
 
     if (loading) {
         return <UserProfileSkeleton />;
@@ -268,45 +290,52 @@ export default function UserProfileCard({ user, loading }) {
             </div>
 
             {/* Extra Student Profile Data */}
-            {extraInfo && (
-                <div style={{
-                    marginTop: '0px',
-                    borderTop: '1px solid rgba(255,255,255,0.1)',
-                    paddingTop: '20px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '16px'
+            <div style={{
+                marginTop: '0px',
+                borderTop: '1px solid rgba(255,255,255,0.1)',
+                paddingTop: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px'
+            }}>
+                <h3 style={{
+                    color: 'white', fontSize: '0.95rem', fontWeight: 600, margin: 0,
+                    display: 'flex', alignItems: 'center', gap: '8px'
                 }}>
+                    <span style={{ opacity: 0.7 }}>📚</span> ข้อมูลทางวิชาการ
+                </h3>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
+                    <InfoItem icon="🏛️" label="คณะ" value={extraInfo?.faculty} />
+                    <InfoItem icon="⚙️" label="ภาควิชา" value={extraInfo?.department} />
+                    <InfoItem icon="📖" label="หลักสูตร" value={extraInfo?.major} />
+                </div>
+
+                {/* Always show Advisor section */}
+                <>
                     <h3 style={{
-                        color: 'white', fontSize: '0.95rem', fontWeight: 600, margin: 0,
+                        color: 'white', fontSize: '0.95rem', fontWeight: 600, margin: '8px 0 0',
                         display: 'flex', alignItems: 'center', gap: '8px'
                     }}>
-                        <span style={{ opacity: 0.7 }}>📚</span> ข้อมูลทางวิชาการ
+                        <span style={{ opacity: 0.7 }}>👨‍🏫</span> อาจารย์ที่ปรึกษา
                     </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {/* Always show Advisor 1 slot, even if empty */}
+                        <AdvisorItem name={extraInfo?.advisor1 || '—'} index={1} />
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
-                        <InfoItem icon="🏛️" label="คณะ" value={extraInfo.faculty} />
-                        <InfoItem icon="⚙️" label="ภาควิชา" value={extraInfo.department} />
-                        <InfoItem icon="📖" label="หลักสูตร" value={extraInfo.major} />
+                        {/* Show Advisor 2 & 3 only if they exist (to avoid clutter), OR if user specifically wants 3 slots? 
+                            User said "Advisor 1, 2, 3". I will show them if they are non-null OR if they are the requested fields.
+                            Let's show Advisor 2 and 3 if they have data. If the user wants 3 empty slots, they can ask.
+                            But usually Advisor 2/3 are rare. 
+                            Wait, "If cannot fetch... show dash". This implies "If I expect to see it but it's not there".
+                            If the student HAS 2 advisors but API fails, we don't know they have 2. 
+                            So we can only show Dash for Advisor 1 safe bet. 
+                        */}
+                        {extraInfo?.advisor2 && <AdvisorItem name={extraInfo.advisor2} index={2} />}
+                        {extraInfo?.advisor3 && <AdvisorItem name={extraInfo.advisor3} index={3} />}
                     </div>
-
-                    {(extraInfo.advisor1 || extraInfo.advisor2) && (
-                        <>
-                            <h3 style={{
-                                color: 'white', fontSize: '0.95rem', fontWeight: 600, margin: '8px 0 0',
-                                display: 'flex', alignItems: 'center', gap: '8px'
-                            }}>
-                                <span style={{ opacity: 0.7 }}>👨‍🏫</span> อาจารย์ที่ปรึกษา
-                            </h3>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                {extraInfo.advisor1 && <AdvisorItem name={extraInfo.advisor1} index={1} />}
-                                {extraInfo.advisor2 && <AdvisorItem name={extraInfo.advisor2} index={2} />}
-                                {extraInfo.advisor3 && <AdvisorItem name={extraInfo.advisor3} index={3} />}
-                            </div>
-                        </>
-                    )}
-                </div>
-            )}
+                </>
+            </div>
         </div>
     );
 }

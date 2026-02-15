@@ -1,6 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import { getServiceSupabase } from '../../../lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase';
 import { getAuthUser } from '@/lib/auth';
 
 export async function GET() {

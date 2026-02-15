@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import axios from 'axios';
-import { getServiceSupabase } from '../../lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase';
 
 // Mock data for when Supabase is not connected
 const MOCK_NEWS = [

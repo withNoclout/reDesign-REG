@@ -6,12 +6,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useGuest } from '../context/GuestContext';
 import {
-    fadeInUp,
     staggerContainer,
-    staggerItem,
-    TIMING,
-    scaleIn
-} from '../lib/animations';
+    fadeInUp,
+    scaleIn,
+    cardHover,
+    itemVariant
+} from '@/lib/animations';
 import Navbar from '../components/Navbar';
 import GuestBanner from '../components/GuestBanner';
 import UserProfileCard from '../components/UserProfileCard';
@@ -44,19 +44,22 @@ export default function Landing() {
         }
     }, [isAuthenticated, isGuest, authLoading, guestLoading, router]);
 
-    // Fetch Student Info and News
+    // Fetch Student Profile (Consolidated)
     const fetchStudentInfo = useCallback(async () => {
         if (!user || !isAuthenticated) return;
         try {
             setLoadingInfo(true);
-            const response = await fetch('/api/student/info');
+            // Use 'profile' API instead of broken 'info' API
+            const response = await fetch('/api/student/profile');
             const result = await response.json();
 
             if (result.success) {
                 setStudentInfo(result.data);
-            } else if (result.status === 401) {
+            } else if (result.status === 401 || result.code === 'SESSION_EXPIRED') {
                 handleLogout();
             } else {
+                // If profile fails (e.g. 503 partial), we might still have some data?
+                // The API now returns 200 even if partial, unless 500/401.
                 setError(result.message || 'ไม่สามารถดึงข้อมูลได้');
             }
         } catch (err) {
@@ -134,9 +137,19 @@ export default function Landing() {
                 <div className="dashboard-grid">
                     {/* Left Column: Profile Card */}
                     <div className="dashboard-left">
-                        <UserProfileCard user={user} loading={loadingInfo} />
+                        <UserProfileCard user={user} loading={loadingInfo} profileData={studentInfo} />
                         {studentInfo && (
-                            <AcademicInfoCard data={studentInfo} loading={loadingInfo} />
+                            <AcademicInfoCard
+                                data={{
+                                    currentacadyear: studentInfo.currentYear,
+                                    currentsemester: studentInfo.currentSemester,
+                                    enrollacadyear: studentInfo.enrollYear,
+                                    enrollsemester: studentInfo.enrollSemester,
+                                    admitacadyear: studentInfo.admitYear,
+                                    admitsemester: studentInfo.admitSemester
+                                }}
+                                loading={loadingInfo}
+                            />
                         )}
                     </div>
 

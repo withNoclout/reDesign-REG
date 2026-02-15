@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getServiceSupabase } from '../../../lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase';
 import { getAuthUser } from '@/lib/auth';
 import { spawn } from 'child_process';
 import { promises as fs } from 'fs';

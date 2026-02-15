@@ -6,7 +6,7 @@ import { useGuest } from '../context/GuestContext';
 import Navbar from '../components/Navbar';
 import GuestBanner from '../components/GuestBanner';
 import { motion } from 'framer-motion';
-import { fadeInUp } from '../lib/animations';
+import { fadeInUp } from '@/lib/animations';
 import '../globals.css';
 
 export default function SharePage() {

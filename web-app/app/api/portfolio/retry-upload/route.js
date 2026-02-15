@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { spawn } from 'child_process';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { getServiceSupabase } from '../../../lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase';
 import { getAuthUser } from '@/lib/auth';
 
 const UPLOAD_TIMEOUT = 30000; // 30 seconds

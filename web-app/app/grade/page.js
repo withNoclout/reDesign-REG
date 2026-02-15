@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useGuest } from '../context/GuestContext';
 import Navbar from '../components/Navbar';
 import GuestBanner from '../components/GuestBanner';
-import { fadeInUp, staggerContainer, staggerItem } from '../lib/animations';
+import { fadeInUp, staggerContainer, gradeCardVariant } from '@/lib/animations';
 import '../globals.css';
 
 // 🔥 FOR DEMO: Set to true to show ideal grades from image, false for real API

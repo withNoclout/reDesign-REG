@@ -15,7 +15,7 @@ import {
     staggerContainer,
     staggerItem,
     TIMING
-} from '../lib/animations';
+} from '@/lib/animations';
 
 // Menu configuration
 const MENU_ITEMS = [

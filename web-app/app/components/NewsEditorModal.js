@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { scaleIn } from '../lib/animations';
+import { scaleIn } from '@/lib/animations';
 
 export default function NewsEditorModal({ isOpen, onClose, onRefresh }) {
     const [title, setTitle] = useState('');

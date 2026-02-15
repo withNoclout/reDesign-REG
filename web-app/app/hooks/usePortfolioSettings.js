@@ -3,9 +3,13 @@ import { useState, useEffect, useCallback } from 'react';
 
 export function usePortfolioSettings() {
     const [settings, setSettings] = useState({
-        columnCount: 3,
-        gapSize: 'normal',
-        maxWidth: 100 // Percentage
+        mode: 'fixed',
+        fixedConfig: {
+            columnCount: 3,
+            gapSize: 'normal'
+        },
+        customLayout: [],
+        maxItemsPerPage: 12
     });
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -60,6 +64,7 @@ export function usePortfolioSettings() {
         settings,
         isLoading,
         isSaving,
+        setIsLoading,
         updateSetting,
         saveSettings
     };

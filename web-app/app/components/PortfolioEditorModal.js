@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export default function PortfolioEditorModal({ isOpen, onClose, onRefresh }) {
     const [topic, setTopic] = useState('');
+    const [description, setDescription] = useState('');
     const [imageFile, setImageFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
     const [loading, setLoading] = useState(false);

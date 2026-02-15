@@ -5,7 +5,7 @@ import axios from 'axios';
 import sharp from 'sharp';
 import fs from 'fs/promises';
 import path from 'path';
-import { getServiceSupabase } from '../../../lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase';
 import { getAuthUser } from '@/lib/auth';
 
 const BASE_URL = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';

@@ -34,42 +34,104 @@ export default function CustomPortfolioGrid({
     const [currentLayout, setCurrentLayout] = useState(savedLayout || generateLayout());
 
     // Sync items with layout
+    // Sync items with layout
     useEffect(() => {
-        // If we have saved layout, ensure items match
-        // Note: We need to ensure the "addNew" key is present in layout if we manage it there.
-        // Actually, let's treat "addNew" as a separate static child that doesn't need to be saved in the DB layout of *items*, 
-        // BUT RGL needs it in the 'layout' prop to avoid overlapping.
-
-        // We will combine pure Item Layout with the Static Add Button Layout for rendering.
-        // But for saving, we only save Item Layout.
         if (savedLayout) {
-            // Ensure new items get a layout entry
-            const newItems = items.filter(item => !savedLayout.some(l => l.i === item.id.toString()));
-            if (newItems.length > 0) {
-                const newLayoutItems = newItems.map((item, i) => ({
-                    i: item.id.toString(),
-                    x: 0,
-                    y: Infinity, // Put at bottom
-                    w: 4,
-                    h: 4,
-                    minW: 2,
-                    minH: 2
-                }));
-                setCurrentLayout(prev => [...prev, ...newLayoutItems]);
+            // Merge saved layout with current items
+            // If item missing from layout (newly added), add it.
+            // If item in layout but not in items (deleted), RGL handles cleanup or we filter.
+
+            // 1. Identify missing items
+            const currentIds = items.map(i => i.id.toString());
+            const existingLayoutIds = savedLayout.map(l => l.i);
+            const newItems = items.filter(i => !existingLayoutIds.includes(i.id.toString()));
+
+            // 2. Create layout for new items (Append to bottom)
+            const newLayoutItems = newItems.map(item => ({
+                i: item.id.toString(),
+                x: 0,
+                y: Infinity,
+                w: 4,
+                h: 2,
+                minW: 2,
+                minH: 2
+            }));
+
+            // 3. Merge and Enforce Constraints
+            let mergedLayout = [...savedLayout, ...newLayoutItems];
+
+            // Filter out deleted items from layout
+            mergedLayout = mergedLayout.filter(l => currentIds.includes(l.i));
+
+            // *** ENFORCEMENT LOGIC ***
+            // Force First Item (if exists) to match Add Button Size
+            if (items.length > 0) {
+                const firstItemId = items[0].id.toString();
+                mergedLayout = mergedLayout.map(l => {
+                    if (l.i === firstItemId) {
+                        return {
+                            ...l,
+                            w: 4,
+                            h: 2,
+                            minW: 4,
+                            minH: 2,
+                            maxW: 4,
+                            maxH: 2,
+                            isResizable: false // LOCK SIZE
+                        };
+                    }
+                    return l;
+                });
             }
+
+            // Check if layout actually changed to avoid infinite loop
+            // For now, just set it. RGL is robust enough.
+            setCurrentLayout(mergedLayout);
+
         } else {
-            setCurrentLayout(generateLayout());
+            // First Load / Generate
+            const baseLayout = items.map((item, i) => {
+                const isFirst = i === 0;
+                return {
+                    i: item.id.toString(),
+                    x: ((i + 1) * 4) % 12, // +1 to skip Add button slot visually if we want default flow? No, RGL packs.
+                    // Actually, let's just let RGL pack it.
+                    x: (i * 4) % 12,
+                    y: Math.floor(i / 3) * 2,
+                    w: 4,
+                    h: 2,
+                    minW: isFirst ? 4 : 2,
+                    minH: 2,
+                    maxW: isFirst ? 4 : undefined,
+                    maxH: isFirst ? 2 : undefined,
+                    isResizable: !isFirst // Lock first item
+                };
+            });
+            setCurrentLayout(baseLayout);
         }
-    }, [items.length, savedLayout]);
+    }, [items, savedLayout]); // Remove items.length, use items for deep check if needed, but array ref change is enough
 
     // Full Layout includes the Static Add Button
     const fullLayout = useMemo(() => {
         const layoutWithAddBtn = [
-            { i: 'addNew', x: 0, y: 0, w: 4, h: 2, static: true },
-            ...(currentLayout || generateLayout())
+            {
+                i: 'addNew',
+                x: 0,
+                y: 0,
+                w: 4,
+                h: 2,
+                minW: 4,
+                maxW: 4,
+                minH: 2,
+                maxH: 2,
+                static: true, // NEVER MOVE/RESIZE
+                isResizable: false,
+                isDraggable: false
+            },
+            ...(currentLayout || [])
         ];
         return layoutWithAddBtn;
-    }, [currentLayout, items]);
+    }, [currentLayout]);
 
 
     const handleLayoutChange = (layout) => {
@@ -114,7 +176,7 @@ export default function CustomPortfolioGrid({
 
             <ResponsiveGridLayout
                 className="layout"
-                layouts={{ lg: fullLayout }}
+                layouts={{ lg: fullLayout, md: fullLayout, sm: fullLayout }} // Force same layout logic on all standard breakpoints
                 breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
                 cols={cols}
                 rowHeight={150} // Base row height

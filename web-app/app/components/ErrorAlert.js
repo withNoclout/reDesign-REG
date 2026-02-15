@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { shake } from '../lib/animations';
+import { shake } from '@/lib/animations';
 
 /**
  * ErrorAlert Component

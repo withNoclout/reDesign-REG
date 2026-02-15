@@ -194,14 +194,25 @@ export async function POST(request) {
                     data: userData
                 });
 
-                // Store API token in HttpOnly cookie for future proxy calls
+                // Store API token in HttpOnly cookie
                 if (apiData.token) {
                     response.cookies.set('reg_token', apiData.token, {
                         httpOnly: true,
                         secure: process.env.NODE_ENV === 'production',
                         path: '/',
                         sameSite: 'lax',
-                        maxAge: 60 * 55 // ~55 minutes (token expires in ~1hr)
+                        maxAge: 60 * 55 // ~55 minutes
+                    });
+                }
+
+                // Store Student Code in Cookie for Offline/Cache Fallback
+                if (userData.usercode) {
+                    response.cookies.set('std_code', userData.usercode, {
+                        httpOnly: true,
+                        secure: process.env.NODE_ENV === 'production',
+                        path: '/',
+                        sameSite: 'lax',
+                        maxAge: 60 * 60 * 24 * 30 // 30 Days (Persistent for cache)
                     });
                 }
 

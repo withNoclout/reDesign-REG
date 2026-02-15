@@ -7,40 +7,38 @@ import PortfolioEditorModal from './PortfolioEditorModal';
 import CustomPortfolioGrid from './CustomPortfolioGrid';
 
 export default function PortfolioGrid() {
-    const { user } = useAuth();
-    const [items, setItems] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const { user, logout } = useAuth();
 
-    // New Hook Integration
+    // Portfolio Settings Hook
     const {
         settings,
+        isLoading,
+        setIsLoading,
+        isSaving,
         updateSetting,
-        saveSettings,
-        isLoading: isSettingsLoading,
-        isSaving
+        saveSettings
     } = usePortfolioSettings();
 
+    // Local State
+    const [items, setItems] = useState([]);
+    const [retryingItem, setRetryingItem] = useState(null);
     const [showControls, setShowControls] = useState(false);
     const [isManageMode, setIsManageMode] = useState(false);
-    const [retryingItem, setRetryingItem] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
-    // Derived values for layout
-    const columnClass = (() => {
-        const cols = settings.fixedConfig?.columnCount || 3;
-        if (cols === 1) return 'columns-1';
-        if (cols === 2) return 'columns-1 md:columns-2';
-        if (cols === 3) return 'columns-1 md:columns-2 lg:columns-3';
-        if (cols === 4) return 'columns-1 md:columns-2 lg:columns-4';
-        return 'columns-1 md:columns-3 lg:columns-5';
-    })();
+    // Helper Classes
+    const columnClass = `columns-${settings.fixedConfig?.columnCount || 3}`;
+    const gapClass = settings.fixedConfig?.gapSize === 'compact' ? 'gap-1.5' : 'gap-6';
 
-    const gapClass = (settings.fixedConfig?.gapSize || 'normal') === 'compact' ? 'gap-1.5 space-y-1.5' : 'gap-6 space-y-6';
-
-    // FIX: Define fetchContent with useCallback
     const fetchContent = useCallback(async () => {
         try {
             const res = await fetch(`/api/portfolio/content?t=${Date.now()}`);
+
+            if (res.status === 401) {
+                if (logout) logout();
+                return;
+            }
+
             const json = await res.json();
             if (json.success) {
                 setItems(json.data);
@@ -162,14 +160,15 @@ export default function PortfolioGrid() {
 
                             <div className="w-px h-4 bg-white/20"></div>
 
-                            {/* Column Slider (Only for Fixed Mode) */}
+                            {/* Column Slider (Only for Fixed Mode) - Hidden on Mobile */}
                             {!isCustomMode && (
-                                <div className="flex items-center gap-2 pl-2">
+                                <div className="hidden md:flex items-center gap-2 pl-2 border-l border-white/20 ml-2">
                                     <span className="text-xs text-white/50">Cols</span>
                                     <input
                                         type="range"
                                         min="2"
                                         max="5"
+                                        step="1"
                                         value={settings.fixedConfig?.columnCount || 3}
                                         onChange={(e) => updateFixedConfig('columnCount', parseInt(e.target.value))}
                                         className="w-20 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer accent-[#ff5722]"
@@ -210,9 +209,9 @@ export default function PortfolioGrid() {
                     onClick={() => setShowControls(!showControls)}
                     className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${showControls ? 'bg-[#ff5722] text-white' : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'}`}
                 >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <circle cx="12" cy="12" r="3" />
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
                     </svg>
                 </button>
             </div>
@@ -245,7 +244,7 @@ export default function PortfolioGrid() {
                                 animate={{ opacity: item.is_visible === false && !isManageMode ? 0.3 : 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.9 }}
                                 transition={{ delay: index * 0.05 }}
-                                className={`break-inside-avoid ${settings.fixedConfig?.gapSize === 'compact' ? 'mb-1.5 p-3 rounded-xl' : 'mb-6 p-4 rounded-3xl'} group relative bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 ${item.is_visible === false && !isManageMode ? 'grayscale opacity-50' : ''}`}
+                                className={`break-inside-avoid ${settings.fixedConfig?.gapSize === 'compact' ? 'mb-1.5 p-3 rounded-xl' : 'mb-6 p-4 rounded-3xl'} group relative bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-[box-shadow,background-color,border-color] duration-300 hover:shadow-2xl ${item.is_visible === false && !isManageMode ? 'grayscale opacity-50' : ''}`}
                             >
                                 {/* Management Overlays */}
                                 {isManageMode && (

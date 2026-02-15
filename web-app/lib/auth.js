@@ -2,7 +2,7 @@
 import { cookies } from 'next/headers';
 import axios from 'axios';
 
-const BASE_URL = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://reg1.kmutnb.ac.th/regapiweb1/api/th';
 
 /**
  * Retrieves the authenticated user's ID (Student Code or User Code).
