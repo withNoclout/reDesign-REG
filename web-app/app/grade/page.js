@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { useGuest } from '../context/GuestContext';
 import Navbar from '../components/Navbar';
 import GuestBanner from '../components/GuestBanner';
+import GradeSubNav from '../components/GradeSubNav';
 import { fadeInUp, staggerContainer, staggerItem } from '@/lib/animations';
 import '../globals.css';
 
@@ -283,8 +284,9 @@ export default function GradePage() {
                     className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 w-full"
                 >
                     <div>
-                        <h1 className="text-3xl font-bold text-white mb-2 font-prompt">ผลการเรียนรวม</h1>
-                        <p className="text-white/70 font-light">Academic Record</p>
+                        <p className="text-xs text-[#ff5722] uppercase tracking-wider font-light mb-1 font-montserrat">ACADEMIC RECORD</p>
+                        <h1 className="text-3xl font-bold text-white mb-1 font-prompt">ผลการเรียนรวม</h1>
+                        <p className="text-white/50 text-sm font-light">Academic Record</p>
                     </div>
 
                     {/* Summary Card - Only show when we have data */}
@@ -301,6 +303,8 @@ export default function GradePage() {
                         </div>
                     )}
                 </motion.div>
+
+                <GradeSubNav />
 
                 {loading && (
                     <div className="text-center text-white/70 py-10" role="status" aria-live="polite">

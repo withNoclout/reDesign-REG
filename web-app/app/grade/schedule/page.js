@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useGuest } from '../../context/GuestContext';
 import Navbar from '../../components/Navbar';
 import GuestBanner from '../../components/GuestBanner';
+import GradeSubNav from '../../components/GradeSubNav';
 import { fadeInUp, staggerContainer, staggerItem } from '@/lib/animations';
 import '../../globals.css';
 
@@ -342,6 +343,8 @@ export default function SchedulePage() {
                         </div>
                     )}
                 </motion.div>
+
+                <GradeSubNav />
 
                 {/* Loading */}
                 {loading && (
