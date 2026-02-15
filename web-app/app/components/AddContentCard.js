@@ -9,6 +9,10 @@ export default function AddContentCard({ onClick, className = '' }) {
             animate={{ opacity: 1, scale: 1 }}
             className={`group relative aspect-square rounded-2xl overflow-hidden cursor-pointer border-2 border-dashed border-white/20 hover:border-[#ff5722]/50 transition-colors bg-white/5 ${className}`}
             onClick={onClick}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(); } }}
+            role="button"
+            tabIndex={0}
+            aria-label="Add new content to portfolio"
         >
             {/* Background Pattern (CSS Gradient) */}
             <div

@@ -18,10 +18,10 @@ export default function Error({ error, reset }) {
     }, [error]);
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4">
+        <main className="min-h-screen flex items-center justify-center p-4" id="main-content">
             {/* Background */}
-            <div className="bg-image" />
-            <div className="bg-overlay" />
+            <div className="bg-image" aria-hidden="true" />
+            <div className="bg-overlay" aria-hidden="true" />
 
             {/* Error Card */}
             <motion.div
@@ -29,6 +29,8 @@ export default function Error({ error, reset }) {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.3 }}
+                role="alert"
+                aria-live="assertive"
             >
                 {/* Error Icon */}
                 <motion.div
@@ -104,6 +106,6 @@ export default function Error({ error, reset }) {
                     หากปัญหายังคงอยู่ กรุณาติดต่อผู้ดูแลระบบ
                 </p>
             </motion.div>
-        </div>
+        </main>
     );
 }

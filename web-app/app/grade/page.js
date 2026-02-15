@@ -264,9 +264,9 @@ export default function GradePage() {
     }
 
     return (
-        <main className="main-content">
-            <div className="bg-image"></div>
-            <div className="bg-overlay"></div>
+        <main className="main-content" id="main-content">
+            <div className="bg-image" aria-hidden="true"></div>
+            <div className="bg-overlay" aria-hidden="true"></div>
 
             <Navbar activePage="grade" />
 
@@ -283,18 +283,18 @@ export default function GradePage() {
                 >
                     <div>
                         <h1 className="text-3xl font-bold text-white mb-2 font-prompt">ผลการเรียนรวม</h1>
-                        <p className="text-white/60 font-light">Academic Record</p>
+                        <p className="text-white/70 font-light">Academic Record</p>
                     </div>
 
                     {/* Summary Card - Only show when we have data */}
                     {!loading && !error && academicRecord && (
                         <div className="flex gap-4 p-4 rounded-2xl bg-[rgba(255,255,255,0.1)] backdrop-blur-md border border-[rgba(255,255,255,0.15)] shadow-lg">
                             <div className="pr-4 border-r border-white/10">
-                                <p className="text-xs text-white/50 uppercase tracking-wider mb-1">GPAX</p>
+                                <p className="text-xs text-white/70 uppercase tracking-wider mb-1">GPAX</p>
                                 <p className="text-2xl font-bold text-[#4ade80] font-montserrat">{academicRecord.gpax}</p>
                             </div>
                             <div>
-                                <p className="text-xs text-white/50 uppercase tracking-wider mb-1">Credits</p>
+                                <p className="text-xs text-white/70 uppercase tracking-wider mb-1">Credits</p>
                                 <p className="text-2xl font-bold text-white font-montserrat">{academicRecord.totalCredits}</p>
                             </div>
                         </div>
@@ -302,13 +302,13 @@ export default function GradePage() {
                 </motion.div>
 
                 {loading && (
-                    <div className="text-center text-white/50 py-10">
-                        กำลังโหลดข้อมูลผลการเรียน...
+                    <div className="text-center text-white/70 py-10" role="status" aria-live="polite">
+                        <span aria-hidden="true">⏳</span> กำลังโหลดข้อมูลผลการเรียน...
                     </div>
                 )}
 
                 {!loading && error && (
-                    <div className="bg-orange-500/20 text-orange-200 p-4 rounded-xl border border-orange-500/30 mb-4">
+                    <div className="bg-orange-500/20 text-orange-200 p-4 rounded-xl border border-orange-500/30 mb-4" role="alert" aria-live="assertive">
                         ⚠️ {error}
                         <button
                             onClick={() => window.location.reload()}
@@ -322,10 +322,10 @@ export default function GradePage() {
                 {/* Empty State */}
                 {!loading && !error && !academicRecord && (
                     <div className="text-center py-20">
-                        <div className="text-white/50 text-lg mb-4">
+                        <div className="text-white/70 text-lg mb-4">
                             ไม่พบข้อมูลผลการเรียน
                         </div>
-                        <div className="text-white/30 text-sm">
+                        <div className="text-white/60 text-sm">
                             กรุณาติดต่อแอดมินหรือลองใหม่ในภายหลัง
                         </div>
                     </div>
@@ -353,16 +353,16 @@ export default function GradePage() {
                                         </div>
                                         <div>
                                             <h2 className="text-xl font-bold text-white">ภาคการเรียนที่ {term.semester}/{term.year}</h2>
-                                            <p className="text-white/40 text-sm">Semester {term.semester}/{term.year}</p>
+                                            <p className="text-white/70 text-sm">Semester {term.semester}/{term.year}</p>
                                         </div>
                                     </div>
                                     <div className="flex gap-6 mt-4 md:mt-0">
                                         <div className="text-right">
-                                            <p className="text-xs text-white/40 uppercase">GPA</p>
+                                            <p className="text-xs text-white/70 uppercase">GPA</p>
                                             <p className="text-xl font-bold text-white font-montserrat">{term.gpa}</p>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-xs text-white/40 uppercase">Credits</p>
+                                            <p className="text-xs text-white/70 uppercase">Credits</p>
                                             <p className="text-xl font-bold text-white font-montserrat">{term.credits}</p>
                                         </div>
                                     </div>
@@ -373,10 +373,10 @@ export default function GradePage() {
                                     <table className="w-full min-w-[600px] border-collapse">
                                         <thead>
                                             <tr className="border-b border-white/10 text-left">
-                                                <th className="py-3 px-4 text-xs font-semibold text-white/40 uppercase tracking-wider w-[15%]">Code</th>
-                                                <th className="py-3 px-4 text-xs font-semibold text-white/40 uppercase tracking-wider w-[55%]">Subject Name</th>
-                                                <th className="py-3 px-4 text-xs font-semibold text-white/40 uppercase tracking-wider w-[15%] text-center">Credit</th>
-                                                <th className="py-3 px-4 text-xs font-semibold text-white/40 uppercase tracking-wider w-[15%] text-right">Grade</th>
+                                                <th className="py-3 px-4 text-xs font-semibold text-white/70 uppercase tracking-wider w-[15%]">Code</th>
+                                                <th className="py-3 px-4 text-xs font-semibold text-white/70 uppercase tracking-wider w-[55%]">Subject Name</th>
+                                                <th className="py-3 px-4 text-xs font-semibold text-white/70 uppercase tracking-wider w-[15%] text-center">Credit</th>
+                                                <th className="py-3 px-4 text-xs font-semibold text-white/70 uppercase tracking-wider w-[15%] text-right">Grade</th>
                                             </tr>
                                         </thead>
                                         <tbody>

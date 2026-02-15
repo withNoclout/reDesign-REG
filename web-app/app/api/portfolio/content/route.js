@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import axios from 'axios';
@@ -7,6 +6,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { getServiceSupabase } from '@/lib/supabase';
 import { getAuthUser } from '@/lib/auth';
+import { sanitizeStudentCodes } from '@/lib/sanitize';
 
 const BASE_URL = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
 
@@ -14,14 +14,9 @@ const BASE_URL = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
 const BASE_DIR = process.cwd(); // = web-app/
 console.log('[Portfolio API] BASE_DIR:', BASE_DIR);
 
-export async function GET() {
+export async function GET(request) {
     try {
         const userId = await getAuthUser();
-        // Allow public read? Or restricted?
-        // User asked for "Personal Portfolio". So maybe only see own?
-        // But usually portfolio is for others to see?
-        // Let's stick to: "If logged in, see own. If guest...?"
-        // Previous logic was "See Own".
 
         if (!userId) {
             return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
@@ -29,16 +24,58 @@ export async function GET() {
 
         const supabase = getServiceSupabase();
 
-        // Fetch USER'S items only
-        const { data, error } = await supabase
+        // Fetch user's own items
+        const { data: ownItems, error: ownError } = await supabase
             .from('news_items')
             .select('*')
             .eq('created_by', String(userId))
             .order('created_at', { ascending: false });
 
-        if (error) throw error;
+        if (ownError) throw ownError;
 
-        return NextResponse.json({ success: true, data: data });
+        // Fetch items where user is an accepted collaborator
+        const { data: collabRecords } = await supabase
+            .from('portfolio_collaborators')
+            .select('portfolio_id, added_by')
+            .eq('student_code', String(userId))
+            .eq('status', 'accepted');
+
+        let collabItems = [];
+        if (collabRecords && collabRecords.length > 0) {
+            const portfolioIds = collabRecords.map(c => c.portfolio_id);
+            const { data: sharedItems } = await supabase
+                .from('news_items')
+                .select('*')
+                .in('id', portfolioIds)
+                .eq('is_visible', true) // Only show visible items to collaborators
+                .order('created_at', { ascending: false });
+
+            if (sharedItems) {
+                // Add collaboration metadata
+                const addedByMap = Object.fromEntries(
+                    collabRecords.map(c => [c.portfolio_id, c.added_by])
+                );
+                collabItems = sharedItems.map(item => ({
+                    ...item,
+                    is_collaboration: true,
+                    added_by: addedByMap[item.id],
+                }));
+            }
+        }
+
+        // Fetch pending collaboration count
+        const { count: pendingCount } = await supabase
+            .from('portfolio_collaborators')
+            .select('id', { count: 'exact', head: true })
+            .eq('student_code', String(userId))
+            .eq('status', 'pending');
+
+        return NextResponse.json({
+            success: true,
+            data: ownItems || [],
+            collaborations: collabItems,
+            pending_count: pendingCount || 0,
+        });
     } catch (error) {
         return NextResponse.json(
             { success: false, message: 'Failed to fetch portfolio: ' + error.message },
@@ -170,6 +207,42 @@ export async function POST(request) {
         }
 
         console.log('[Portfolio API] Success!');
+
+        // 4. Save collaborators if provided
+        const collaboratorsJson = formData.get('collaborators');
+        if (collaboratorsJson && data && data[0]?.id) {
+            try {
+                const codes = JSON.parse(collaboratorsJson);
+                const { valid, sanitized, error: valErr } = sanitizeStudentCodes(codes);
+
+                if (valid && sanitized.length > 0) {
+                    // Filter out self-tagging
+                    const filtered = sanitized.filter(code => code !== String(userId));
+
+                    if (filtered.length > 0) {
+                        // Allow adding any student code — even if not yet in user_directory.
+                        // When that student logs in, their info will be upserted and the link activates.
+                        const collabRows = filtered.map(code => ({
+                            portfolio_id: data[0].id,
+                            student_code: code,
+                            added_by: String(userId),
+                            status: 'pending',
+                        }));
+
+                        const { error: collabErr } = await supabase
+                            .from('portfolio_collaborators')
+                            .upsert(collabRows, { onConflict: 'portfolio_id,student_code' });
+
+                        if (collabErr) {
+                            console.warn('[Portfolio API] Collaborator insert warning:', collabErr.message);
+                        }
+                    }
+                }
+            } catch (collabParseErr) {
+                console.warn('[Portfolio API] Collaborators parse error (non-blocking):', collabParseErr.message);
+            }
+        }
+
         return NextResponse.json({ success: true, data: data });
 
     } catch (error) {

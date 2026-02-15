@@ -49,3 +49,7 @@ ui-ux-skill/
 
 # Disabled files (kept for reference)
 *.disabled
+
+# Application logs and user uploads
+web-app/logs/
+web-app/public/uploads/

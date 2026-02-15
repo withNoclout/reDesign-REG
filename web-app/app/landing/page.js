@@ -116,9 +116,9 @@ export default function Landing() {
     }
 
     return (
-        <main className="main-content">
-            <div className="bg-image"></div>
-            <div className="bg-overlay"></div>
+        <main className="main-content" id="main-content">
+            <div className="bg-image" aria-hidden="true"></div>
+            <div className="bg-overlay" aria-hidden="true"></div>
 
             {/* Navbar */}
             <Navbar activePage="profile" />

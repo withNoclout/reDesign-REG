@@ -1,34 +1,15 @@
 import { NextResponse } from 'next/server';
 import axios from 'axios';
 import crypto from 'crypto';
+import { createRateLimiter, getClientIp } from '@/lib/rateLimit';
+import { getServiceSupabase } from '@/lib/supabase';
 
-// Rate limiting storage (in-memory for prototype, should use Redis in production)
-const rateLimitStore = new Map();
-const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
-const MAX_ATTEMPTS = 5;
-
-function checkRateLimit(ip) {
-    const now = Date.now();
-    const attempts = rateLimitStore.get(ip) || { count: 0, resetTime: now + RATE_LIMIT_WINDOW };
-
-    if (now > attempts.resetTime) {
-        // Reset if window expired
-        rateLimitStore.set(ip, { count: 0, resetTime: now + RATE_LIMIT_WINDOW });
-        return { allowed: true, attempts: 0, resetTime: now + RATE_LIMIT_WINDOW };
-    }
-
-    if (attempts.count >= MAX_ATTEMPTS) {
-        return { allowed: false, attempts: attempts.count, resetTime: attempts.resetTime };
-    }
-
-    return { allowed: true, attempts: attempts.count, resetTime: attempts.resetTime };
-}
-
-function incrementRateLimit(ip) {
-    const attempts = rateLimitStore.get(ip) || { count: 0, resetTime: Date.now() + RATE_LIMIT_WINDOW };
-    attempts.count++;
-    rateLimitStore.set(ip, attempts);
-}
+// Shared rate limiter instance for login (5 attempts per 15 minutes)
+const loginLimiter = createRateLimiter({
+    namespace: 'login',
+    maxAttempts: 5,
+    windowMs: 15 * 60 * 1000,
+});
 
 function generateSecureToken() {
     const array = new Uint8Array(32);
@@ -58,14 +39,12 @@ export async function POST(request) {
         }
 
         // Get client IP for rate limiting
-        const ip = request.headers.get('x-forwarded-for') ||
-            request.headers.get('x-real-ip') ||
-            'unknown';
+        const ip = getClientIp(request);
 
         // Check rate limit
-        const rateLimit = checkRateLimit(ip);
+        const rateLimit = loginLimiter.check(ip);
         if (!rateLimit.allowed) {
-            const minutesLeft = Math.ceil((rateLimit.resetTime - Date.now()) / 60000);
+            const minutesLeft = Math.ceil(rateLimit.retryAfterMs / 60000);
             return NextResponse.json(
                 {
                     success: false,
@@ -225,11 +204,29 @@ export async function POST(request) {
                     });
                 }
 
+                // Upsert user_directory for searchable user directory
+                if (userData.usercode) {
+                    try {
+                        const supabase = getServiceSupabase();
+                        await supabase.from('user_directory').upsert({
+                            user_code: userData.usercode,
+                            name_th: userData.username || '',
+                            name_en: userData.usernameeng || '',
+                            email: userData.email || '',
+                            faculty: '',
+                            avatar_url: userData.img || '',
+                            last_login: new Date().toISOString(),
+                        }, { onConflict: 'user_code' });
+                    } catch (upsertErr) {
+                        console.warn('[API] user_directory upsert failed (non-blocking):', upsertErr.message);
+                    }
+                }
+
                 return response;
             } else {
                 console.warn('[API] LoginAD non-200 status:', loginResponse.status, loginResponse.data);
-                incrementRateLimit(ip);
-                const remainingAttempts = MAX_ATTEMPTS - rateLimit.attempts - 1;
+                loginLimiter.increment(ip);
+                const remainingAttempts = rateLimit.remaining - 1;
 
                 // Server returns 404 for auth failures (with {result: "..."})
                 // Also handle standard 401
@@ -272,9 +269,9 @@ export async function POST(request) {
         // if (apiResponse && apiResponse.status === 200) { ... }
 
         // Increment rate limit on failed attempt
-        incrementRateLimit(ip);
+        loginLimiter.increment(ip);
 
-        const remainingAttempts = MAX_ATTEMPTS - rateLimit.attempts - 1;
+        const remainingAttempts = rateLimit.remaining - 1;
         const warningMessage = remainingAttempts > 0
             ? `รหัสผู้ใช้หรือรหัสผ่านไม่ถูกต้อง (คงเหลือ ${remainingAttempts} ครั้ง)`
             : 'รหัสผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';

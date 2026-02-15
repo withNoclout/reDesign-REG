@@ -7,7 +7,7 @@ import ToggleSwitch from '../components/ToggleSwitch';
 import ShareLinkBox from '../components/ShareLinkBox';
 import FailedUploadsBanner from '../components/FailedUploadsBanner';
 import { motion } from 'framer-motion';
-import { fadeInUp } from '../lib/animations';
+import { fadeInUp } from '@/lib/animations';
 import '../globals.css';
 
 const MENU_ITEMS = [
@@ -99,7 +99,7 @@ export default function PortfolioSettings() {
     };
 
     return (
-        <main className="main-content min-h-screen bg-[#0f172a]">
+        <main className="main-content min-h-screen bg-[#0f172a]" id="main-content">
             {/* Failed Uploads Banner */}
             <FailedUploadsBanner onRetryAll={() => window.location.reload()} />
 

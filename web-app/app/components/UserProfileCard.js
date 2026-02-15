@@ -147,6 +147,10 @@ export default function UserProfileCard({ user, loading, profileData }) {
                     onMouseEnter={() => setIsHovered(true)}
                     onMouseLeave={() => setIsHovered(false)}
                     onClick={handleProfileClick}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleProfileClick(); } }}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={isVerified ? 'เปลี่ยนรูปโปรไฟล์' : 'รูปโปรไฟล์ (ต้องยืนยันตัวตนก่อน)'}
                 >
                     <div style={{
                         width: '100%', height: '100%',
@@ -210,7 +214,7 @@ export default function UserProfileCard({ user, loading, profileData }) {
                                 {user.name || user.username || 'N/A'}
                             </h2>
                             <p style={{
-                                color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.85rem',
+                                color: 'rgba(255, 255, 255, 0.75)', fontSize: '0.85rem',
                                 margin: '2px 0 0', fontFamily: 'Montserrat, sans-serif',
                             }}>
                                 {user.nameeng || user.usernameeng || ''}
@@ -224,11 +228,11 @@ export default function UserProfileCard({ user, loading, profileData }) {
                                 style={{
                                     background: 'rgba(255,255,255,0.1)',
                                     border: 'none', borderRadius: '4px',
-                                    color: 'rgba(255,255,255,0.6)',
+                                    color: 'rgba(255,255,255,0.75)',
                                     fontSize: '10px', padding: '2px 6px',
                                     cursor: 'pointer', marginLeft: '8px'
                                 }}
-                                title="Reset to original photo"
+                                aria-label="Reset to original profile photo"
                             >
                                 Reset
                             </button>

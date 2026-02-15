@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import StudentSearchInput from './StudentSearchInput';
 
 export default function PortfolioEditorModal({ isOpen, onClose, onRefresh }) {
     const [topic, setTopic] = useState('');
@@ -11,6 +12,7 @@ export default function PortfolioEditorModal({ isOpen, onClose, onRefresh }) {
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState(null);
+    const [selectedStudents, setSelectedStudents] = useState([]);
     const fileInputRef = useRef(null);
 
     const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -101,8 +103,11 @@ export default function PortfolioEditorModal({ isOpen, onClose, onRefresh }) {
         try {
             const formData = new FormData();
             formData.append('description', description);
-            formData.append('topic', topic); // Add topic to formData
+            formData.append('topic', topic);
             if (imageFile) formData.append('image', imageFile);
+            if (selectedStudents.length > 0) {
+                formData.append('collaborators', JSON.stringify(selectedStudents.map(s => s.user_code)));
+            }
 
             const res = await fetch('/api/portfolio/content', {
                 method: 'POST',
@@ -116,6 +121,7 @@ export default function PortfolioEditorModal({ isOpen, onClose, onRefresh }) {
                 setDescription('');
                 setImageFile(null);
                 setPreviewUrl(null);
+                setSelectedStudents([]);
                 setLoading(false);
 
                 // If there's a temp file, trigger upload
@@ -145,8 +151,8 @@ export default function PortfolioEditorModal({ isOpen, onClose, onRefresh }) {
     const UploadNotification = () => {
         if (!uploading) return null;
         return (
-            <div className="fixed bottom-6 left-6 z-[200] bg-[#0f172a] border border-[#ff5722]/50 rounded-xl px-6 py-4 shadow-2xl flex items-center gap-3 animate-pulse">
-                <div className="w-6 h-6 border-2 border-[#ff5722] border-t-transparent rounded-full animate-spin"></div>
+            <div className="fixed bottom-6 left-6 z-[200] bg-[#0f172a] border border-[#ff5722]/50 rounded-xl px-6 py-4 shadow-2xl flex items-center gap-3 animate-pulse" role="status" aria-live="polite">
+                <div className="w-6 h-6 border-2 border-[#ff5722] border-t-transparent rounded-full animate-spin" aria-hidden="true"></div>
                 <div className="text-white font-medium">กำลังอัพโหลดภาพ...</div>
             </div>
         );
@@ -190,6 +196,10 @@ export default function PortfolioEditorModal({ isOpen, onClose, onRefresh }) {
                                 {/* Image Upload Area */}
                                 <div
                                     onClick={() => fileInputRef.current?.click()}
+                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-label="Click to upload image"
                                     className={`relative aspect-video rounded-xl border-2 border-dashed transition-all cursor-pointer overflow-hidden group ${previewUrl ? 'border-transparent' : 'border-white/20 hover:border-[#ff5722]'
                                         }`}
                                 >
@@ -242,6 +252,17 @@ export default function PortfolioEditorModal({ isOpen, onClose, onRefresh }) {
                                                         className="w-full bg-transparent text-white/90 focus:outline-none min-h-[100px] resize-none placeholder-white/30 leading-relaxed font-light"
                                                         placeholder="รายละเอียด..."
                                                         required
+                                                    />
+                                                </td>
+                                            </tr>
+                                            <tr className="border-t border-white/10">
+                                                <td className="py-2 pr-4 align-top">
+                                                    <label className="text-white/70 text-xs font-medium pt-2 block uppercase tracking-wider">Related Students</label>
+                                                </td>
+                                                <td className="py-2">
+                                                    <StudentSearchInput
+                                                        selectedStudents={selectedStudents}
+                                                        onStudentsChange={setSelectedStudents}
                                                     />
                                                 </td>
                                             </tr>

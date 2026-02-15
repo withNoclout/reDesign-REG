@@ -6,6 +6,121 @@ import AddContentCard from './AddContentCard';
 import PortfolioEditorModal from './PortfolioEditorModal';
 import CustomPortfolioGrid from './CustomPortfolioGrid';
 
+function PendingTagsBanner({ count, userId, onRespond }) {
+    const [tags, setTags] = useState([]);
+    const [expanded, setExpanded] = useState(false);
+    const [responding, setResponding] = useState(null);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (!expanded || !userId) return;
+        setLoading(true);
+        fetch('/api/portfolio/collaborator')
+            .then(res => res.json())
+            .then(json => {
+                if (json.success && json.data?.tags) {
+                    setTags(json.data.tags);
+                }
+            })
+            .catch(console.error)
+            .finally(() => setLoading(false));
+    }, [expanded, userId]);
+
+    const handleRespond = async (portfolioId, action) => {
+        setResponding(portfolioId);
+        try {
+            const res = await fetch('/api/portfolio/collaborator', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ portfolio_id: portfolioId, action }),
+            });
+            const json = await res.json();
+            if (json.success) {
+                setTags(prev => prev.filter(t => t.portfolio_id !== portfolioId));
+                onRespond && onRespond();
+            }
+        } catch (err) {
+            console.error('Respond error:', err);
+        } finally {
+            setResponding(null);
+        }
+    };
+
+    if (count === 0) return null;
+
+    return (
+        <div className="mb-4 mx-4">
+            <button
+                onClick={() => setExpanded(!expanded)}
+                className="w-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-xl px-4 py-3 flex items-center justify-between text-left transition-all hover:border-blue-500/40"
+                aria-expanded={expanded}
+            >
+                <div className="flex items-center gap-2">
+                    <span className="text-lg">🏷️</span>
+                    <span className="text-white/90 text-sm font-medium">
+                        {count} pending collaboration {count > 1 ? 'tags' : 'tag'}
+                    </span>
+                </div>
+                <span className="text-white/40 text-xs">{expanded ? '▲' : '▼'}</span>
+            </button>
+
+            {/* Expanded tag list */}
+            {expanded && (
+                <div className="mt-2 bg-black/40 backdrop-blur-md border border-white/10 rounded-xl overflow-hidden">
+                    {loading ? (
+                        <div className="p-4 text-center text-white/50 text-sm">กำลังโหลด...</div>
+                    ) : tags.length === 0 ? (
+                        <div className="p-4 text-center text-white/50 text-sm">ไม่มีคำเชิญที่รอดำเนินการ</div>
+                    ) : (
+                        tags.map((tag) => (
+                            <div key={tag.id} className="flex items-center gap-3 px-4 py-3 border-b border-white/5 last:border-b-0">
+                                {/* Portfolio thumbnail */}
+                                <div className="w-12 h-12 rounded-lg bg-white/5 overflow-hidden flex-shrink-0">
+                                    {tag.portfolio?.image_url ? (
+                                        <img src={tag.portfolio.image_url} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-white/20 text-lg">📄</div>
+                                    )}
+                                </div>
+
+                                {/* Info */}
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-sm text-white/90 font-medium truncate">
+                                        {tag.portfolio?.topic || tag.portfolio?.description || 'Portfolio item'}
+                                    </div>
+                                    <div className="text-xs text-white/50">
+                                        เพิ่มโดย {tag.added_by_info?.name_th || tag.added_by_info?.name_en || tag.added_by}
+                                    </div>
+                                </div>
+
+                                {/* Action buttons */}
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                    <button
+                                        onClick={() => handleRespond(tag.portfolio_id, 'accepted')}
+                                        disabled={responding === tag.portfolio_id}
+                                        className="px-3 py-1.5 bg-green-500/20 hover:bg-green-500 text-green-400 hover:text-white border border-green-500/30 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
+                                        aria-label="Accept collaboration"
+                                    >
+                                        ✓ ยอมรับ
+                                    </button>
+                                    <button
+                                        onClick={() => handleRespond(tag.portfolio_id, 'rejected')}
+                                        disabled={responding === tag.portfolio_id}
+                                        className="px-3 py-1.5 bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
+                                        aria-label="Reject collaboration"
+                                    >
+                                        ✕ ปฏิเสธ
+                                    </button>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
 export default function PortfolioGrid() {
     const { user, logout } = useAuth();
 
@@ -21,6 +136,8 @@ export default function PortfolioGrid() {
 
     // Local State
     const [items, setItems] = useState([]);
+    const [collaborations, setCollaborations] = useState([]);
+    const [pendingCount, setPendingCount] = useState(0);
     const [retryingItem, setRetryingItem] = useState(null);
     const [showControls, setShowControls] = useState(false);
     const [isManageMode, setIsManageMode] = useState(false);
@@ -42,6 +159,8 @@ export default function PortfolioGrid() {
             const json = await res.json();
             if (json.success) {
                 setItems(json.data);
+                setCollaborations(json.collaborations || []);
+                setPendingCount(json.pending_count || 0);
             }
         } catch (err) {
             console.error('Failed to fetch portfolio:', err);
@@ -123,6 +242,11 @@ export default function PortfolioGrid() {
 
     return (
         <section className="relative pt-0">
+            {/* Pending Collaboration Tags Banner */}
+            {pendingCount > 0 && (
+                <PendingTagsBanner count={pendingCount} userId={user?.usercode} onRespond={fetchContent} />
+            )}
+
             {/* View Controls (Absolute Top Right) */}
             <div className="absolute -top-12 right-4 z-20 flex items-center gap-2">
                 <AnimatePresence>
@@ -163,7 +287,7 @@ export default function PortfolioGrid() {
                             {/* Column Slider (Only for Fixed Mode) - Hidden on Mobile */}
                             {!isCustomMode && (
                                 <div className="hidden md:flex items-center gap-2 pl-2 border-l border-white/20 ml-2">
-                                    <span className="text-xs text-white/50">Cols</span>
+                                    <span className="text-xs text-white/70">Cols</span>
                                     <input
                                         type="range"
                                         min="2"
@@ -207,6 +331,8 @@ export default function PortfolioGrid() {
 
                 <button
                     onClick={() => setShowControls(!showControls)}
+                    aria-label={showControls ? 'ปิดการตั้งค่า Portfolio' : 'เปิดการตั้งค่า Portfolio'}
+                    aria-expanded={showControls}
                     className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${showControls ? 'bg-[#ff5722] text-white' : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'}`}
                 >
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -237,7 +363,7 @@ export default function PortfolioGrid() {
 
                     {/* Content Items */}
                     <AnimatePresence mode='popLayout'>
-                        {items.slice(0, settings.maxItemsPerPage || 12).map((item, index) => {
+                        {[...items, ...collaborations].slice(0, settings.maxItemsPerPage || 12).map((item, index) => {
                             // First item is 33% width to match Add Button
                             const isFirstItem = index === 0;
                             // Dynamic Column Span Calculation based on Slider
@@ -314,9 +440,16 @@ export default function PortfolioGrid() {
                                     )}
 
                                     {/* Status Badges */}
-                                    {!item.uploaded_to_supabase && (
+                                    {!item.uploaded_to_supabase && !item.is_collaboration && (
                                         <div className="absolute top-3 right-3 bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg z-10 backdrop-blur-md bg-opacity-90">
                                             Upload Pending
+                                        </div>
+                                    )}
+
+                                    {/* Collaboration Badge */}
+                                    {item.is_collaboration && (
+                                        <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white/90 px-3 py-1 rounded-full text-xs font-medium shadow-lg z-10 border border-white/10 flex items-center gap-1.5">
+                                            🤝 Shared with you
                                         </div>
                                     )}
                                 </div>
@@ -338,13 +471,20 @@ export default function PortfolioGrid() {
 
                                     {/* Metadata & Actions */}
                                     <div className='flex items-center justify-between border-t border-white/5 pt-3'>
-                                        <span className="text-white/40 text-xs font-light">
-                                            {new Date(item.created_at).toLocaleDateString('th-TH', {
-                                                year: 'numeric',
-                                                month: 'short',
-                                                day: 'numeric'
-                                            })}
-                                        </span>
+                                        <div className="flex flex-col gap-0.5">
+                                            <span className="text-white/70 text-xs font-light">
+                                                {new Date(item.created_at).toLocaleDateString('th-TH', {
+                                                    year: 'numeric',
+                                                    month: 'short',
+                                                    day: 'numeric'
+                                                })}
+                                            </span>
+                                            {item.is_collaboration && item.added_by && (
+                                                <span className="text-white/40 text-[10px]">
+                                                    Added by: {item.added_by}
+                                                </span>
+                                            )}
+                                        </div>
 
                                         {/* Retry Button */}
                                         {!item.uploaded_to_supabase && item.temp_path && (
