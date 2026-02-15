@@ -402,12 +402,12 @@ export default function SchedulePage() {
                             variants={staggerItem}
                             className="hidden md:block bg-[rgba(255,255,255,0.06)] backdrop-blur-xl border border-[rgba(255,255,255,0.1)] rounded-3xl overflow-hidden shadow-2xl"
                         >
-                            <div className="overflow-x-auto">
-                                <table className="w-full border-collapse">
+                            <div>
+                                <table className="w-full border-collapse table-fixed">
                                     {/* Time header */}
                                     <thead>
                                         <tr>
-                                            <th className="sticky left-0 z-10 bg-[rgba(20,20,30,0.95)] backdrop-blur-xl p-3 text-xs text-white/50 uppercase tracking-wider font-light text-center border-b border-r border-[rgba(255,255,255,0.06)]" style={{ minWidth: '80px' }}>
+                                            <th className="sticky left-0 z-10 bg-[rgba(20,20,30,0.95)] backdrop-blur-xl p-3 text-xs text-white/50 uppercase tracking-wider font-light text-center border-b border-r border-[rgba(255,255,255,0.06)]" style={{ width: '80px' }}>
                                                 วัน
                                             </th>
                                             {timeSlots.map((slot) => (
