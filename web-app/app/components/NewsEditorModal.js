@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { scaleIn } from '@/lib/animations';
+import { CameraIcon } from './Icons';
 
 export default function NewsEditorModal({ isOpen, onClose, onRefresh }) {
     const [title, setTitle] = useState('');
@@ -138,7 +139,7 @@ export default function NewsEditorModal({ isOpen, onClose, onRefresh }) {
                                         </div>
                                     ) : (
                                         <div className="py-4 text-white/40">
-                                            <span className="block text-2xl mb-2">📷</span>
+                                            <span className="block text-2xl mb-2"><CameraIcon size={28} /></span>
                                             <span>คลิกเพื่อเลือกรูปภาพ</span>
                                         </div>
                                     )}

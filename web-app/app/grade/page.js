@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { LockIcon, AlertTriangleIcon, ClockIcon } from '../components/Icons';
 import { useAuth } from '../context/AuthContext';
 import { useGuest } from '../context/GuestContext';
 import Navbar from '../components/Navbar';
@@ -254,7 +255,7 @@ export default function GradePage() {
                 <div className="bg-overlay"></div>
                 <div className="flex items-center justify-center min-h-screen">
                     <div className="text-white text-center">
-                        <div className="text-6xl mb-4">🔒</div>
+                        <div className="text-6xl mb-4"><LockIcon size={64} /></div>
                         <h1 className="text-2xl font-bold mb-2">ไม่มีสิทธิ์เข้าถึง</h1>
                         <p className="text-white/60">คุณไม่ได้รับอนุญาตให้ดูหน้านี้</p>
                     </div>
@@ -303,13 +304,13 @@ export default function GradePage() {
 
                 {loading && (
                     <div className="text-center text-white/70 py-10" role="status" aria-live="polite">
-                        <span aria-hidden="true">⏳</span> กำลังโหลดข้อมูลผลการเรียน...
+                        <span aria-hidden="true"><ClockIcon size={16} /></span> กำลังโหลดข้อมูลผลการเรียน...
                     </div>
                 )}
 
                 {!loading && error && (
                     <div className="bg-orange-500/20 text-orange-200 p-4 rounded-xl border border-orange-500/30 mb-4" role="alert" aria-live="assertive">
-                        ⚠️ {error}
+                        <AlertTriangleIcon size={16} className="inline mr-1" /> {error}
                         <button
                             onClick={() => window.location.reload()}
                             className="mt-3 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors"

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { GraduationCapIcon, CalendarIcon, BuildingIcon, CogIcon, IdCardIcon, MailIcon, BookOpenIcon, BookIcon, UserCheckIcon } from './Icons';
 
 export default function UserProfileCard({ user, loading, profileData }) {
     const { updateProfileImage, isVerified, connectGoogleDrive, logout } = useAuth();
@@ -287,10 +288,10 @@ export default function UserProfileCard({ user, loading, profileData }) {
                 gridTemplateColumns: '1fr 1fr',
                 gap: '12px',
             }}>
-                <InfoItem icon="🆔" label="รหัสนักศึกษา" value={user.usercode} mono />
-                <InfoItem icon="📧" label="อีเมล" value={user.email} />
-                <InfoItem icon="🎓" label="บทบาท" value={formatRole(user.role)} />
-                <InfoItem icon="📅" label="วันรายงานตัว" value={formatDate(user.reportdate)} />
+                <InfoItem icon={<IdCardIcon size={14} />} label="รหัสนักศึกษา" value={user.usercode} mono />
+                <InfoItem icon={<MailIcon size={14} />} label="อีเมล" value={user.email} />
+                <InfoItem icon={<GraduationCapIcon size={14} />} label="บทบาท" value={formatRole(user.role)} />
+                <InfoItem icon={<CalendarIcon size={14} />} label="วันรายงานตัว" value={formatDate(user.reportdate)} />
             </div>
 
             {/* Extra Student Profile Data */}
@@ -306,13 +307,13 @@ export default function UserProfileCard({ user, loading, profileData }) {
                     color: 'white', fontSize: '0.95rem', fontWeight: 600, margin: 0,
                     display: 'flex', alignItems: 'center', gap: '8px'
                 }}>
-                    <span style={{ opacity: 0.7 }}>📚</span> ข้อมูลทางวิชาการ
+                    <span style={{ opacity: 0.7 }}><BookOpenIcon size={16} /></span> ข้อมูลทางวิชาการ
                 </h3>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
-                    <InfoItem icon="🏛️" label="คณะ" value={extraInfo?.faculty} />
-                    <InfoItem icon="⚙️" label="ภาควิชา" value={extraInfo?.department} />
-                    <InfoItem icon="📖" label="หลักสูตร" value={extraInfo?.major} />
+                    <InfoItem icon={<BuildingIcon size={14} />} label="คณะ" value={extraInfo?.faculty} />
+                    <InfoItem icon={<CogIcon size={14} />} label="ภาควิชา" value={extraInfo?.department} />
+                    <InfoItem icon={<BookIcon size={14} />} label="หลักสูตร" value={extraInfo?.major} />
                 </div>
 
                 {/* Always show Advisor section */}
@@ -321,7 +322,7 @@ export default function UserProfileCard({ user, loading, profileData }) {
                         color: 'white', fontSize: '0.95rem', fontWeight: 600, margin: '8px 0 0',
                         display: 'flex', alignItems: 'center', gap: '8px'
                     }}>
-                        <span style={{ opacity: 0.7 }}>👨‍🏫</span> อาจารย์ที่ปรึกษา
+                        <span style={{ opacity: 0.7 }}><UserCheckIcon size={16} /></span> อาจารย์ที่ปรึกษา
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {/* Always show Advisor 1 slot, even if empty */}

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { motion } from 'framer-motion';
+import { ShieldIcon, CheckIcon, BookOpenIcon, BombIcon, ZapIcon } from '../components/Icons';
 
 /**
  * Test component that can throw errors on demand
@@ -20,7 +21,7 @@ function BuggyComponent({ shouldThrow }) {
                     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                     <polyline points="22 4 12 14.01 9 11.01" />
                 </svg>
-                <span className="text-white">Component is working correctly! ✅</span>
+                <span className="text-white">Component is working correctly! <CheckIcon size={14} className="inline" /></span>
             </div>
         </div>
     );
@@ -53,7 +54,7 @@ export default function ErrorBoundaryTest() {
                     animate={{ opacity: 1, y: 0 }}
                 >
                     <h1 className="text-3xl font-bold text-white mb-2">
-                        🛡️ Error Boundary Test Page
+                        <ShieldIcon size={20} className="inline mr-2" /> Error Boundary Test Page
                     </h1>
                     <p className="text-gray-300">
                         Test error handling with Next.js error.js and React ErrorBoundary
@@ -81,7 +82,7 @@ export default function ErrorBoundaryTest() {
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
                             >
-                                💣 Throw Component Error
+                                <BombIcon size={16} className="inline mr-1" /> Throw Component Error
                             </motion.button>
                         </div>
 
@@ -96,7 +97,7 @@ export default function ErrorBoundaryTest() {
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
                             >
-                                💥 Throw Page Error
+                                <ZapIcon size={16} className="inline mr-1" /> Throw Page Error
                             </motion.button>
                         </div>
 
@@ -114,7 +115,7 @@ export default function ErrorBoundaryTest() {
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
                             >
-                                ✅ Reset
+                                <CheckIcon size={14} className="inline mr-1" /> Reset
                             </motion.button>
                         </div>
                     </div>
@@ -144,7 +145,7 @@ export default function ErrorBoundaryTest() {
                     transition={{ delay: 0.3 }}
                 >
                     <h2 className="text-xl font-semibold text-white mb-3">
-                        📚 How It Works
+                        <BookOpenIcon size={16} className="inline mr-1" /> How It Works
                     </h2>
                     
                     <div className="space-y-3 text-sm text-gray-300">

@@ -96,3 +96,137 @@ performWorkOnRoot@http://localhost:3000/_next/static/chunks/node_modules_next_di
 performWorkOnRootViaSchedulerTask@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:10230:26
 performWorkUntilDeadline@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_a0e4c7b4._.js:2647:72
 --------------------------------------------------------------------------------
+[2026-02-15T14:05:00.371Z] [INFO] [Schedule API] === Request Start === Has token: false, Token length: 0
+[2026-02-15T14:05:00.372Z] [WARN] [Schedule API] Serving Mock Data. Reason: no token in cookie
+[2026-02-15T14:22:14.090Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-15T14:22:14.091Z] [INFO] [Schedule API] Calling External API: Enroll/Week...
+[2026-02-15T14:22:14.163Z] [INFO] [Schedule API] External API Status: 200
+[2026-02-15T14:22:14.164Z] [INFO] [Schedule API] Response preview: [{"roomcode":null,"weekday":2,"weekcalllong":"จันทร์","row":1,"order":1},{"roomcode":null,"weekday":3,"weekcalllong":"อังคาร","row":1,"order":2},{"roomcode":null,"weekday":4,"weekcalllong":"พุธ","row":1,"order":3},{"roomcode":null,"weekday":5,"weekcalllong":"พฤหัสบดี","row":1,"order":4},{"roomcode":
+[2026-02-15T14:22:14.165Z] [INFO] [Schedule API] Raw data: 7 items
+[2026-02-15T14:22:14.165Z] [DEBUG] [Schedule API] Filtered out: subject_id=undefined, timefrom=undefined
+[2026-02-15T14:22:14.165Z] [DEBUG] [Schedule API] Filtered out: subject_id=undefined, timefrom=undefined
+[2026-02-15T14:22:14.165Z] [DEBUG] [Schedule API] Filtered out: subject_id=undefined, timefrom=undefined
+[2026-02-15T14:22:14.165Z] [DEBUG] [Schedule API] Filtered out: subject_id=undefined, timefrom=undefined
+[2026-02-15T14:22:14.165Z] [DEBUG] [Schedule API] Filtered out: subject_id=undefined, timefrom=undefined
+[2026-02-15T14:22:14.166Z] [DEBUG] [Schedule API] Filtered out: subject_id=undefined, timefrom=undefined
+[2026-02-15T14:22:14.166Z] [DEBUG] [Schedule API] Filtered out: subject_id=undefined, timefrom=undefined
+[2026-02-15T14:22:14.166Z] [INFO] [Schedule API] Final result: 7 raw → 0 valid → 0 safe
+[2026-02-15T14:22:15.831Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-15T14:22:15.832Z] [INFO] [Schedule API] Calling External API: Enroll/Week...
+[2026-02-15T14:22:15.884Z] [INFO] [Schedule API] External API Status: 200
+[2026-02-15T14:22:15.884Z] [INFO] [Schedule API] Response preview: [{"roomcode":null,"weekday":2,"weekcalllong":"จันทร์","row":1,"order":1},{"roomcode":null,"weekday":3,"weekcalllong":"อังคาร","row":1,"order":2},{"roomcode":null,"weekday":4,"weekcalllong":"พุธ","row":1,"order":3},{"roomcode":null,"weekday":5,"weekcalllong":"พฤหัสบดี","row":1,"order":4},{"roomcode":
+[2026-02-15T14:22:15.884Z] [INFO] [Schedule API] Raw data: 7 items
+[2026-02-15T14:22:15.884Z] [DEBUG] [Schedule API] Filtered out: subject_id=undefined, timefrom=undefined
+[2026-02-15T14:22:15.885Z] [DEBUG] [Schedule API] Filtered out: subject_id=undefined, timefrom=undefined
+[2026-02-15T14:22:15.885Z] [DEBUG] [Schedule API] Filtered out: subject_id=undefined, timefrom=undefined
+[2026-02-15T14:22:15.885Z] [DEBUG] [Schedule API] Filtered out: subject_id=undefined, timefrom=undefined
+[2026-02-15T14:22:15.885Z] [DEBUG] [Schedule API] Filtered out: subject_id=undefined, timefrom=undefined
+[2026-02-15T14:22:15.885Z] [DEBUG] [Schedule API] Filtered out: subject_id=undefined, timefrom=undefined
+[2026-02-15T14:22:15.885Z] [DEBUG] [Schedule API] Filtered out: subject_id=undefined, timefrom=undefined
+[2026-02-15T14:22:15.885Z] [INFO] [Schedule API] Final result: 7 raw → 0 valid → 0 safe
+[2026-02-15T14:23:04.711Z] [INFO] [Schedule API] === Request Start === Has token: false, Token length: 0
+[2026-02-15T14:23:04.712Z] [WARN] [Schedule API] Serving Mock Data. Reason: no token in cookie
+[2026-02-15T14:28:14.143Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-15T14:28:14.144Z] [INFO] [Schedule API] Calling Enroll/Timetable + Grade/Showgrade...
+[2026-02-15T14:28:14.321Z] [INFO] [Schedule API] Grade lookup built: 32 courses
+[2026-02-15T14:28:14.321Z] [INFO] [Schedule API] Timetable raw: 1 items
+[2026-02-15T14:28:14.321Z] [INFO] [Schedule API] Timetable preview: [{"roomcode":null,"weekday":5,"tfrom":16,"mfrom":0,"tto":19,"mto":0,"coursecode":"080203908","roomname":"78-223","sectioncode":"5","classid":306109,"row":1}]
+[2026-02-15T14:28:14.322Z] [INFO] [Schedule API] Final: 1 raw → 1 transformed → 1 safe
+[2026-02-15T14:28:21.216Z] [INFO] [Schedule API] === Request Start === Has token: false, Token length: 0
+[2026-02-15T14:28:21.216Z] [WARN] [Schedule API] Serving Mock Data. Reason: no token in cookie
+[2026-02-15T14:28:39.417Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-15T14:28:39.419Z] [INFO] [Schedule API] Calling Enroll/Timetable + Grade/Showgrade...
+[2026-02-15T14:28:39.508Z] [INFO] [Schedule API] Grade lookup built: 32 courses
+[2026-02-15T14:28:39.509Z] [INFO] [Schedule API] Timetable raw: 1 items
+[2026-02-15T14:28:39.509Z] [INFO] [Schedule API] Timetable preview: [{"roomcode":null,"weekday":5,"tfrom":16,"mfrom":0,"tto":19,"mto":0,"coursecode":"080203908","roomname":"78-223","sectioncode":"5","classid":306109,"row":1}]
+[2026-02-15T14:28:39.509Z] [INFO] [Schedule API] Final: 1 raw → 1 transformed → 1 safe
+[2026-02-15T14:32:04.200Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-15T14:32:04.202Z] [INFO] [Schedule API] Calling Enroll/Timetable + Grade/Showgrade...
+[2026-02-15T14:32:04.292Z] [INFO] [Schedule API] Grade lookup built: 32 courses
+[2026-02-15T14:32:04.292Z] [INFO] [Schedule API] Timetable raw: 1 items
+[2026-02-15T14:32:04.292Z] [INFO] [Schedule API] Timetable preview: [{"roomcode":null,"weekday":5,"tfrom":16,"mfrom":0,"tto":19,"mto":0,"coursecode":"080203908","roomname":"78-223","sectioncode":"5","classid":306109,"row":1}]
+[2026-02-15T14:32:04.293Z] [INFO] [Schedule API] Final: 1 raw → 1 transformed → 1 safe
+[2026-02-15T14:42:31.455Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-15T14:42:31.456Z] [INFO] [Schedule API] Calling Enroll/Timetable + Grade/Showgrade...
+[2026-02-15T14:42:31.562Z] [INFO] [Schedule API] Grade lookup built: 32 courses
+[2026-02-15T14:42:31.563Z] [INFO] [Schedule API] Timetable raw: 1 items
+[2026-02-15T14:42:31.563Z] [INFO] [Schedule API] Timetable preview: [{"roomcode":null,"weekday":5,"tfrom":16,"mfrom":0,"tto":19,"mto":0,"coursecode":"080203908","roomname":"78-223","sectioncode":"5","classid":306109,"row":1}]
+[2026-02-15T14:42:31.563Z] [INFO] [Schedule API] Final: 1 raw → 1 transformed → 1 safe
+[2026-02-15T14:42:59.735Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-15T14:42:59.736Z] [INFO] [Schedule API] Calling Enroll/Timetable + Grade/Showgrade...
+[2026-02-15T14:42:59.812Z] [INFO] [Schedule API] Grade lookup built: 32 courses
+[2026-02-15T14:42:59.812Z] [INFO] [Schedule API] Timetable raw: 1 items
+[2026-02-15T14:42:59.813Z] [INFO] [Schedule API] Timetable preview: [{"roomcode":null,"weekday":5,"tfrom":16,"mfrom":0,"tto":19,"mto":0,"coursecode":"080203908","roomname":"78-223","sectioncode":"5","classid":306109,"row":1}]
+[2026-02-15T14:42:59.813Z] [INFO] [Schedule API] Final: 1 raw → 1 transformed → 1 safe
+[2026-02-15T15:08:08.019Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-15T15:08:08.020Z] [INFO] [Schedule API] Calling Enroll/Timetable + Grade/Showgrade...
+[2026-02-15T15:08:08.179Z] [INFO] [Schedule API] Grade lookup built: 32 courses
+[2026-02-15T15:08:08.180Z] [INFO] [Schedule API] Timetable raw: 1 items
+[2026-02-15T15:08:08.180Z] [INFO] [Schedule API] Timetable preview: [{"roomcode":null,"weekday":5,"tfrom":16,"mfrom":0,"tto":19,"mto":0,"coursecode":"080203908","roomname":"78-223","sectioncode":"5","classid":306109,"row":1}]
+[2026-02-15T15:08:08.194Z] [INFO] [Schedule API] Final: 1 raw → 1 transformed → 1 safe
+[2026-02-15T15:17:24.703Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-15T15:17:24.705Z] [INFO] [Schedule API] Calling Enroll/Timetable + Grade/Showgrade...
+[2026-02-15T15:17:24.799Z] [INFO] [Schedule API] Grade lookup built: 32 courses
+[2026-02-15T15:17:24.799Z] [INFO] [Schedule API] Timetable raw: 1 items
+[2026-02-15T15:17:24.800Z] [INFO] [Schedule API] Timetable preview: [{"roomcode":null,"weekday":5,"tfrom":16,"mfrom":0,"tto":19,"mto":0,"coursecode":"080203908","roomname":"78-223","sectioncode":"5","classid":306109,"row":1}]
+[2026-02-15T15:17:24.801Z] [INFO] [Schedule API] Final: 1 raw → 1 transformed → 1 safe
+[2026-02-15T15:17:44.454Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-15T15:17:44.456Z] [INFO] [Schedule API] Calling Enroll/Timetable + Grade/Showgrade...
+[2026-02-15T15:17:44.544Z] [INFO] [Schedule API] Grade lookup built: 32 courses
+[2026-02-15T15:17:44.544Z] [INFO] [Schedule API] Timetable raw: 1 items
+[2026-02-15T15:17:44.545Z] [INFO] [Schedule API] Timetable preview: [{"roomcode":null,"weekday":5,"tfrom":16,"mfrom":0,"tto":19,"mto":0,"coursecode":"080203908","roomname":"78-223","sectioncode":"5","classid":306109,"row":1}]
+[2026-02-15T15:17:44.545Z] [INFO] [Schedule API] Final: 1 raw → 1 transformed → 1 safe
+[2026-02-15T15:44:10.832Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-15T15:44:10.832Z] [INFO] [Schedule API] Calling Enroll/Timetable + Grade/Showgrade...
+[2026-02-15T15:44:10.917Z] [INFO] [Schedule API] Grade lookup built: 32 courses
+[2026-02-15T15:44:10.917Z] [INFO] [Schedule API] Timetable raw: 1 items
+[2026-02-15T15:44:10.917Z] [INFO] [Schedule API] Timetable preview: [{"roomcode":null,"weekday":5,"tfrom":16,"mfrom":0,"tto":19,"mto":0,"coursecode":"080203908","roomname":"78-223","sectioncode":"5","classid":306109,"row":1}]
+[2026-02-15T15:44:10.918Z] [INFO] [Schedule API] Final: 1 raw → 1 transformed → 1 safe
+[2026-02-15T15:44:55.020Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-15T15:44:55.021Z] [INFO] [Schedule API] Calling Enroll/Timetable + Grade/Showgrade...
+[2026-02-15T15:44:55.105Z] [INFO] [Schedule API] Grade lookup built: 32 courses
+[2026-02-15T15:44:55.106Z] [INFO] [Schedule API] Timetable raw: 1 items
+[2026-02-15T15:44:55.106Z] [INFO] [Schedule API] Timetable preview: [{"roomcode":null,"weekday":5,"tfrom":16,"mfrom":0,"tto":19,"mto":0,"coursecode":"080203908","roomname":"78-223","sectioncode":"5","classid":306109,"row":1}]
+[2026-02-15T15:44:55.111Z] [INFO] [Schedule API] Final: 1 raw → 1 transformed → 1 safe
+[2026-02-15T15:45:26.944Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-15T15:45:26.945Z] [INFO] [Schedule API] Calling Enroll/Timetable + Grade/Showgrade...
+[2026-02-15T15:45:27.097Z] [INFO] [Schedule API] Grade lookup built: 32 courses
+[2026-02-15T15:45:27.097Z] [INFO] [Schedule API] Timetable raw: 1 items
+[2026-02-15T15:45:27.097Z] [INFO] [Schedule API] Timetable preview: [{"roomcode":null,"weekday":5,"tfrom":16,"mfrom":0,"tto":19,"mto":0,"coursecode":"080203908","roomname":"78-223","sectioncode":"5","classid":306109,"row":1}]
+[2026-02-15T15:45:27.098Z] [INFO] [Schedule API] Final: 1 raw → 1 transformed → 1 safe
+[2026-02-15T15:47:29.008Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-15T15:47:29.009Z] [INFO] [Schedule API] Calling Enroll/Timetable + Grade/Showgrade...
+[2026-02-15T15:47:29.094Z] [INFO] [Schedule API] Grade lookup built: 32 courses
+[2026-02-15T15:47:29.095Z] [INFO] [Schedule API] Timetable raw: 1 items
+[2026-02-15T15:47:29.096Z] [INFO] [Schedule API] Timetable preview: [{"roomcode":null,"weekday":5,"tfrom":16,"mfrom":0,"tto":19,"mto":0,"coursecode":"080203908","roomname":"78-223","sectioncode":"5","classid":306109,"row":1}]
+[2026-02-15T15:47:29.098Z] [INFO] [Schedule API] Final: 1 raw → 1 transformed → 1 safe
+[2026-02-15T15:51:47.811Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-15T15:51:47.812Z] [INFO] [Schedule API] Calling Enroll/Timetable + Grade/Showgrade...
+[2026-02-15T15:51:47.914Z] [INFO] [Schedule API] Grade lookup built: 32 courses
+[2026-02-15T15:51:47.914Z] [INFO] [Schedule API] Timetable raw: 1 items
+[2026-02-15T15:51:47.915Z] [INFO] [Schedule API] Timetable preview: [{"roomcode":null,"weekday":5,"tfrom":16,"mfrom":0,"tto":19,"mto":0,"coursecode":"080203908","roomname":"78-223","sectioncode":"5","classid":306109,"row":1}]
+[2026-02-15T15:51:47.915Z] [INFO] [Schedule API] Final: 1 raw → 1 transformed → 1 safe
+[2026-02-15T15:52:04.230Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-15T15:52:04.230Z] [INFO] [Schedule API] Calling Enroll/Timetable + Grade/Showgrade...
+[2026-02-15T15:52:04.313Z] [INFO] [Schedule API] Grade lookup built: 32 courses
+[2026-02-15T15:52:04.313Z] [INFO] [Schedule API] Timetable raw: 1 items
+[2026-02-15T15:52:04.313Z] [INFO] [Schedule API] Timetable preview: [{"roomcode":null,"weekday":5,"tfrom":16,"mfrom":0,"tto":19,"mto":0,"coursecode":"080203908","roomname":"78-223","sectioncode":"5","classid":306109,"row":1}]
+[2026-02-15T15:52:04.314Z] [INFO] [Schedule API] Final: 1 raw → 1 transformed → 1 safe
+[2026-02-15T15:58:02.633Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-15T15:58:02.634Z] [INFO] [Schedule API] Calling Enroll/Timetable + Grade/Showgrade...
+[2026-02-15T15:58:02.724Z] [INFO] [Schedule API] Grade lookup built: 32 courses
+[2026-02-15T15:58:02.724Z] [INFO] [Schedule API] Timetable raw: 1 items
+[2026-02-15T15:58:02.724Z] [INFO] [Schedule API] Timetable preview: [{"roomcode":null,"weekday":5,"tfrom":16,"mfrom":0,"tto":19,"mto":0,"coursecode":"080203908","roomname":"78-223","sectioncode":"5","classid":306109,"row":1}]
+[2026-02-15T15:58:02.725Z] [INFO] [Schedule API] Final: 1 raw → 1 transformed → 1 safe
+[2026-02-15T15:59:48.459Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-15T15:59:48.460Z] [INFO] [Schedule API] Calling Enroll/Timetable + Grade/Showgrade...
+[2026-02-15T15:59:48.542Z] [INFO] [Schedule API] Grade lookup built: 32 courses
+[2026-02-15T15:59:48.543Z] [INFO] [Schedule API] Timetable raw: 1 items
+[2026-02-15T15:59:48.543Z] [INFO] [Schedule API] Timetable preview: [{"roomcode":null,"weekday":5,"tfrom":16,"mfrom":0,"tto":19,"mto":0,"coursecode":"080203908","roomname":"78-223","sectioncode":"5","classid":306109,"row":1}]
+[2026-02-15T15:59:48.543Z] [INFO] [Schedule API] Final: 1 raw → 1 transformed → 1 safe
+[2026-02-15T16:02:48.029Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-15T16:02:48.030Z] [INFO] [Schedule API] Calling Schg/Getacadstd...
+[2026-02-15T16:02:48.081Z] [INFO] [Schedule API] Calling Timetable/Timetable/2568/2...
+[2026-02-15T16:02:48.140Z] [INFO] [Schedule API] Decoding gzip-compressed timetable...
+[2026-02-15T16:02:48.141Z] [INFO] [Schedule API] Timetable decoded: 6 courses
+[2026-02-15T16:02:48.141Z] [INFO] [Schedule API] Final: 6 total → 4 scheduled + 2 unscheduled

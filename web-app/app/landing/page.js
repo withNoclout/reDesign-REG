@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { LockIcon } from '../components/Icons';
 import { useAuth } from '../context/AuthContext';
 import { useGuest } from '../context/GuestContext';
 import {
@@ -106,7 +107,7 @@ export default function Landing() {
                 <div className="bg-overlay"></div>
                 <div className="flex items-center justify-center min-h-screen">
                     <div className="text-white text-center">
-                        <div className="text-6xl mb-4">🔒</div>
+                        <div className="text-6xl mb-4"><LockIcon size={64} /></div>
                         <h1 className="text-2xl font-bold mb-2">ไม่มีสิทธิ์เข้าถึง</h1>
                         <p className="text-white/60">คุณไม่ได้รับอนุญาตให้ดูหน้านี้</p>
                     </div>

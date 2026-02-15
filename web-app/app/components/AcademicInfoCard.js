@@ -1,5 +1,7 @@
 'use client';
 
+import { CheckIcon, ClockIcon } from './Icons';
+
 export default function AcademicInfoCard({ data, loading }) {
     if (loading) {
         return <AcademicSkeleton />;
@@ -51,7 +53,9 @@ export default function AcademicInfoCard({ data, loading }) {
                 />
                 <AcadItem
                     label="สถานะลงทะเบียน"
-                    value={data.enrollacadyear === data.currentacadyear ? '✅ เปิดลงทะเบียน' : '⏳ รอเปิด'}
+                    value={data.enrollacadyear === data.currentacadyear
+                        ? <span className="inline-flex items-center gap-1"><CheckIcon size={14} /> เปิดลงทะเบียน</span>
+                        : <span className="inline-flex items-center gap-1"><ClockIcon size={14} /> รอเปิด</span>}
                     isStatus
                 />
             </div>

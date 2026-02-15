@@ -1,10 +1,57 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { usePortfolioSettings } from '../hooks/usePortfolioSettings';
 import AddContentCard from './AddContentCard';
 import PortfolioEditorModal from './PortfolioEditorModal';
 import CustomPortfolioGrid from './CustomPortfolioGrid';
+import { TagIcon, FileTextIcon, SparklesIcon, LinkIcon, UsersIcon } from './Icons';
+
+/**
+ * Smart sort: visible first → more collaborators first → newer first.
+ * Manual mode uses saved order. Newest/oldest sort by created_at.
+ */
+function sortItems(items, collaborations, sortMode, customItemOrder) {
+    const all = [...items, ...collaborations];
+
+    if (sortMode === 'manual' && customItemOrder?.length > 0) {
+        const orderMap = new Map(customItemOrder.map((id, i) => [id, i]));
+        const ordered = [];
+        const unordered = [];
+        for (const item of all) {
+            if (orderMap.has(item.id)) {
+                ordered.push(item);
+            } else {
+                unordered.push(item);
+            }
+        }
+        ordered.sort((a, b) => orderMap.get(a.id) - orderMap.get(b.id));
+        return [...ordered, ...unordered];
+    }
+
+    if (sortMode === 'newest') {
+        return all.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    }
+    if (sortMode === 'oldest') {
+        return all.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    }
+
+    // Default: auto sort
+    return all.sort((a, b) => {
+        // 1. Visible items first
+        const visA = a.is_visible !== false ? 1 : 0;
+        const visB = b.is_visible !== false ? 1 : 0;
+        if (visA !== visB) return visB - visA;
+
+        // 2. More collaborators first
+        const collabA = a.collaborator_count || 0;
+        const collabB = b.collaborator_count || 0;
+        if (collabA !== collabB) return collabB - collabA;
+
+        // 3. Newer first
+        return new Date(b.created_at) - new Date(a.created_at);
+    });
+}
 
 function PendingTagsBanner({ count, userId, onRespond }) {
     const [tags, setTags] = useState([]);
@@ -56,7 +103,7 @@ function PendingTagsBanner({ count, userId, onRespond }) {
                 aria-expanded={expanded}
             >
                 <div className="flex items-center gap-2">
-                    <span className="text-lg">🏷️</span>
+                    <span className="text-lg"><TagIcon size={18} /></span>
                     <span className="text-white/90 text-sm font-medium">
                         {count} pending collaboration {count > 1 ? 'tags' : 'tag'}
                     </span>
@@ -79,7 +126,7 @@ function PendingTagsBanner({ count, userId, onRespond }) {
                                     {tag.portfolio?.image_url ? (
                                         <img src={tag.portfolio.image_url} alt="" className="w-full h-full object-cover" />
                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-white/20 text-lg">📄</div>
+                                        <div className="w-full h-full flex items-center justify-center text-white/20 text-lg"><FileTextIcon size={24} /></div>
                                     )}
                                 </div>
 
@@ -184,12 +231,12 @@ export default function PortfolioGrid() {
             const data = await res.json();
             if (data.success) {
                 await fetchContent();
-                alert('✅ อัพโหลดสำเร็จ');
+                alert('อัพโหลดสำเร็จ');
             } else {
-                alert('❌ อัพโหลดไม่สำเร็จ');
+                alert('อัพโหลดไม่สำเร็จ');
             }
         } catch (error) {
-            alert('❌ เกิดข้อผิดพลาด: ' + error.message);
+            alert('เกิดข้อผิดพลาด: ' + error.message);
         } finally {
             setRetryingItem(null);
         }
@@ -208,7 +255,7 @@ export default function PortfolioGrid() {
             if (!json.success) throw new Error(json.message);
         } catch (err) {
             setItems(prev => prev.map(item => item.id === id ? { ...item, is_visible: currentVisibility } : item));
-            alert('❌ Failed to update visibility');
+            alert('Failed to update visibility');
         }
     };
 
@@ -222,7 +269,7 @@ export default function PortfolioGrid() {
             if (!json.success) throw new Error(json.message);
         } catch (err) {
             setItems(previousItems);
-            alert('❌ Failed to delete item');
+            alert('Failed to delete item');
         }
     };
 
@@ -239,6 +286,17 @@ export default function PortfolioGrid() {
     };
 
     const isCustomMode = settings.mode === 'custom';
+
+    // Sorted items for rendering
+    const sortedItems = useMemo(() => {
+        return sortItems(items, collaborations, settings.sortMode, settings.customItemOrder);
+    }, [items, collaborations, settings.sortMode, settings.customItemOrder]);
+
+    // Save manual order (for drag-to-reorder in Fixed mode)
+    const handleManualReorder = useCallback((newOrder) => {
+        updateSetting('customItemOrder', newOrder);
+        updateSetting('sortMode', 'manual');
+    }, [updateSetting]);
 
     return (
         <section className="relative pt-0">
@@ -317,6 +375,24 @@ export default function PortfolioGrid() {
 
                             <div className="w-px h-4 bg-white/20"></div>
 
+                            {/* Sort Mode */}
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-xs text-white/70">Sort</span>
+                                <select
+                                    value={settings.sortMode || 'auto'}
+                                    onChange={(e) => updateSetting('sortMode', e.target.value)}
+                                    className="bg-white/10 text-white text-xs rounded-md px-2 py-1 border border-white/10 focus:outline-none focus:border-[#ff5722]/50 cursor-pointer appearance-none"
+                                    aria-label="Sort order"
+                                >
+                                    <option value="auto" className="bg-black">Auto</option>
+                                    <option value="newest" className="bg-black">Newest</option>
+                                    <option value="oldest" className="bg-black">Oldest</option>
+                                    <option value="manual" className="bg-black">Manual</option>
+                                </select>
+                            </div>
+
+                            <div className="w-px h-4 bg-white/20"></div>
+
                             {/* Save Button */}
                             <button
                                 onClick={handleSaveSettings}
@@ -345,7 +421,7 @@ export default function PortfolioGrid() {
             {/* Layout Rendering */}
             {isCustomMode ? (
                 <CustomPortfolioGrid
-                    items={items.slice(0, settings.maxItemsPerPage || 12)}
+                    items={sortedItems.slice(0, settings.maxItemsPerPage || 12)}
                     savedLayout={settings.customLayout}
                     onLayoutChange={handleCustomLayoutChange}
                     isManageMode={isManageMode}
@@ -363,7 +439,7 @@ export default function PortfolioGrid() {
 
                     {/* Content Items */}
                     <AnimatePresence mode='popLayout'>
-                        {[...items, ...collaborations].slice(0, settings.maxItemsPerPage || 12).map((item, index) => {
+                        {sortedItems.slice(0, settings.maxItemsPerPage || 12).map((item, index) => {
                             // First item is 33% width to match Add Button
                             const isFirstItem = index === 0;
                             // Dynamic Column Span Calculation based on Slider
@@ -449,7 +525,14 @@ export default function PortfolioGrid() {
                                     {/* Collaboration Badge */}
                                     {item.is_collaboration && (
                                         <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white/90 px-3 py-1 rounded-full text-xs font-medium shadow-lg z-10 border border-white/10 flex items-center gap-1.5">
-                                            🤝 Shared with you
+                                            <LinkIcon size={14} className="inline" /> Shared with you
+                                        </div>
+                                    )}
+
+                                    {/* Collaborator Count Badge (own items) */}
+                                    {!item.is_collaboration && item.collaborator_count > 0 && (
+                                        <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white/90 px-2.5 py-1 rounded-full text-xs font-medium shadow-lg z-10 border border-white/10 flex items-center gap-1">
+                                            <UsersIcon size={14} className="inline" /> {item.collaborator_count}
                                         </div>
                                     )}
                                 </div>

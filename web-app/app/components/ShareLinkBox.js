@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { LightbulbIcon, CheckIcon } from './Icons';
 
 /**
  * ShareLinkBox - Displays generated share link with copy functionality
@@ -24,7 +25,7 @@ export default function ShareLinkBox({ link }) {
 
     return (
         <div className="mt-6 p-4 bg-[rgba(74,222,128,0.1)] border border-[#4ade80]/30 rounded-xl">
-            <p className="text-sm text-[#4ade80] mb-3 font-medium">✓ ลิงก์แชร์พอร์ตโฟลิโอของคุณพร้อมแล้ว!</p>
+            <p className="text-sm text-[#4ade80] mb-3 font-medium"><CheckIcon size={14} className="inline mr-1" /> ลิงก์แชร์พอร์ตโฟลิโอของคุณพร้อมแล้ว!</p>
             <div className="flex gap-2">
                 <input
                     type="text"
@@ -43,7 +44,7 @@ export default function ShareLinkBox({ link }) {
                 </button>
             </div>
             <p className="text-xs text-white/50 mt-2">
-                💡 ลิงก์นี้จะหมดอายุตามที่คุณตั้งค่าไว้
+                <LightbulbIcon size={14} className="inline mr-1" /> ลิงก์นี้จะหมดอายุตามที่คุณตั้งค่าไว้
             </p>
         </div>
     );

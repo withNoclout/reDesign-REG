@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { HeartIcon } from './components/Icons';
 
 const LAST_USERS_KEY = 'reg_last_users';
 const MAX_SAVED_USERS = 3;
@@ -344,7 +345,7 @@ export default function Home() {
                     </form>
 
                     <div className="login-footer">
-                        <p>Powered by <strong>Vision Net</strong> · Redesigned with ❤️</p>
+                        <p>Powered by <strong>Vision Net</strong> · Redesigned with <HeartIcon size={14} className="inline text-red-400" /></p>
                     </div>
                 </div>
             </div>

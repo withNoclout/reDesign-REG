@@ -9,7 +9,9 @@ export function usePortfolioSettings() {
             gapSize: 'normal'
         },
         customLayout: [],
-        maxItemsPerPage: 12
+        maxItemsPerPage: 12,
+        sortMode: 'auto',
+        customItemOrder: [],
     });
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -49,7 +51,7 @@ export function usePortfolioSettings() {
             return true;
         } catch (error) {
             console.error('Failed to save settings:', error);
-            alert('❌ Failed to save settings');
+            alert('Failed to save settings');
             return false;
         } finally {
             setIsSaving(false);

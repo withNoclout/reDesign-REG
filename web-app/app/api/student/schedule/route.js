@@ -5,6 +5,50 @@ import axios from 'axios';
 import { z } from 'zod';
 import fs from 'fs';
 import path from 'path';
+import zlib from 'zlib';
+
+/**
+ * API Route: /api/student/schedule
+ * 
+ * วัตถุประสงค์: ดึงตารางเรียนของนักศึกษาในเทอมปัจจุบัน พร้อมข้อมูลครบถ้วน
+ * 
+ * External API ที่ใช้ (regapiweb1 - API หลักของ reg3.kmutnb.ac.th):
+ * 
+ * 1. Timetable/Timetable/{acadyear}/{semester} - ตารางเรียนครบถ้วน ✅ RECOMMENDED
+ *    - URL: https://reg3.kmutnb.ac.th/regapiweb1/api/th/Timetable/Timetable/2568/2
+ *    - Method: GET
+ *    - Authentication: Bearer token
+ *    - Response Format: { result: "base64-gzip-compressed-json" }
+ *    - Data Encoding: 
+ *      1. JSON → gzip compress → base64 encode
+ *      2. ต้อง decode: base64 → gunzip → JSON
+ *    - Response Fields (after decode):
+ *      * coursecode, coursename (TH), coursenameeng (EN)
+ *      * sectioncode, classid
+ *      * time (HTML format): "<B><FONT COLOR=#5080E0>พ.</FONT></B><FONT>13:00-16:00</FONT>"
+ *      * roomtime: ห้องเรียน
+ *      * classofficer (HTML): ชื่ออาจารย์
+ *      * m_exam, f_exam: วันสอบกลางเทอม/ปลายเทอม
+ *      * creditattempt, courseunit
+ * 
+ * 2. Schg/Getacadstd - ดึงข้อมูลเทอมปัจจุบัน (สำหรับ dynamic acadyear/semester)
+ *    - URL: https://reg4.kmutnb.ac.th/regapiweb2/api/th/Schg/Getacadstd
+ *    - Response: { enrollsemester, enrollacadyear, ... }
+ * 
+ * ⚠️ API เดิมที่ไม่แนะนำ:
+ * - regapiweb2/Enroll/Timetable → ข้อมูลไม่ครบ (มีแค่ 16.7% ของวิชาทั้งหมด)
+ * - ไม่มีชื่อวิชา, ไม่มีชื่ออาจารย์, ไม่มีวันสอบ
+ * 
+ * Logic:
+ * 1. เรียก Schg/Getacadstd → ได้ปีการศึกษา/ภาคเรียนปัจจุบัน
+ * 2. เรียก Timetable/Timetable/{acadyear}/{semester} → ได้ตารางครบถ้วน
+ * 3. Decode: base64 → gunzip → JSON
+ * 4. Parse HTML ใน field "time" → ดึงวัน-เวลาเรียน
+ * 5. Clean HTML tags จาก classofficer, roomtime
+ * 6. Format เป็น schema ที่ frontend ต้องการ
+ * 
+ * Data Coverage: ~66.7% ของวิชาทั้งหมด (ดีกว่า regapiweb2 มาก)
+ */
 
 // Server-side log helper (persists to app.log)
 function serverLog(level, message) {
@@ -23,9 +67,43 @@ function formatTime(hour, minute) {
     return `${String(hour).padStart(2, '0')}:${String(minute || 0).padStart(2, '0')}`;
 }
 
-const BASE_URL = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
+const BASE_URL_V1 = 'https://reg3.kmutnb.ac.th/regapiweb1/api/th';
+const BASE_URL_V2 = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
 
 const agent = new https.Agent({ rejectUnauthorized: false });
+
+// Helper: Decode gzip-compressed base64 response from regapiweb1
+function decodeGzipResponse(base64String) {
+    const compressedBuffer = Buffer.from(base64String, 'base64');
+    const decompressed = zlib.gunzipSync(compressedBuffer);
+    return JSON.parse(decompressed.toString('utf-8'));
+}
+
+// Helper: Parse HTML time format from regapiweb1
+// Example: "<B><FONT COLOR=#5080E0>พ.</FONT></B><FONT>13:00-16:00</FONT>"
+// Returns: { weekday: 4, timefrom: "13:00", timeto: "16:00" }
+function parseTimeHtml(timeHtml) {
+    if (!timeHtml) return { weekday: null, timefrom: null, timeto: null };
+    
+    // Extract day abbreviation (จ, อ, พ, พฤ, ศ, ส)
+    const dayMatch = timeHtml.match(/>([จอพพฤศส])\.?</);
+    const dayMap = { 'จ': 2, 'อ': 3, 'พ': 4, 'พฤ': 5, 'ศ': 6, 'ส': 7, 'อา': 1 };
+    
+    // Extract time range (HH:MM-HH:MM)
+    const timeMatch = timeHtml.match(/(\d{2}:\d{2})-(\d{2}:\d{2})/);
+    
+    return {
+        weekday: dayMatch ? dayMap[dayMatch[1]] : null,
+        timefrom: timeMatch ? timeMatch[1] : null,
+        timeto: timeMatch ? timeMatch[2] : null
+    };
+}
+
+// Helper: Remove HTML tags
+function stripHtml(html) {
+    if (!html) return null;
+    return html.replace(/<[^>]*>/g, '').trim();
+}
 
 // Zod Schema for our normalized schedule item
 const ScheduleItemSchema = z.object({
@@ -75,95 +153,98 @@ export async function GET() {
     };
 
     try {
-        // 1. Fetch Timetable + Grade data in parallel
-        serverLog('INFO', 'Calling Enroll/Timetable + Grade/Showgrade...');
-        const [timetableRes, gradeRes, acadRes] = await Promise.allSettled([
-            axios.get(`${BASE_URL}/Enroll/Timetable`, apiConfig),
-            axios.get(`${BASE_URL}/Grade/Showgrade`, apiConfig),
-            axios.get(`${BASE_URL}/Schg/Getacadstd`, apiConfig)
-        ]);
-
-        // 2. Extract semester info
+        // 1. Get current semester info
+        serverLog('INFO', 'Calling Schg/Getacadstd...');
+        const acadRes = await axios.get(`${BASE_URL_V2}/Schg/Getacadstd`, apiConfig);
+        
         let semester = '2/2568';
-        if (acadRes.status === 'fulfilled' && acadRes.value?.status === 200) {
-            const acad = acadRes.value.data;
+        let acadyear = 2568;
+        let semesterNum = 2;
+        
+        if (acadRes.status === 200 && acadRes.data) {
+            const acad = acadRes.data;
             if (acad.enrollsemester && acad.enrollacadyear) {
                 semester = `${acad.enrollsemester}/${acad.enrollacadyear}`;
+                acadyear = acad.enrollacadyear;
+                semesterNum = acad.enrollsemester;
             }
         }
 
-        // 3. Build course name lookup from Grade/Showgrade
-        const courseNames = {};
-        if (gradeRes.status === 'fulfilled' && gradeRes.value?.status === 200 && Array.isArray(gradeRes.value.data)) {
-            for (const g of gradeRes.value.data) {
-                if (g.coursecode) {
-                    courseNames[g.coursecode] = g.coursename || null;
-                }
-            }
-            serverLog('INFO', `Grade lookup built: ${Object.keys(courseNames).length} courses`);
-        }
+        // 2. Fetch timetable from regapiweb1 (compressed format)
+        serverLog('INFO', `Calling Timetable/Timetable/${acadyear}/${semesterNum}...`);
+        const timetableRes = await axios.get(
+            `${BASE_URL_V1}/Timetable/Timetable/${acadyear}/${semesterNum}`,
+            apiConfig
+        );
 
-        // 4. Process Timetable response
-        if (timetableRes.status !== 'fulfilled' || timetableRes.value?.status !== 200) {
-            const status = timetableRes.status === 'fulfilled' ? timetableRes.value?.status : 'rejected';
-            serverLog('ERROR', `Timetable API failed: ${status}`);
+        if (timetableRes.status !== 200 || !timetableRes.data?.result) {
+            serverLog('ERROR', `Timetable API failed: ${timetableRes.status}`);
             return NextResponse.json({
                 success: false,
                 error: 'Failed to fetch timetable from university',
-                statusCode: status
-            }, { status: typeof status === 'number' ? status : 502 });
+                statusCode: timetableRes.status
+            }, { status: timetableRes.status || 502 });
         }
 
-        const rawData = timetableRes.value.data;
-        serverLog('INFO', `Timetable raw: ${Array.isArray(rawData) ? rawData.length : 'N/A'} items`);
-        serverLog('INFO', `Timetable preview: ${JSON.stringify(rawData)?.substring(0, 300)}`);
+        // 3. Decode gzip-compressed response
+        serverLog('INFO', 'Decoding gzip-compressed timetable...');
+        const rawData = decodeGzipResponse(timetableRes.data.result);
+        
+        serverLog('INFO', `Timetable decoded: ${Array.isArray(rawData) ? rawData.length : 'N/A'} courses`);
 
         if (!Array.isArray(rawData) || rawData.length === 0) {
             serverLog('INFO', 'No timetable data — student may not have enrolled');
             return NextResponse.json({ success: true, data: [], semester });
         }
 
-        // 5. Transform Timetable fields → our schema
+        // 4. Transform regapiweb1 format → our schema
         const transformed = rawData
             .filter(item => {
                 const hasCode = item.coursecode && String(item.coursecode).trim() !== '';
-                const hasTime = item.tfrom != null;
-                if (!hasCode || !hasTime) {
-                    serverLog('DEBUG', `Filtered: coursecode=${item.coursecode}, tfrom=${item.tfrom}`);
+                if (!hasCode) {
+                    serverLog('DEBUG', `Filtered: coursecode=${item.coursecode}`);
                 }
-                return hasCode && hasTime;
+                return hasCode;
             })
             .map(item => {
-                const courseName = courseNames[item.coursecode] || null;
+                const schedule = parseTimeHtml(item.time);
+                const teacherName = stripHtml(item.classofficer);
+                const roomName = stripHtml(item.roomtime);
+                
                 return {
-                    weekday: item.weekday,
-                    timefrom: formatTime(item.tfrom, item.mfrom),
-                    timeto: formatTime(item.tto, item.mto),
+                    weekday: schedule.weekday,
+                    timefrom: schedule.timefrom,
+                    timeto: schedule.timeto,
                     subject_id: String(item.coursecode).trim(),
-                    subject_name_en: courseName,
-                    subject_name_th: null,
+                    subject_name_en: item.coursenameeng || null,
+                    subject_name_th: item.coursename || null,
                     section: item.sectioncode ? String(item.sectioncode) : null,
-                    roomcode: item.roomname || item.roomcode || 'TBA',
-                    teach_name: null
+                    roomcode: roomName || 'TBA',
+                    teach_name: teacherName || null,
+                    // Extra fields (useful for frontend)
+                    credit: item.creditattempt || null,
+                    exam_midterm: item.m_exam ? stripHtml(item.m_exam) : null,
+                    exam_final: item.f_exam ? stripHtml(item.f_exam) : null
                 };
             });
 
-        // 6. Zod validation (filter invalid, don't crash)
-        const safeItems = transformed.filter(item => {
-            const result = ScheduleItemSchema.safeParse(item);
-            if (!result.success) {
-                serverLog('WARN', `Zod rejected: ${JSON.stringify(item)}`);
-                return false;
-            }
-            return true;
-        });
-
-        serverLog('INFO', `Final: ${rawData.length} raw → ${transformed.length} transformed → ${safeItems.length} safe`);
+        // 5. Separate scheduled vs unscheduled courses
+        const scheduledCourses = transformed.filter(item => item.weekday !== null);
+        const unscheduledCourses = transformed.filter(item => item.weekday === null);
+        
+        serverLog('INFO', `Final: ${rawData.length} total → ${scheduledCourses.length} scheduled + ${unscheduledCourses.length} unscheduled`);
 
         return NextResponse.json({
             success: true,
-            data: safeItems,
-            semester
+            data: transformed,  // All courses
+            scheduled: scheduledCourses,  // Courses with time
+            unscheduled: unscheduledCourses,  // Courses without time
+            semester,
+            stats: {
+                total: rawData.length,
+                withSchedule: scheduledCourses.length,
+                withoutSchedule: unscheduledCourses.length
+            }
         });
 
     } catch (error) {

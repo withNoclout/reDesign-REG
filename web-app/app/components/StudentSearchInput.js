@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { UserIcon } from './Icons';
 
 /**
  * StudentSearchInput — Autocomplete search for tagging students.
@@ -228,7 +229,7 @@ export default function StudentSearchInput({ selectedStudents, onStudentsChange 
                                 <img src={student.avatar_url} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
                             ) : (
                                 <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
-                                    <span className="text-xs text-white/70">👤</span>
+                                    <span className="text-xs text-white/70"><UserIcon size={14} /></span>
                                 </div>
                             )}
                             <div className="flex-1 min-w-0">

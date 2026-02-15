@@ -33,6 +33,28 @@ export async function GET(request) {
 
         if (ownError) throw ownError;
 
+        // Fetch collaborator counts for user's own items
+        let collabCountMap = {};
+        if (ownItems && ownItems.length > 0) {
+            const ownIds = ownItems.map(i => i.id);
+            const { data: collabCounts } = await supabase
+                .from('portfolio_collaborators')
+                .select('portfolio_id')
+                .in('portfolio_id', ownIds);
+
+            if (collabCounts) {
+                for (const c of collabCounts) {
+                    collabCountMap[c.portfolio_id] = (collabCountMap[c.portfolio_id] || 0) + 1;
+                }
+            }
+        }
+
+        // Attach collaborator_count to own items
+        const ownItemsWithCount = (ownItems || []).map(item => ({
+            ...item,
+            collaborator_count: collabCountMap[item.id] || 0,
+        }));
+
         // Fetch items where user is an accepted collaborator
         const { data: collabRecords } = await supabase
             .from('portfolio_collaborators')
@@ -72,7 +94,7 @@ export async function GET(request) {
 
         return NextResponse.json({
             success: true,
-            data: ownItems || [],
+            data: ownItemsWithCount,
             collaborations: collabItems,
             pending_count: pendingCount || 0,
         });

@@ -1,5 +1,7 @@
 'use client';
 
+import { AlertTriangleIcon } from '../components/Icons';
+
 export default function GradeError({ error, reset }) {
     return (
         <main className="main-content">
@@ -7,7 +9,7 @@ export default function GradeError({ error, reset }) {
             <div className="bg-overlay"></div>
             <div className="flex items-center justify-center min-h-screen">
                 <div className="text-white text-center max-w-md mx-auto p-8">
-                    <div className="text-6xl mb-6">⚠️</div>
+                    <div className="text-6xl mb-6"><AlertTriangleIcon size={64} /></div>
                     <h2 className="text-2xl font-bold mb-3 font-prompt">
                         เกิดข้อผิดพลาดในหน้าผลการเรียน
                     </h2>

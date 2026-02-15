@@ -7,6 +7,7 @@ import Navbar from '../components/Navbar';
 import GuestBanner from '../components/GuestBanner';
 import { motion } from 'framer-motion';
 import { fadeInUp } from '@/lib/animations';
+import { LightbulbIcon } from '../components/Icons';
 import '../globals.css';
 
 export default function SharePage() {
@@ -71,7 +72,7 @@ export default function SharePage() {
                         className="bg-[rgba(15,23,42,0.6)] backdrop-blur-lg border border-white/10 rounded-2xl p-6 max-w-lg mx-auto"
                     >
                         <p className="text-white/80 text-sm">
-                            💡 <span className="font-medium">เคล็ด:</span> รายการที่ถูกล็อกแสดงว่าไม่ได้รับอนุญาตให้ดู
+                            <LightbulbIcon size={14} className="inline mr-1" /> <span className="font-medium">เคล็ด:</span> รายการที่ถูกล็อกแสดงว่าไม่ได้รับอนุญาตให้ดู
                         </p>
                     </motion.div>
                 </motion.div>

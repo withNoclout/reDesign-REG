@@ -45,11 +45,11 @@ export default function FailedUploadsBanner({ onRetryAll, onDismiss }) {
 
                 // Show success message
                 if (uploaded > 0) {
-                    alert(`✅ อัพโหลดสำเร็จ ${uploaded} รายการ`);
+                    alert(`อัพโหลดสำเร็จ ${uploaded} รายการ`);
                 }
 
                 if (failed > 0) {
-                    alert(`⚠️ อัพโหลดไม่สำเร็จ ${failed} รายการ`);
+                    alert(`อัพโหลดไม่สำเร็จ ${failed} รายการ`);
                 }
 
                 // Refresh the check
@@ -60,11 +60,11 @@ export default function FailedUploadsBanner({ onRetryAll, onDismiss }) {
                     onRetryAll();
                 }
             } else {
-                alert('❌ ไม่สามารถอัพโหลดใหม่ได้: ' + (data.message || 'Unknown error'));
+                alert('ไม่สามารถอัพโหลดใหม่ได้: ' + (data.message || 'Unknown error'));
             }
         } catch (error) {
             console.error('[FailedUploadsBanner] Retry error:', error);
-            alert('❌ เกิดข้อผิดพลาด: ' + error.message);
+            alert('เกิดข้อผิดพลาด: ' + error.message);
         } finally {
             setIsRetrying(false);
         }

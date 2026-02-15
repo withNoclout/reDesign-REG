@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { logError } from '@/lib/logger';
+import { HomeIcon, RefreshCwIcon } from './components/Icons';
 
 /**
  * Next.js Error Boundary
@@ -87,7 +88,7 @@ export default function Error({ error, reset }) {
                         whileTap={{ scale: 0.98 }}
                         aria-label="ลองอีกครั้ง"
                     >
-                        🔄 ลองอีกครั้ง
+                        <RefreshCwIcon size={14} className="inline mr-1" /> ลองอีกครั้ง
                     </motion.button>
                     
                     <motion.a
@@ -97,7 +98,7 @@ export default function Error({ error, reset }) {
                         whileTap={{ scale: 0.98 }}
                         aria-label="กลับหน้าหลัก"
                     >
-                        🏠 หน้าหลัก
+                        <HomeIcon size={16} className="inline mr-1" /> หน้าหลัก
                     </motion.a>
                 </div>
 

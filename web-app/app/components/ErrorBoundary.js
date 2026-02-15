@@ -3,6 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { logError } from '@/lib/logger';
+import { RefreshCwIcon } from './Icons';
 
 /**
  * React Error Boundary Component
@@ -119,7 +120,7 @@ class ErrorBoundary extends React.Component {
                                 whileTap={{ scale: 0.98 }}
                                 aria-label="ลองอีกครั้ง"
                             >
-                                🔄 ลองอีกครั้ง
+                                <RefreshCwIcon size={14} className="inline mr-1" /> ลองอีกครั้ง
                             </motion.button>
                         </div>
                     </div>
