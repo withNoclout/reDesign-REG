@@ -23,7 +23,7 @@
 }
 
 body {
-  font-family: 'Prompt', sans-serif;
+  font-family: var(--font-prompt), 'Prompt', sans-serif;
   color: var(--text-color);
   background: #0f172a;
   /* Deep Slate Fallback */
@@ -116,7 +116,7 @@ body {
 }
 
 .brand-text {
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--font-montserrat), 'Montserrat', sans-serif;
   font-weight: 600;
   font-size: 1.2rem;
   letter-spacing: 1px;
@@ -320,7 +320,7 @@ body {
   border-radius: 14px;
   color: white;
   font-size: 1rem;
-  font-family: 'Prompt', sans-serif;
+  font-family: var(--font-prompt), 'Prompt', sans-serif;
   outline: none;
   transition: all 0.3s ease;
 }
@@ -402,7 +402,7 @@ body {
   border: none;
   color: rgba(255, 255, 255, 0.9);
   font-size: 0.95rem;
-  font-family: 'Prompt', sans-serif;
+  font-family: var(--font-prompt), 'Prompt', sans-serif;
   cursor: pointer;
   text-align: left;
   transition: color 0.15s ease;
@@ -553,7 +553,7 @@ body {
   color: white;
   font-size: 1rem;
   font-weight: 600;
-  font-family: 'Prompt', sans-serif;
+  font-family: var(--font-prompt), 'Prompt', sans-serif;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1011,7 +1011,7 @@ select:focus-visible,
   color: rgba(255, 255, 255, 0.6);
   font-size: 0.85rem;
   margin: 2px 0 0;
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--font-montserrat), 'Montserrat', sans-serif;
 }
 
 .profile-status {
@@ -1096,7 +1096,7 @@ select:focus-visible,
 }
 
 .info-value.mono {
-  font-family: 'Montserrat', monospace;
+  font-family: var(--font-montserrat), 'Montserrat', monospace;
 }
 
 /* Academic Info */
@@ -1139,7 +1139,7 @@ select:focus-visible,
   color: white;
   font-size: 1.2rem;
   font-weight: 600;
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--font-montserrat), 'Montserrat', sans-serif;
 }
 
 .academic-item-value.highlight {

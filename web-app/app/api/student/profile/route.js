@@ -72,14 +72,16 @@ export async function GET() {
 
         // --- ATTEMPT 1: Fetch from University API ---
         try {
-            // Use allSettled to allow partial success (e.g. Bio OK, Acad Fail)
+            // Fetch all 3 endpoints in parallel
             const results = await Promise.allSettled([
                 axios.get(`${BASE_URL}/Bioentryconfig/Getbioentryconfig/I`, apiCallConfig),
-                axios.get(`${BASE_URL}/Schg/Getacadstrat`, apiCallConfig)
+                axios.get(`${BASE_URL}/Schg/Getacadstrat`, apiCallConfig),
+                axios.get(`${BASE_URL}/Schg/Getacadstd`, apiCallConfig)
             ]);
 
             const bioResult = results[0];
             const acadResult = results[1];
+            const idResult = results[2];
 
             // Primary Check: Bioentry is essential (Name/Faculty). Acad is secondary.
             if (bioResult.status === 'fulfilled' && bioResult.value?.status === 200) {
@@ -106,26 +108,11 @@ export async function GET() {
                     return value;
                 };
 
-                // Identify Student ID from Bio Data (Usually it's in there, or we fetch another endpoint)
-                // Let's assume we can find it, or we simply use the one from `getAuthUser` logic.
-                // Bioentry doesn't always have ID. `acadRes` might? 
-                // Let's look at `acadRes.data`.
-
-                // If we cannot find ID, we can't cache keyed by ID.
-                // Fallback: Use `token` hash as key? No, tokens change.
-                // Let's Try `Schg/Getacadstd` as part of the flow to get ID if needed?
-                // Or assuming the Frontend passes ID? No.
-
-                // Let's fetch ID explicitly if we want to cache.
-                // Actually, `acadRes.data` from `Getacadstrat` might not have ID.
-                // Let's add a quick ID check.
+                // Get student ID from parallel result (no extra sequential call)
                 let studentId = null;
-                try {
-                    const idRes = await axios.get(`${BASE_URL}/Schg/Getacadstd`, apiCallConfig);
-                    if (idRes.status === 200) {
-                        studentId = idRes.data.studentCode || idRes.data.usercode;
-                    }
-                } catch (e) { /* Ignore */ }
+                if (idResult.status === 'fulfilled' && idResult.value?.status === 200) {
+                    studentId = idResult.value.data.studentCode || idResult.value.data.usercode;
+                }
 
                 const profile = {
                     faculty: extract(['คณะ', 'Faculty']),

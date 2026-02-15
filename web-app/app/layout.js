@@ -1,6 +1,21 @@
+import { Prompt, Montserrat } from 'next/font/google';
 import { AuthProvider } from './context/AuthContext';
 import { GuestProvider } from './context/GuestContext';
 import GlobalErrorListener from './components/GlobalErrorListener';
+
+const prompt = Prompt({
+    subsets: ['thai', 'latin'],
+    weight: ['300', '400', '500', '600', '700'],
+    display: 'swap',
+    variable: '--font-prompt',
+});
+
+const montserrat = Montserrat({
+    subsets: ['latin'],
+    weight: ['300', '400', '500', '600', '700'],
+    display: 'swap',
+    variable: '--font-montserrat',
+});
 
 export const metadata = {
     title: 'ระบบลงทะเบียนนักศึกษา - KMUTNB',
@@ -9,11 +24,8 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
     return (
-        <html lang="th">
+        <html lang="th" className={`${prompt.variable} ${montserrat.variable}`}>
             <head>
-                <link rel="preconnect" href="https://fonts.googleapis.com" />
-                <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-                <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
             </head>
             <body>
                 <a href="#main-content" className="skip-to-content">

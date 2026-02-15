@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import StudentSearchInput from './StudentSearchInput';
 
-export default function PortfolioEditorModal({ isOpen, onClose, onRefresh }) {
+export default function PortfolioEditorModal({ isOpen, onClose, onRefresh, editItem }) {
+    const isEditMode = !!editItem;
     const [topic, setTopic] = useState('');
     const [description, setDescription] = useState('');
     const [imageFile, setImageFile] = useState(null);
@@ -16,6 +17,25 @@ export default function PortfolioEditorModal({ isOpen, onClose, onRefresh }) {
     const fileInputRef = useRef(null);
 
     const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+    // Pre-fill form when editing
+    useEffect(() => {
+        if (editItem && isOpen) {
+            setTopic(editItem.topic || '');
+            setDescription(editItem.description || '');
+            setPreviewUrl(editItem.image_url || null);
+            setImageFile(null);
+            setError(null);
+            setSelectedStudents([]);
+        } else if (!editItem && isOpen) {
+            setTopic('');
+            setDescription('');
+            setPreviewUrl(null);
+            setImageFile(null);
+            setError(null);
+            setSelectedStudents([]);
+        }
+    }, [editItem, isOpen]);
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -101,39 +121,60 @@ export default function PortfolioEditorModal({ isOpen, onClose, onRefresh }) {
         setError(null);
 
         try {
-            const formData = new FormData();
-            formData.append('description', description);
-            formData.append('topic', topic);
-            if (imageFile) formData.append('image', imageFile);
-            if (selectedStudents.length > 0) {
-                formData.append('collaborators', JSON.stringify(selectedStudents.map(s => s.user_code)));
-            }
+            if (isEditMode) {
+                // Edit mode: PATCH existing item
+                const res = await fetch('/api/portfolio/content', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: editItem.id,
+                        topic,
+                        description,
+                    }),
+                });
 
-            const res = await fetch('/api/portfolio/content', {
-                method: 'POST',
-                body: formData,
-            });
-
-            const data = await res.json();
-
-            if (res.ok && data.success) {
-                const savedItem = data.data[0];
-                setDescription('');
-                setImageFile(null);
-                setPreviewUrl(null);
-                setSelectedStudents([]);
-                setLoading(false);
-
-                // If there's a temp file, trigger upload
-                if (savedItem.temp_path) {
-                    await triggerUpload(savedItem.id, savedItem.temp_path);
-                } else {
-                    // No image, just close modal and refresh
+                const data = await res.json();
+                if (res.ok && data.success) {
                     onRefresh && onRefresh();
                     onClose();
+                } else {
+                    setError(data.message || 'Failed to update');
                 }
             } else {
-                setError(data.message || 'Failed to upload');
+                // Create mode: POST new item
+                const formData = new FormData();
+                formData.append('description', description);
+                formData.append('topic', topic);
+                if (imageFile) formData.append('image', imageFile);
+                if (selectedStudents.length > 0) {
+                    formData.append('collaborators', JSON.stringify(selectedStudents.map(s => s.user_code)));
+                }
+
+                const res = await fetch('/api/portfolio/content', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    const savedItem = data.data[0];
+                    setDescription('');
+                    setImageFile(null);
+                    setPreviewUrl(null);
+                    setSelectedStudents([]);
+                    setLoading(false);
+
+                    // If there's a temp file, trigger upload
+                    if (savedItem.temp_path) {
+                        await triggerUpload(savedItem.id, savedItem.temp_path);
+                    } else {
+                        onRefresh && onRefresh();
+                        onClose();
+                    }
+                } else {
+                    setError(data.message || 'Failed to upload');
+                }
             }
         } catch (error) {
             console.error(error);
@@ -178,7 +219,7 @@ export default function PortfolioEditorModal({ isOpen, onClose, onRefresh }) {
                         className="relative w-full max-w-xl bg-[#0f172a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-10"
                     >
                         <div className="p-6">
-                            <h2 className="text-2xl font-bold text-white mb-6 font-prompt text-center">Add Content</h2>
+                            <h2 className="text-2xl font-bold text-white mb-6 font-prompt text-center">{isEditMode ? 'Edit Content' : 'Add Content'}</h2>
 
                             <form onSubmit={handleSubmit} className="space-y-6">
                                 {/* Error Banner */}
@@ -193,7 +234,14 @@ export default function PortfolioEditorModal({ isOpen, onClose, onRefresh }) {
                                     </div>
                                 )}
 
-                                {/* Image Upload Area */}
+                                {/* Image Upload Area (create mode) / Preview (edit mode) */}
+                                {isEditMode ? (
+                                    previewUrl && (
+                                        <div className="relative aspect-video rounded-xl overflow-hidden bg-black/20">
+                                            <img src={previewUrl} alt="Current image" className="w-full h-full object-cover" />
+                                        </div>
+                                    )
+                                ) : (
                                 <div
                                     onClick={() => fileInputRef.current?.click()}
                                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
@@ -222,6 +270,7 @@ export default function PortfolioEditorModal({ isOpen, onClose, onRefresh }) {
                                     )}
                                     <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
                                 </div>
+                                )}
 
                                 {/* Description Input */}
                                 <div>
@@ -255,6 +304,7 @@ export default function PortfolioEditorModal({ isOpen, onClose, onRefresh }) {
                                                     />
                                                 </td>
                                             </tr>
+                                            {!isEditMode && (
                                             <tr className="border-t border-white/10">
                                                 <td className="py-2 pr-4 align-top">
                                                     <label className="text-white/70 text-xs font-medium pt-2 block uppercase tracking-wider">Related Students</label>
@@ -266,6 +316,7 @@ export default function PortfolioEditorModal({ isOpen, onClose, onRefresh }) {
                                                     />
                                                 </td>
                                             </tr>
+                                            )}
                                         </tbody>
                                     </table>
                                 </div>
@@ -284,7 +335,7 @@ export default function PortfolioEditorModal({ isOpen, onClose, onRefresh }) {
                                         disabled={loading}
                                         className="px-6 py-2 bg-[#ff5722] hover:bg-[#ff7043] text-white rounded-xl font-bold transition-all disabled:opacity-50 flex items-center gap-2"
                                     >
-                                        {loading ? 'Uploading...' : 'Post Content'}
+                                        {loading ? (isEditMode ? 'Saving...' : 'Uploading...') : (isEditMode ? 'Save Changes' : 'Post Content')}
                                     </button>
                                 </div>
                             </form>

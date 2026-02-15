@@ -189,6 +189,7 @@ export default function PortfolioGrid() {
     const [showControls, setShowControls] = useState(false);
     const [isManageMode, setIsManageMode] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingItem, setEditingItem] = useState(null);
 
     // Helper Classes
     const columnClass = `columns-${settings.fixedConfig?.columnCount || 3}`;
@@ -196,7 +197,7 @@ export default function PortfolioGrid() {
 
     const fetchContent = useCallback(async () => {
         try {
-            const res = await fetch(`/api/portfolio/content?t=${Date.now()}`);
+            const res = await fetch(`/api/portfolio/content`);
 
             if (res.status === 401) {
                 if (logout) logout();
@@ -425,7 +426,7 @@ export default function PortfolioGrid() {
                     savedLayout={settings.customLayout}
                     onLayoutChange={handleCustomLayoutChange}
                     isManageMode={isManageMode}
-                    onAddNew={() => setIsModalOpen(true)}
+                    onAddNew={() => { setEditingItem(null); setIsModalOpen(true); }}
                     maxRows={4}
                 />
             ) : (
@@ -434,7 +435,7 @@ export default function PortfolioGrid() {
 
                     {/* Add Trigger (Always First, 33% Width on Desktop) */}
                     <div className="md:col-span-4 h-full min-h-[250px]">
-                        <AddContentCard onClick={() => setIsModalOpen(true)} className="w-full h-full shadow-xl hover:shadow-[#ff5722]/10" />
+                        <AddContentCard onClick={() => { setEditingItem(null); setIsModalOpen(true); }} className="w-full h-full shadow-xl hover:shadow-[#ff5722]/10" />
                     </div>
 
                     {/* Content Items */}
@@ -460,6 +461,19 @@ export default function PortfolioGrid() {
                                 {/* Management Overlays */}
                                 {isManageMode && (
                                     <div className="absolute top-2 right-2 z-30 flex items-center gap-2">
+                                        {/* Edit Button */}
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setEditingItem(item);
+                                                setIsModalOpen(true);
+                                            }}
+                                            className="p-2 rounded-full bg-white/20 text-white hover:bg-[#ff5722] backdrop-blur-md shadow-lg transition-all"
+                                            title="Edit"
+                                        >
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                                        </button>
+
                                         {/* Visibility Toggle */}
                                         <button
                                             onClick={(e) => {
@@ -606,8 +620,9 @@ export default function PortfolioGrid() {
 
             <PortfolioEditorModal
                 isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
+                onClose={() => { setIsModalOpen(false); setEditingItem(null); }}
                 onRefresh={fetchContent}
+                editItem={editingItem}
             />
         </section>
     );

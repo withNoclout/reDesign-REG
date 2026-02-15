@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "lint:fix": "next lint --fix"
+    "lint:fix": "next lint --fix",
+    "ngrok:start": "bash scripts/ngrok-start.sh",
+    "ngrok:start:fixed": "bash scripts/ngrok-start.sh 3000 unoccluded-aura-derivationally.ngrok-free.dev",
+    "ngrok:stop": "bash scripts/ngrok-stop.sh"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.95.3",

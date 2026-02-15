@@ -4,6 +4,14 @@ import axios from 'axios';
 
 const BASE_URL = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
 
+// Grade endpoints to try (in priority order)
+const GRADE_ENDPOINTS = [
+    { url: 'https://reg4.kmutnb.ac.th/regapiweb1/api/th/Grade/Showgrade', label: 'Grade/Showgrade', needsArray: true },
+    { url: `${BASE_URL}/Schg/Showgrade`, label: 'Schg/Showgrade', needsArray: false },
+    { url: `${BASE_URL}/Schg/Getgrade`, label: 'Schg/Getgrade', needsArray: false },
+    { url: `${BASE_URL}/Schg/GetStudyResult`, label: 'Schg/GetStudyResult', needsArray: false },
+];
+
 export async function GET() {
     try {
         const cookieStore = await cookies();
@@ -16,99 +24,35 @@ export async function GET() {
             );
         }
 
-        console.log('[API] Fetching grades with token:', token.substring(0, 10) + '...');
+        console.log('[API] Fetching grades (parallel) with token:', token.substring(0, 10) + '...');
 
-        // Attempt 1: Try Grade/Showgrade (User Provided URL)
-        try {
-            console.log('[API] Trying Grade/Showgrade (regapiweb1)...');
-            // User specifically provided regapiweb1
-            const response = await axios.get('https://reg4.kmutnb.ac.th/regapiweb1/api/th/Grade/Showgrade', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                validateStatus: status => status < 500
-            });
+        const headers = { 'Authorization': `Bearer ${token}` };
 
-            console.log('[API] Grade/Showgrade Status:', response.status);
+        // Fire all endpoints in parallel
+        const results = await Promise.allSettled(
+            GRADE_ENDPOINTS.map(ep =>
+                axios.get(ep.url, { headers, validateStatus: s => s < 500 })
+                    .then(res => ({ ...ep, response: res }))
+            )
+        );
 
-            // Validate that we got JSON matching expected structure (Array)
-            // Some endpoints return HTML (login page) with 200 OK if token is invalid for that system
+        // Pick the first successful result (respecting priority order)
+        for (let i = 0; i < results.length; i++) {
+            const r = results[i];
+            if (r.status !== 'fulfilled') continue;
+            const { response, label, needsArray } = r.value;
+
             if (response.status === 200 && response.data && typeof response.data === 'object') {
-                // Additional check: If it's the expected array
-                if (Array.isArray(response.data) && response.data.length > 0) {
-                    return NextResponse.json({
-                        success: true,
-                        data: response.data
-                    });
+                if (needsArray) {
+                    if (Array.isArray(response.data) && response.data.length > 0) {
+                        console.log(`[API] Grade success from: ${label}`);
+                        return NextResponse.json({ success: true, data: response.data });
+                    }
+                } else {
+                    console.log(`[API] Grade success from: ${label}`);
+                    return NextResponse.json({ success: true, data: response.data });
                 }
             }
-            console.warn('[API] Grade/Showgrade returned non-array/invalid data, falling back...');
-        } catch (err) {
-            console.error('[API] Grade/Showgrade failed:', err.message);
-        }
-
-        // Attempt 2: Try Schg/Showgrade (regapiweb2 - Fallback)
-        try {
-            console.log('[API] Trying Schg/Showgrade (regapiweb2)...');
-            const response = await axios.get(`${BASE_URL}/Schg/Showgrade`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                validateStatus: status => status < 500
-            });
-
-            console.log('[API] Schg/Showgrade Status:', response.status);
-
-            if (response.status === 200 && response.data) {
-                return NextResponse.json({
-                    success: true,
-                    data: response.data
-                });
-            }
-        } catch (err) {
-            console.error('[API] Schg/Showgrade (regapiweb2) failed:', err.message);
-        }
-
-        // Attempt 3: Try Getgrade (Backup)
-        try {
-            const response = await axios.get(`${BASE_URL}/Schg/Getgrade`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                validateStatus: status => status < 500
-            });
-
-            console.log('[API] Getgrade Status:', response.status);
-
-            if (response.status === 200 && response.data) {
-                return NextResponse.json({
-                    success: true,
-                    data: response.data
-                });
-            }
-        } catch (err) {
-            console.error('[API] Getgrade failed:', err.message);
-        }
-
-        // Attempt 4: Try GetStudyResult (Common alternative)
-        try {
-            const response = await axios.get(`${BASE_URL}/Schg/GetStudyResult`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                validateStatus: status => status < 500
-            });
-
-            console.log('[API] GetStudyResult Status:', response.status);
-
-            if (response.status === 200 && response.data) {
-                return NextResponse.json({
-                    success: true,
-                    data: response.data
-                });
-            }
-        } catch (err) {
-            console.error('[API] GetStudyResult failed:', err.message);
         }
 
         return NextResponse.json(

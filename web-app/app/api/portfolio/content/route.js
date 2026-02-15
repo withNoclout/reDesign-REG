@@ -281,7 +281,7 @@ export async function PATCH(request) {
         }
 
         const body = await request.json();
-        const { id, is_visible } = body;
+        const { id, is_visible, topic, description } = body;
 
         if (!id) {
             return NextResponse.json({ success: false, message: 'ID is required' }, { status: 400 });
@@ -304,10 +304,20 @@ export async function PATCH(request) {
             return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 403 });
         }
 
+        // Build update payload (only include provided fields)
+        const updateData = {};
+        if (is_visible !== undefined) updateData.is_visible = is_visible;
+        if (topic !== undefined) updateData.topic = topic;
+        if (description !== undefined) updateData.description = description;
+
+        if (Object.keys(updateData).length === 0) {
+            return NextResponse.json({ success: false, message: 'No fields to update' }, { status: 400 });
+        }
+
         // Update
         const { error } = await supabase
             .from('news_items')
-            .update({ is_visible })
+            .update(updateData)
             .eq('id', id);
 
         if (error) throw error;

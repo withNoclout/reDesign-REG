@@ -21,12 +21,11 @@ export default function UserProfileCard({ user, loading, profileData }) {
         }
     }, [profileData]);
 
-    // Fetch if no profileData provided
+    // Fetch only if no profileData was provided by parent (standalone usage)
+    // Skip when loading=true (parent is actively fetching)
     useEffect(() => {
-        if (user && !profileData) {
-            // Fetch extra profile data
+        if (user && !profileData && !extraInfo && !loading) {
             fetch('/api/student/profile')
-                // ... rest of fetch logic
                 .then(async res => {
                     if (res.status === 401) {
                         console.warn('[UserProfileCard] Session Expired from Profile API. Logging out...');
@@ -46,7 +45,7 @@ export default function UserProfileCard({ user, loading, profileData }) {
                 })
                 .catch(err => console.error('Failed to fetch student profile:', err));
         }
-    }, [user, logout]);
+    }, [user, logout, loading]);
 
     if (loading) {
         return <UserProfileSkeleton />;

@@ -3,9 +3,10 @@ import { cookies } from 'next/headers';
 import https from 'https';
 import axios from 'axios';
 import { z } from 'zod';
-import fs from 'fs';
+import fs from 'fs/promises';
 import path from 'path';
 import zlib from 'zlib';
+import { promisify } from 'util';
 
 /**
  * API Route: /api/student/schedule
@@ -50,14 +51,12 @@ import zlib from 'zlib';
  * Data Coverage: ~66.7% ของวิชาทั้งหมด (ดีกว่า regapiweb2 มาก)
  */
 
-// Server-side log helper (persists to app.log)
+// Server-side log helper (fire-and-forget async I/O)
 function serverLog(level, message) {
     const timestamp = new Date().toISOString();
     const entry = `[${timestamp}] [${level}] [Schedule API] ${message}\n`;
-    try {
-        const logPath = path.join(process.cwd(), 'logs', 'app.log');
-        fs.appendFileSync(logPath, entry);
-    } catch { /* ignore */ }
+    const logPath = path.join(process.cwd(), 'logs', 'app.log');
+    fs.appendFile(logPath, entry).catch(() => {});
     console.log(`[Schedule API] ${message}`);
 }
 
@@ -72,10 +71,12 @@ const BASE_URL_V2 = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
 
 const agent = new https.Agent({ rejectUnauthorized: false });
 
+const gunzip = promisify(zlib.gunzip);
+
 // Helper: Decode gzip-compressed base64 response from regapiweb1
-function decodeGzipResponse(base64String) {
+async function decodeGzipResponse(base64String) {
     const compressedBuffer = Buffer.from(base64String, 'base64');
-    const decompressed = zlib.gunzipSync(compressedBuffer);
+    const decompressed = await gunzip(compressedBuffer);
     return JSON.parse(decompressed.toString('utf-8'));
 }
 
@@ -189,7 +190,7 @@ export async function GET() {
 
         // 3. Decode gzip-compressed response
         serverLog('INFO', 'Decoding gzip-compressed timetable...');
-        const rawData = decodeGzipResponse(timetableRes.data.result);
+        const rawData = await decodeGzipResponse(timetableRes.data.result);
         
         serverLog('INFO', `Timetable decoded: ${Array.isArray(rawData) ? rawData.length : 'N/A'} courses`);
 

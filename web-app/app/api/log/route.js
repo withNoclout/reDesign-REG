@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
+import fs from 'fs/promises';
+import { existsSync, mkdirSync } from 'fs';
 import path from 'path';
 
 export async function POST(request) {
@@ -11,9 +12,9 @@ export async function POST(request) {
         const logDir = path.join(process.cwd(), 'logs');
         const logFilePath = path.join(logDir, 'app.log');
 
-        // Ensure logs directory exists
-        if (!fs.existsSync(logDir)) {
-            fs.mkdirSync(logDir, { recursive: true });
+        // Ensure logs directory exists (sync on first call only)
+        if (!existsSync(logDir)) {
+            mkdirSync(logDir, { recursive: true });
         }
 
         // Format the log entry
@@ -22,8 +23,8 @@ export async function POST(request) {
                          (stack ? `${stack}\n` : '') +
                          '-'.repeat(80) + '\n';
 
-        // Append to log file
-        fs.appendFileSync(logFilePath, logEntry);
+        // Append to log file (async, non-blocking)
+        await fs.appendFile(logFilePath, logEntry);
 
         return NextResponse.json({ success: true });
     } catch (error) {
