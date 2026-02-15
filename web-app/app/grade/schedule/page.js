@@ -87,9 +87,19 @@ function shortenTitle(name) {
     if (!name) return name;
     let s = name;
     for (const [full, abbr] of TITLE_ABBREVIATIONS) {
-        s = s.replace(full, abbr);
+        s = s.replaceAll(full, abbr);
     }
     return s;
+}
+
+function splitInstructors(name) {
+    if (!name) return [];
+    const shortened = shortenTitle(name);
+    // Split before each title prefix (รศ., ผศ., ศ., อ., ดร.)
+    const parts = shortened.split(/(?=(?:รศ\.|ผศ\.|ศ\.|อ\.|ดร\.))/g)
+        .map(s => s.trim())
+        .filter(Boolean);
+    return parts.length ? parts : [shortened];
 }
 
 export default function SchedulePage() {
@@ -552,7 +562,7 @@ export default function SchedulePage() {
                                                                 {entry.course.teach_name && (
                                                                     <>
                                                                         <span>·</span>
-                                                                        <span className="truncate">{shortenTitle(entry.course.teach_name)}</span>
+                                                                        <span className="truncate">{splitInstructors(entry.course.teach_name).join(', ')}</span>
                                                                     </>
                                                                 )}
                                                             </div>
@@ -609,7 +619,13 @@ export default function SchedulePage() {
                                                         {course.subject_name_th || course.subject_name_en}
                                                     </td>
                                                     <td className="p-3 text-sm text-white/70 font-prompt max-w-[200px]">
-                                                        {shortenTitle(course.teach_name) || '—'}
+                                                        {course.teach_name ? (
+                                                            <div className="space-y-0.5">
+                                                                {splitInstructors(course.teach_name).map((inst, i) => (
+                                                                    <p key={i} className="whitespace-nowrap">{inst}</p>
+                                                                ))}
+                                                            </div>
+                                                        ) : '—'}
                                                     </td>
                                                     <td className="p-3 text-sm text-white/60 font-montserrat text-center">
                                                         {course.section}
@@ -665,9 +681,13 @@ export default function SchedulePage() {
                                             </span>
                                         </div>
                                         {course.teach_name && (
-                                            <p className="text-xs text-white/60 font-prompt mb-2 flex items-center gap-1">
-                                                <UserIcon size={12} className="shrink-0" /> {shortenTitle(course.teach_name)}
-                                            </p>
+                                            <div className="text-xs text-white/60 font-prompt mb-2 space-y-0.5">
+                                                {splitInstructors(course.teach_name).map((inst, i) => (
+                                                    <p key={i} className="flex items-center gap-1">
+                                                        <UserIcon size={12} className="shrink-0" /> {inst}
+                                                    </p>
+                                                ))}
+                                            </div>
                                         )}
                                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-white/50">
                                             <span>
