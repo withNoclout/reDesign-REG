@@ -2,95 +2,100 @@
 
 ## 📋 สรุป API Routes ที่สร้าง
 
-### 1. `/api/student/courses` - วิชาที่ลงเรียน
-**วัตถุประสงค์**: ดึงรายการวิชาที่ลงเรียนในเทอมปัจจุบัน
+### 1. `/api/student/schedule` - ตารางเรียน ✅ UPDATED
+**วัตถุประสงค์**: ดึงตารางเรียนครบถ้วนพร้อมข้อมูลอาจารย์และวันสอบ
 
-**External APIs ที่ใช้**:
-- `GET /Grade/Showgrade` - ดึงประวัติเกรดทั้งหมด (มีชื่อวิชา)
-- `GET /Schg/Getacadstd` - ดึงข้อมูลเทอมปัจจุบัน (enrollsemester, enrollacadyear)
+**External APIs ที่ใช้** (⚡ ใช้ regapiweb1 แล้ว):
+- `GET /Timetable/Timetable/{acadyear}/{semester}` (regapiweb1) - ตารางครบถ้วน ✅
+  - Response: gzip-compressed base64 JSON
+  - Data: coursecode, coursename (TH+EN), time (HTML), roomtime, classofficer, exam dates
+- `GET /Schg/Getacadstd` (regapiweb2) - เทอมปัจจุบัน
 
-**Logic**:
-1. เรียก Grade/Showgrade เพื่อดึงวิชาทั้งหมด
-2. เรียก Schg/Getacadstd เพื่อหาเทอมปัจจุบัน
-3. กรองเฉพาะวิชาที่ semester + acadyear ตรงกับเทอมปัจจุบัน
-4. กรองวิชาที่ coursecode ไม่ว่าง และ coursename ไม่มี "TOTAL"
+**Data Processing**:
+1. Decode: base64 → gunzip → JSON
+2. Parse HTML: Extract วัน-เวลา จาก `<FONT>พ.</FONT>13:00-16:00`
+3. Strip HTML tags จาก classofficer, roomtime
+4. Separate scheduled (มีเวลา) vs unscheduled (ไม่มีเวลา)
+
+**Coverage**: 66.7% (4/6 วิชามีตาราง, 2 วิชาไม่มี)
 
 **Response**:
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "coursecode": "010913121",
-      "coursename": "MAINTENANCE ENGINEERING",
-      "creditattempt": 3,
-      "sectioncode": "2",
-      "acadyear": 2568,
-      "semester": 2,
-      "grade": null,
-      "courseid": 4898
-    }
-  ],
+  "data": [...],           // All courses
+  "scheduled": [...],      // Courses with time (4 items)
+  "unscheduled": [...],    // Courses without time (2 items)
   "semester": "2/2568",
-  "currentAcadYear": 2568,
-  "currentSemester": 2
+  "stats": {
+    "total": 6,
+    "withSchedule": 4,
+    "withoutSchedule": 2
+  }
 }
 ```
 
-### 2. `/api/student/schedule` - ตารางเรียน
-**วัตถุประสงค์**: ดึงตารางเรียน (วัน เวลา ห้อง) พร้อมชื่อวิชา
-
-**External APIs ที่ใช้**:
-- `GET /Enroll/Timetable` - ตารางเรียน (มีเวลาแต่ไม่มีชื่อวิชา)
-- `GET /Grade/Showgrade` - ใช้ lookup ชื่อวิชา
-- `GET /Schg/Getacadstd` - ข้อมูลเทอมปัจจุบัน
-
-**Logic**:
-1. เรียก Timetable → ได้ weekday, tfrom, mfrom, tto, mto, coursecode, roomname
-2. เรียก Grade/Showgrade → สร้าง Map[coursecode] = coursename
-3. Merge: เอาชื่อวิชาจาก Map ใส่เข้าไปใน Timetable
-4. Format เวลา: tfrom=16, mfrom=0 → "16:00"
-
-**Response**:
+**Sample Item** (scheduled):
 ```json
 {
-  "success": true,
-  "data": [
-    {
-      "weekday": 5,
-      "timefrom": "16:00",
-      "timeto": "19:00",
-      "subject_id": "080203908",
-      "subject_name_en": "...",
-      "section": "5",
-      "roomcode": "78-223",
-      "teach_name": null
-    }
-  ],
-  "semester": "2/2568"
+  "weekday": 4,
+  "timefrom": "13:00",
+  "timeto": "16:00",
+  "subject_id": "010913121",
+  "subject_name_en": "Maintenance Engineering",
+  "subject_name_th": "วิศวกรรมการบำรุงรักษา",
+  "section": "S.2",
+  "roomcode": "81-IE-รัตติฯ",
+  "teach_name": "รองศาสตราจารย์สมเกียรติ จงประสิทธิ์พร",
+  "credit": 3,
+  "exam_midterm": null,
+  "exam_final": "27 มี.ค. 2569 เวลา 09:00-12:00"
 }
 ```
 
-## 🔌 External API Endpoints (reg4.kmutnb.ac.th)
+## 🔌 External API Endpoints
+
+### ⚡ regapiweb1 (reg3.kmutnb.ac.th) - RECOMMENDED
+
+Base URL: `https://reg3.kmutnb.ac.th/regapiweb1/api/th`
+
+| Endpoint | Method | Purpose | Response Format | Coverage |
+|----------|--------|---------|----------------|----------|
+| `/Timetable/Timetable/{year}/{sem}` | GET | ตารางเรียนครบถ้วน | gzip-compressed base64 | 66.7% ✅ |
+
+**Response Decoding**:
+```javascript
+// 1. Decode base64
+const compressed = Buffer.from(response.data.result, 'base64');
+// 2. Decompress gzip
+const decompressed = zlib.gunzipSync(compressed);
+// 3. Parse JSON
+const data = JSON.parse(decompressed.toString('utf-8'));
+```
+
+**Fields**:
+- `coursecode`, `coursename` (TH), `coursenameeng` (EN)
+- `time` (HTML): `<FONT COLOR=#5080E0>พ.</FONT>13:00-16:00`
+- `roomtime`: ห้องเรียน
+- `classofficer` (HTML): ชื่ออาจารย์
+- `m_exam`, `f_exam`: วันสอบ
+- `sectioncode`, `creditattempt`
+
+### 🔧 regapiweb2 (reg4.kmutnb.ac.th) - For Metadata Only
 
 Base URL: `https://reg4.kmutnb.ac.th/regapiweb2/api/th`
 
-### ✅ ใช้งานได้
-
 | Endpoint | Method | Purpose | Key Fields |
 |----------|--------|---------|------------|
-| `/Enroll/Timetable` | GET | ตารางเรียน | weekday, tfrom, mfrom, tto, mto, coursecode, roomname, sectioncode |
-| `/Grade/Showgrade` | GET | ประวัติเกรด | coursecode, coursename, creditattempt, grade, acadyear, semester |
 | `/Schg/Getacadstd` | GET | ข้อมูลนักศึกษา | enrollsemester, enrollacadyear |
+| `/Grade/Showgrade` | GET | ประวัติเกรด | coursecode, coursename, grade |
 
-### ❌ ไม่พบ (404)
+### ❌ Deprecated (ไม่แนะนำ)
 
-- `/Enroll/Result`
-- `/Enroll/Enrollresult`
-- `/Enroll/GetEnroll`
-- `/Enroll/ShowEnroll`
-
-**Note**: ไม่มี API โดยตรงสำหรับ "วิชาที่ลงเรียน" จึงใช้ Grade/Showgrade กรองตามเทอมแทน
+| Endpoint | Reason |
+|----------|--------|
+| `/Enroll/Timetable` (regapiweb2) | Coverage 16.7% เท่านั้น, ไม่มีชื่อวิชา/อาจารย์ |
+| `/Enroll/Result` | ไม่พบ (404) |
 
 ## 📊 Data Mapping
 
@@ -147,21 +152,23 @@ test();
 "
 ```
 
-## ✅ ข้อมูลที่ได้
+## ✅ ข้อมูลที่ได้ (Updated with regapiweb1)
 
-- ✅ ตารางเรียน (วัน เวลา ห้อง)
+- ✅ ตารางเรียน (วัน เวลา ห้อง) - **66.7% coverage**
 - ✅ รหัสวิชา
-- ✅ ชื่อวิชา (EN)
+- ✅ ชื่อวิชา (TH + EN) ⭐ NEW
 - ✅ Section
 - ✅ หน่วยกิต
+- ✅ **ชื่ออาจารย์ผู้สอน** ⭐ NEW
+- ✅ **วันสอบกลางเทอม/ปลายเทอม** ⭐ NEW
 - ✅ เกรด (วิชาที่เรียนแล้ว)
 - ✅ เทอมปัจจุบัน
 
-## ❌ ข้อมูลที่ไม่มี
+## ⚠️ ข้อจำกัด
 
-- ❌ ชื่ออาจารย์ผู้สอน
-- ❌ ชื่อวิชาภาษาไทย (มีแค่ EN)
-- ❌ API แยกสำหรับ enrollresult
+- ⚠️ 2/6 วิชา (33.3%) ไม่มีเวลาเรียนกำหนด (อาจเป็นวิชา Online/Async)
+- ⚠️ Response เป็น gzip-compressed (ต้อง decode)
+- ⚠️ เวลาเรียนและชื่ออาจารย์อยู่ในรูป HTML (ต้อง parse)
 
 ## 📝 Notes
 

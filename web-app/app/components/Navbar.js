@@ -28,7 +28,8 @@ const MENU_ITEMS = [
         active: false,
         href: '#',
         submenu: [
-            { id: 'grade-total', label: 'ผลการเรียนรวม', href: '/grade' }
+            { id: 'grade-total', label: 'ผลการเรียนรวม', href: '/grade' },
+            { id: 'grade-schedule', label: 'ตารางเรียน', href: '/grade/schedule' }
         ]
     },
     { id: 'search', icon: 'search', label: 'ค้นหาระบบ', active: false, href: '#' },
