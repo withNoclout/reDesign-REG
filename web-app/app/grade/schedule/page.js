@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { LockIcon, AlertTriangleIcon, ClockIcon, CalendarIcon, BookOpenIcon } from '../../components/Icons';
+import { LockIcon, AlertTriangleIcon, ClockIcon, CalendarIcon, BookOpenIcon, ArrowUpIcon, ArrowDownIcon, UserIcon } from '../../components/Icons';
 import { useAuth } from '../../context/AuthContext';
 import { useGuest } from '../../context/GuestContext';
 import Navbar from '../../components/Navbar';
@@ -50,6 +50,8 @@ export default function SchedulePage() {
     const [scheduleData, setScheduleData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [sortField, setSortField] = useState('subject_id');
+    const [sortDirection, setSortDirection] = useState('asc');
 
     const canAccess = isGuest ? allowedModules.includes('grade') : isAuthenticated;
 
@@ -100,9 +102,10 @@ export default function SchedulePage() {
             cMap[sid] = COURSE_COLORS[i % COURSE_COLORS.length];
         });
 
-        // Determine active days (sorted Mon→Sun)
-        const daySet = new Set(courses.map(c => c.weekday));
-        const days = [...daySet].sort((a, b) => a - b);
+        // Always show Mon-Fri (2-6), plus Sat/Sun if they have courses
+        const WEEKDAYS = [2, 3, 4, 5, 6];
+        const extraDays = courses.map(c => c.weekday).filter(d => !WEEKDAYS.includes(d));
+        const days = [...new Set([...WEEKDAYS, ...extraDays])].sort((a, b) => a - b);
 
         // Determine time range
         let minTime = 24 * 60, maxTime = 0;
@@ -146,6 +149,74 @@ export default function SchedulePage() {
 
     const uniqueDays = activeDays.length;
     const totalSubjects = scheduleData?.stats?.total || 0;
+
+    // Sort handler
+    const handleSort = (field) => {
+        if (sortField === field) {
+            setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortField(field);
+            setSortDirection('asc');
+        }
+    };
+
+    // Sorted course list for table view
+    const sortedCourses = useMemo(() => {
+        if (!scheduleData?.scheduled?.length) return [];
+        const courses = [...scheduleData.scheduled];
+        courses.sort((a, b) => {
+            let valA, valB;
+            switch (sortField) {
+                case 'subject_id':
+                    valA = a.subject_id || ''; valB = b.subject_id || '';
+                    break;
+                case 'subject_name':
+                    valA = a.subject_name_th || a.subject_name_en || '';
+                    valB = b.subject_name_th || b.subject_name_en || '';
+                    break;
+                case 'teach_name':
+                    valA = a.teach_name || ''; valB = b.teach_name || '';
+                    break;
+                case 'section':
+                    valA = a.section || ''; valB = b.section || '';
+                    break;
+                case 'weekday':
+                    valA = a.weekday || 0; valB = b.weekday || 0;
+                    if (valA !== valB) return sortDirection === 'asc' ? valA - valB : valB - valA;
+                    valA = a.timefrom || ''; valB = b.timefrom || '';
+                    break;
+                case 'exam_midterm':
+                    valA = a.exam_midterm || ''; valB = b.exam_midterm || '';
+                    break;
+                case 'exam_final':
+                    valA = a.exam_final || ''; valB = b.exam_final || '';
+                    break;
+                default:
+                    valA = a.subject_id || ''; valB = b.subject_id || '';
+            }
+            if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+            if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+        return courses;
+    }, [scheduleData, sortField, sortDirection]);
+
+    // Sort indicator component
+    const SortHeader = ({ field, children, className = '' }) => (
+        <th
+            className={`p-3 text-xs text-white/50 uppercase tracking-wider font-light text-left border-b border-[rgba(255,255,255,0.06)] cursor-pointer select-none hover:text-white/80 transition-colors ${className}`}
+            onClick={() => handleSort(field)}
+        >
+            <span className="inline-flex items-center gap-1">
+                {children}
+                {sortField === field && (
+                    sortDirection === 'asc'
+                        ? <ArrowUpIcon size={12} className="text-[#ff5722]" />
+                        : <ArrowDownIcon size={12} className="text-[#ff5722]" />
+                )}
+            </span>
+        </th>
+    );
 
     // --- Render ---
 
@@ -344,9 +415,6 @@ export default function SchedulePage() {
                                                                     <span>·</span>
                                                                     <span>{entry.course.roomcode}</span>
                                                                 </div>
-                                                                <p className="text-[10px] text-white/40 mt-1 truncate opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                    {entry.course.teach_name}
-                                                                </p>
                                                             </div>
                                                         </td>
                                                     );
@@ -360,7 +428,7 @@ export default function SchedulePage() {
                                             }
 
                                             return (
-                                                <tr key={day} className="hover:bg-white/[0.02] transition-colors">
+                                                <tr key={day} className="hover:bg-white/[0.02] transition-colors" style={{ height: '85px' }}>
                                                     <td className="sticky left-0 z-10 bg-[rgba(20,20,30,0.95)] backdrop-blur-xl p-3 border-r border-b border-[rgba(255,255,255,0.06)]">
                                                         <div className="text-center">
                                                             <p className="text-xs text-white/50 font-montserrat uppercase tracking-wider">{dayInfo.en}</p>
@@ -450,7 +518,127 @@ export default function SchedulePage() {
                     </motion.div>
                 )}
 
-                {/* ===== Unscheduled Courses ===== */}
+                {/* ===== Course Detail Table (always visible below grid) ===== */}
+                {!loading && !error && sortedCourses.length > 0 && (
+                    <motion.div
+                        variants={fadeInUp}
+                        initial="initial"
+                        animate="animate"
+                    >
+                        {/* Desktop Table */}
+                        <div className="hidden md:block bg-[rgba(255,255,255,0.06)] backdrop-blur-xl border border-[rgba(255,255,255,0.1)] rounded-3xl overflow-hidden shadow-2xl">
+                            <div className="p-5 border-b border-[rgba(255,255,255,0.06)] flex items-center gap-3">
+                                <BookOpenIcon size={18} className="text-white/50" />
+                                <div>
+                                    <h2 className="text-sm font-semibold text-white uppercase tracking-wider">รายละเอียดรายวิชา</h2>
+                                    <p className="text-xs text-white/40 mt-0.5">Course details & instructor info</p>
+                                </div>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full border-collapse">
+                                    <thead>
+                                        <tr className="bg-[rgba(20,20,30,0.95)]">
+                                            <SortHeader field="subject_id" className="font-montserrat">รหัสวิชา</SortHeader>
+                                            <SortHeader field="subject_name">ชื่อวิชา</SortHeader>
+                                            <SortHeader field="teach_name">อาจารย์ผู้สอน</SortHeader>
+                                            <SortHeader field="section" className="font-montserrat text-center">Sec</SortHeader>
+                                            <SortHeader field="weekday">วัน/เวลา</SortHeader>
+                                            <SortHeader field="exam_midterm">สอบกลางภาค</SortHeader>
+                                            <SortHeader field="exam_final">สอบปลายภาค</SortHeader>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {sortedCourses.map((course, idx) => {
+                                            const color = colorMap[course.subject_id];
+                                            const dayInfo = DAY_NAMES[course.weekday];
+                                            return (
+                                                <tr key={idx} className="hover:bg-white/[0.03] transition-colors border-b border-[rgba(255,255,255,0.05)]">
+                                                    <td className="p-3 font-montserrat text-sm font-bold whitespace-nowrap" style={{ color: color?.text }}>
+                                                        {course.subject_id}
+                                                    </td>
+                                                    <td className="p-3 text-sm text-white/90 font-prompt max-w-[220px]">
+                                                        {course.subject_name_th || course.subject_name_en}
+                                                    </td>
+                                                    <td className="p-3 text-sm text-white/70 font-prompt max-w-[200px]">
+                                                        {course.teach_name || '—'}
+                                                    </td>
+                                                    <td className="p-3 text-sm text-white/60 font-montserrat text-center">
+                                                        {course.section}
+                                                    </td>
+                                                    <td className="p-3 text-sm text-white/70 whitespace-nowrap">
+                                                        <span className="font-prompt">{dayInfo?.short || '—'}</span>
+                                                        <span className="text-white/40 mx-1">·</span>
+                                                        <span className="font-montserrat text-xs">{course.timefrom}–{course.timeto}</span>
+                                                    </td>
+                                                    <td className="p-3 text-xs text-white/60 font-montserrat">
+                                                        {course.exam_midterm || '—'}
+                                                    </td>
+                                                    <td className="p-3 text-xs text-white/60 font-montserrat">
+                                                        {course.exam_final || '—'}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* Mobile Cards */}
+                        <div className="md:hidden space-y-3">
+                            <div className="flex items-center gap-3 mb-1">
+                                <BookOpenIcon size={18} className="text-white/50" />
+                                <div>
+                                    <h2 className="text-sm font-semibold text-white uppercase tracking-wider">รายละเอียดรายวิชา</h2>
+                                    <p className="text-xs text-white/40 mt-0.5">Course details & instructor info</p>
+                                </div>
+                            </div>
+                            {sortedCourses.map((course, idx) => {
+                                const color = colorMap[course.subject_id];
+                                const dayInfo = DAY_NAMES[course.weekday];
+                                return (
+                                    <div
+                                        key={idx}
+                                        className="bg-[rgba(255,255,255,0.06)] backdrop-blur-xl border border-[rgba(255,255,255,0.1)] rounded-2xl p-4"
+                                        style={{ borderLeft: `3px solid ${color?.border}` }}
+                                    >
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-xs font-bold font-montserrat" style={{ color: color?.text }}>
+                                                    {course.subject_id}
+                                                </p>
+                                                <p className="text-sm text-white/90 font-prompt mt-0.5">
+                                                    {course.subject_name_th || course.subject_name_en}
+                                                </p>
+                                            </div>
+                                            <span className="text-xs text-white/50 font-montserrat ml-2 shrink-0">
+                                                Sec {course.section}
+                                            </span>
+                                        </div>
+                                        {course.teach_name && (
+                                            <p className="text-xs text-white/60 font-prompt mb-2 flex items-center gap-1">
+                                                <UserIcon size={12} className="shrink-0" /> {course.teach_name}
+                                            </p>
+                                        )}
+                                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-white/50">
+                                            <span>
+                                                <span className="font-prompt">{dayInfo?.short || '—'}</span>
+                                                <span className="mx-1">·</span>
+                                                <span className="font-montserrat">{course.timefrom}–{course.timeto}</span>
+                                            </span>
+                                            {course.exam_midterm && (
+                                                <span>กลางภาค: <span className="font-montserrat">{course.exam_midterm}</span></span>
+                                            )}
+                                            {course.exam_final && (
+                                                <span>ปลายภาค: <span className="font-montserrat">{course.exam_final}</span></span>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </motion.div>
+                )}
                 {!loading && !error && scheduleData?.unscheduled?.length > 0 && (
                     <motion.div
                         variants={fadeInUp}

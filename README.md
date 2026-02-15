@@ -85,6 +85,35 @@ npm start
 
 ---
 
+## 🏭 Production Implementation Plan
+
+> Target: **Supabase (DB/Backend services) + External Hosting** สำหรับ Next.js runtime
+
+### Phase 1 — Readiness & Environment
+- [ ] แยก environment ชัดเจน: `dev / staging / production`
+- [ ] เตรียม production secret manager และย้าย env สำคัญทั้งหมดออกจากเครื่อง local
+- [ ] ยืนยันค่า production เช่น `NODE_ENV=production`, `MOCK_AUTH=false`, base URLs ถูกต้อง
+
+### Phase 2 — Database & Security Hardening
+- [ ] ทำ schema baseline + migration order ให้ deterministic
+- [ ] ทดสอบ backup/restore บน staging ก่อนขึ้นจริง
+- [ ] ตรวจ RLS/policies และสิทธิ์ service role ให้ถูก scope
+- [ ] เปลี่ยน rate limit login จาก in-memory เป็น shared store (เช่น Redis/Upstash)
+
+### Phase 3 — CI/CD & Release Gates
+- [ ] วาง pipeline: install → lint → build → smoke tests
+- [ ] ตั้ง staging deploy อัตโนมัติ และกำหนด merge/deploy gates
+- [ ] เตรียม production deploy strategy (blue/green หรือ canary) พร้อม rollback trigger
+
+### Phase 4 — Monitoring, Rollback, Go-live
+- [ ] รวม logs/metrics/alerts (error rate, latency, 401/429 spikes)
+- [ ] เตรียม incident runbook และ communication template
+- [ ] ทำ post-deploy verification checklist และเฝ้าระวังช่วง 24–48 ชม.แรก
+
+> Detailed working plan: `~/.copilot/session-state/ad6e61b3-5e99-4452-b0b8-1ca0fb0e0558/plan.md`
+
+---
+
 ## 🎨 Design System
 
 - **Theme**: Glassmorphism (frosted glass effect)

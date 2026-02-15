@@ -292,3 +292,45 @@ export function BombIcon({ size, className, ...props }) {
         </Icon>
     );
 }
+
+export function GridIcon({ size, className, ...props }) {
+    return (
+        <Icon size={size} className={className} {...props}>
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" />
+        </Icon>
+    );
+}
+
+export function ListIcon({ size, className, ...props }) {
+    return (
+        <Icon size={size} className={className} {...props}>
+            <line x1="8" y1="6" x2="21" y2="6" />
+            <line x1="8" y1="12" x2="21" y2="12" />
+            <line x1="8" y1="18" x2="21" y2="18" />
+            <line x1="3" y1="6" x2="3.01" y2="6" />
+            <line x1="3" y1="12" x2="3.01" y2="12" />
+            <line x1="3" y1="18" x2="3.01" y2="18" />
+        </Icon>
+    );
+}
+
+export function ArrowUpIcon({ size, className, ...props }) {
+    return (
+        <Icon size={size} className={className} {...props}>
+            <line x1="12" y1="19" x2="12" y2="5" />
+            <polyline points="5 12 12 5 19 12" />
+        </Icon>
+    );
+}
+
+export function ArrowDownIcon({ size, className, ...props }) {
+    return (
+        <Icon size={size} className={className} {...props}>
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <polyline points="19 12 12 19 5 12" />
+        </Icon>
+    );
+}
