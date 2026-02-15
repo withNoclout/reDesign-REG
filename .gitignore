@@ -53,3 +53,7 @@ ui-ux-skill/
 # Application logs and user uploads
 web-app/logs/
 web-app/public/uploads/
+
+# Credentials / testing accounts
+**/user_fortesting.txt
+**/userfortesting.txt
