@@ -75,6 +75,23 @@ function formatExamDate(dateStr) {
     return time ? `${day}/${month} ${time}` : `${day}/${month}`;
 }
 
+const TITLE_ABBREVIATIONS = [
+    ['รองศาสตราจารย์', 'รศ.'],
+    ['ผู้ช่วยศาสตราจารย์', 'ผศ.'],
+    ['ศาสตราจารย์', 'ศ.'],
+    ['อาจารย์', 'อ.'],
+    ['ดร.', 'ดร.'],
+];
+
+function shortenTitle(name) {
+    if (!name) return name;
+    let s = name;
+    for (const [full, abbr] of TITLE_ABBREVIATIONS) {
+        s = s.replace(full, abbr);
+    }
+    return s;
+}
+
 export default function SchedulePage() {
     const router = useRouter();
     const { user, isAuthenticated, loading: authLoading } = useAuth();
@@ -535,7 +552,7 @@ export default function SchedulePage() {
                                                                 {entry.course.teach_name && (
                                                                     <>
                                                                         <span>·</span>
-                                                                        <span className="truncate">{entry.course.teach_name}</span>
+                                                                        <span className="truncate">{shortenTitle(entry.course.teach_name)}</span>
                                                                     </>
                                                                 )}
                                                             </div>
@@ -592,7 +609,7 @@ export default function SchedulePage() {
                                                         {course.subject_name_th || course.subject_name_en}
                                                     </td>
                                                     <td className="p-3 text-sm text-white/70 font-prompt max-w-[200px]">
-                                                        {course.teach_name || '—'}
+                                                        {shortenTitle(course.teach_name) || '—'}
                                                     </td>
                                                     <td className="p-3 text-sm text-white/60 font-montserrat text-center">
                                                         {course.section}
@@ -649,7 +666,7 @@ export default function SchedulePage() {
                                         </div>
                                         {course.teach_name && (
                                             <p className="text-xs text-white/60 font-prompt mb-2 flex items-center gap-1">
-                                                <UserIcon size={12} className="shrink-0" /> {course.teach_name}
+                                                <UserIcon size={12} className="shrink-0" /> {shortenTitle(course.teach_name)}
                                             </p>
                                         )}
                                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-white/50">
