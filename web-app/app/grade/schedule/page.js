@@ -43,6 +43,38 @@ function getColSpan(from, to, slotMinutes) {
     return Math.max(1, Math.round(duration / slotMinutes));
 }
 
+const THAI_MONTHS = {
+    'มกราคม': '01', 'กุมภาพันธ์': '02', 'มีนาคม': '03', 'เมษายน': '04',
+    'พฤษภาคม': '05', 'มิถุนายน': '06', 'กรกฎาคม': '07', 'สิงหาคม': '08',
+    'กันยายน': '09', 'ตุลาคม': '10', 'พฤศจิกายน': '11', 'ธันวาคม': '12',
+    'ม.ค.': '01', 'ก.พ.': '02', 'มี.ค.': '03', 'เม.ย.': '04',
+    'พ.ค.': '05', 'มิ.ย.': '06', 'ก.ค.': '07', 'ส.ค.': '08',
+    'ก.ย.': '09', 'ต.ค.': '10', 'พ.ย.': '11', 'ธ.ค.': '12',
+};
+
+function formatExamDate(dateStr) {
+    if (!dateStr) return null;
+    const s = dateStr.trim();
+
+    // Extract time (HH:MM) if present — match patterns like "13:00-16:00" or "เวลา 13:00"
+    const timeMatch = s.match(/(\d{1,2}:\d{2})/);
+    const time = timeMatch ? timeMatch[1] : '';
+
+    // Extract day number
+    const dayMatch = s.match(/(\d{1,2})\s/);
+    if (!dayMatch) return s;
+    const day = dayMatch[1].padStart(2, '0');
+
+    // Extract Thai month name → month number
+    let month = '';
+    for (const [name, num] of Object.entries(THAI_MONTHS)) {
+        if (s.includes(name)) { month = num; break; }
+    }
+    if (!month) return s;
+
+    return time ? `${day}/${month} ${time}` : `${day}/${month}`;
+}
+
 export default function SchedulePage() {
     const router = useRouter();
     const { user, isAuthenticated, loading: authLoading } = useAuth();
@@ -570,11 +602,11 @@ export default function SchedulePage() {
                                                         <span className="text-white/40 mx-1">·</span>
                                                         <span className="font-montserrat text-xs">{course.timefrom}–{course.timeto}</span>
                                                     </td>
-                                                    <td className="p-3 text-xs text-white/60 font-montserrat">
-                                                        {course.exam_midterm || '—'}
+                                                    <td className="p-3 text-sm text-white/60 font-montserrat whitespace-nowrap">
+                                                        {formatExamDate(course.exam_midterm) || '—'}
                                                     </td>
-                                                    <td className="p-3 text-xs text-white/60 font-montserrat">
-                                                        {course.exam_final || '—'}
+                                                    <td className="p-3 text-sm text-white/60 font-montserrat whitespace-nowrap">
+                                                        {formatExamDate(course.exam_final) || '—'}
                                                     </td>
                                                 </tr>
                                             );
@@ -627,10 +659,10 @@ export default function SchedulePage() {
                                                 <span className="font-montserrat">{course.timefrom}–{course.timeto}</span>
                                             </span>
                                             {course.exam_midterm && (
-                                                <span>กลางภาค: <span className="font-montserrat">{course.exam_midterm}</span></span>
+                                                <span>กลางภาค: <span className="font-montserrat">{formatExamDate(course.exam_midterm)}</span></span>
                                             )}
                                             {course.exam_final && (
-                                                <span>ปลายภาค: <span className="font-montserrat">{course.exam_final}</span></span>
+                                                <span>ปลายภาค: <span className="font-montserrat">{formatExamDate(course.exam_final)}</span></span>
                                             )}
                                         </div>
                                     </div>
