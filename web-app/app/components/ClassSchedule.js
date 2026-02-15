@@ -72,8 +72,29 @@ export default function ClassSchedule() {
                     <line x1="12" y1="16" x2="12.01" y2="16" />
                 </svg>
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">Unavailable</h3>
-            <p className="text-white/60">{error}</p>
+            <h3 className="text-xl font-bold text-white mb-2">ไม่สามารถโหลดตารางเรียนได้</h3>
+            <p className="text-white/60 mb-4">{error}</p>
+            <button
+                onClick={() => {
+                    setLoading(true);
+                    setError(null);
+                    fetch('/api/student/schedule')
+                        .then(r => r.json())
+                        .then(json => {
+                            if (json.success) {
+                                setSchedule(json.data || []);
+                                setSemester(json.semester);
+                            } else {
+                                setError(json.error || 'Failed to load schedule');
+                            }
+                        })
+                        .catch(() => setError('Network error'))
+                        .finally(() => setLoading(false));
+                }}
+                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors text-sm"
+            >
+                🔄 Try Again
+            </button>
         </div>
     );
 
@@ -106,10 +127,31 @@ export default function ClassSchedule() {
                     <div className="col-span-full text-center py-20">
                         <div className="bg-white/5 rounded-2xl p-8 max-w-md mx-auto border border-white/10">
                             <h3 className="text-xl font-bold text-white mb-2">No Classes Found</h3>
-                            <p className="text-white/40">
-                                You don't have any classes scheduled for this period.
-                                Keep up the good work!
+                            <p className="text-white/40 mb-4">
+                                ยังไม่พบข้อมูลตารางเรียนในเทอมนี้ อาจเป็นเพราะยังไม่ได้ลงทะเบียน
+                                หรือ session หมดอายุ
                             </p>
+                            <button
+                                onClick={() => {
+                                    setLoading(true);
+                                    setError(null);
+                                    fetch('/api/student/schedule')
+                                        .then(r => r.json())
+                                        .then(json => {
+                                            if (json.success) {
+                                                setSchedule(json.data || []);
+                                                setSemester(json.semester);
+                                            } else {
+                                                setError(json.error || 'Failed to load schedule');
+                                            }
+                                        })
+                                        .catch(() => setError('Network error'))
+                                        .finally(() => setLoading(false));
+                                }}
+                                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors text-sm"
+                            >
+                                🔄 Try Again
+                            </button>
                         </div>
                     </div>
                 ) : (

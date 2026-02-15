@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { getAuthUser } from '@/lib/auth';
 import { spawn } from 'child_process';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -15,10 +16,19 @@ export async function POST(request) {
     let timeoutId = null;
 
     try {
+        // Auth check
+        const userId = await getAuthUser();
+        if (!userId) {
+            return NextResponse.json(
+                { success: false, message: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+
         const body = await request.json();
         const { itemId, tempPath } = body;
 
-        console.log('[Upload API] Received upload request:', { itemId, tempPath });
+        console.log('[Upload API] Received upload request:', { itemId, tempPath, userId });
 
         if (!itemId || !tempPath) {
             return NextResponse.json(

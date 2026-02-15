@@ -3,6 +3,19 @@ import { cookies } from 'next/headers';
 import https from 'https';
 import axios from 'axios';
 import { z } from 'zod';
+import fs from 'fs';
+import path from 'path';
+
+// Server-side log helper (persists to app.log)
+function serverLog(level, message) {
+    const timestamp = new Date().toISOString();
+    const entry = `[${timestamp}] [${level}] [Schedule API] ${message}\n`;
+    try {
+        const logPath = path.join(process.cwd(), 'logs', 'app.log');
+        fs.appendFileSync(logPath, entry);
+    } catch { /* ignore */ }
+    console.log(`[Schedule API] ${message}`);
+}
 
 // Disable SSL verification for the uni API
 const agent = new https.Agent({
@@ -26,10 +39,12 @@ export async function GET() {
     const cookieStore = await cookies();
     const token = cookieStore.get('reg_token')?.value;
 
+    serverLog('INFO', `=== Request Start === Has token: ${!!token}, Token length: ${token?.length || 0}`);
+
     // Check for MOCK_AUTH mode or missing token -> Return Mock Data
     if (process.env.MOCK_AUTH === 'true' || !token) {
-        // ... (Keep existing Mock Logic for dev if needed, or simplify)
-        console.log('[Schedule API] Serving Mock Data (Auth bypassed or missing token)');
+        const reason = !token ? 'no token in cookie' : 'MOCK_AUTH enabled';
+        serverLog('WARN', `Serving Mock Data. Reason: ${reason}`);
         // Shortened mock data for brevity, ensuring it matches schema
         const mockSchedule = [
             {
@@ -54,33 +69,46 @@ export async function GET() {
 
     try {
         // 1. Fetch Schedule Data (Enroll/Week)
+        serverLog('INFO', 'Calling External API: Enroll/Week...');
         const scheduleResponse = await axios.get('https://reg4.kmutnb.ac.th/regapiweb2/api/th/Enroll/Week', {
             headers: {
-                'Authorization': `Bearer ${token}`, // Use Bearer as proven in probe
+                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
             httpsAgent: agent,
             validateStatus: () => true
         });
 
+        serverLog('INFO', `External API Status: ${scheduleResponse.status}`);
+        serverLog('INFO', `Response preview: ${JSON.stringify(scheduleResponse.data)?.substring(0, 300)}`);
+
         if (scheduleResponse.status !== 200) {
-            console.warn('[Schedule API] Upstream Error:', scheduleResponse.status);
-            return NextResponse.json({ success: false, error: 'Failed to fetch schedule from university' }, { status: scheduleResponse.status });
+            serverLog('ERROR', `Upstream Error: ${scheduleResponse.status} - ${JSON.stringify(scheduleResponse.data)?.substring(0, 200)}`);
+            return NextResponse.json({ 
+                success: false, 
+                error: 'Failed to fetch schedule from university',
+                statusCode: scheduleResponse.status
+            }, { status: scheduleResponse.status });
         }
 
         const rawData = scheduleResponse.data;
 
         if (!Array.isArray(rawData)) {
+            serverLog('WARN', `Non-array response: ${typeof rawData}`);
             return NextResponse.json({ success: true, data: [], semester: 'Unknown' });
         }
+
+        serverLog('INFO', `Raw data: ${rawData.length} items`);
 
         // 2. Filter & Validate
         const validItems = rawData
             .filter(item => {
-                // Critical Filter: Must have a subject_id AND a roomcode (or at least not be completely empty)
-                // The issue was items with null roomcode/subject_id being returned for empty slots
-                return item.subject_id && item.subject_id.trim() !== '' &&
-                    item.timefrom && item.timefrom.trim() !== '';
+                const hasSubject = item.subject_id && item.subject_id.trim() !== '';
+                const hasTime = item.timefrom && item.timefrom.trim() !== '';
+                if (!hasSubject || !hasTime) {
+                    serverLog('DEBUG', `Filtered out: subject_id=${item.subject_id}, timefrom=${item.timefrom}`);
+                }
+                return hasSubject && hasTime;
             })
             .map(item => {
                 // Normalize data if needed
@@ -96,11 +124,13 @@ export async function GET() {
         const safeItems = validItems.filter(item => {
             const result = ScheduleItemSchema.safeParse(item);
             if (!result.success) {
-                console.warn('[Schedule API] Invalid Item Filtered:', item, result.error.format());
+                serverLog('WARN', `Invalid Item Filtered: ${JSON.stringify(item)}`);
                 return false;
             }
             return true;
         });
+
+        serverLog('INFO', `Final result: ${rawData.length} raw → ${validItems.length} valid → ${safeItems.length} safe`);
 
         return NextResponse.json({
             success: true,
@@ -109,7 +139,7 @@ export async function GET() {
         });
 
     } catch (error) {
-        console.error('Schedule Fetch Error:', error.message);
+        serverLog('ERROR', `Schedule Fetch Error: ${error.message}`);
         return NextResponse.json({
             success: false,
             error: 'Failed to fetch schedule data',

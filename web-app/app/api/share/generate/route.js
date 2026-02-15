@@ -46,8 +46,13 @@ export async function POST(request) {
         }
 
         // Generate JWT token
+        // Get userId from auth cookie for proper ownership tracking
+        const { cookies: getCookies } = await import('next/headers');
+        const cookieStore = await getCookies();
+        const storedUserId = cookieStore.get('std_code')?.value || 'anonymous';
+
         const payload = {
-            userId: 'current-user', // TODO: Get from session/auth
+            userId: storedUserId,
             permissions,
             guestName: guestName.trim(),
             createdAt: new Date().toISOString()

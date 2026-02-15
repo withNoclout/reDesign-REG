@@ -58,8 +58,8 @@ export async function POST(request) {
             }, { onConflict: 'user_id' });
 
         if (error) {
-            console.warn('[Settings] Save failed (type mismatch?):', error.message);
-            // Still return success — settings are in-memory on client
+            console.error('[Settings] Save failed:', error.message);
+            return NextResponse.json({ success: false, message: 'Failed to save settings: ' + error.message }, { status: 500 });
         }
 
         return NextResponse.json({ success: true });

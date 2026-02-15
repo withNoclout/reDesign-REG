@@ -22,7 +22,8 @@ const MOCK_NEWS = [
     }
 ];
 
-const ADMIN_USER_ID = process.env.ADMIN_USER_ID || 's6701091611290';
+// ⚠️ ADMIN_USER_ID must match the format returned by REG API (no 's' prefix)
+const ADMIN_USER_ID = (process.env.ADMIN_USER_ID || 's6701091611290').replace(/^s/, '');
 const BASE_URL = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
 
 export async function GET() {
@@ -79,12 +80,11 @@ export async function POST(request) {
             // Actually usually Getacadstd returns object. Let's assume it has usercode/student code.
             // Based on previous logs or code: usercode is in the response.
             // Let's safe check keys.
-            const userCode = authRes.data.studentCode || authRes.data.usercode || authRes.data.studentId;
+            const rawUserCode = authRes.data.studentCode || authRes.data.usercode || authRes.data.studentId;
+            // Normalize: strip 's' prefix for consistent comparison
+            const userCode = String(rawUserCode).replace(/^s/, '');
 
-            // Debug log if needed (commented out)
-            // console.log('Admin Check:', userCode);
-
-            if (String(userCode) !== ADMIN_USER_ID) {
+            if (userCode !== ADMIN_USER_ID) {
                 return NextResponse.json({ success: false, message: 'Forbidden: Admin only' }, { status: 403 });
             }
 
