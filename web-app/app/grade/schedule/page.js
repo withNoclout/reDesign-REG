@@ -75,37 +75,18 @@ function formatExamDate(dateStr) {
     return time ? `${day}/${month} ${time}` : `${day}/${month}`;
 }
 
-const TITLE_ABBREVIATIONS = [
-    ['รองศาสตราจารย์', 'รศ.'],
-    ['ผู้ช่วยศาสตราจารย์', 'ผศ.'],
-    ['ศาสตราจารย์', 'ศ.'],
-    ['อาจารย์', 'อ.'],
-    ['ดร.', 'ดร.'],
+const TITLE_PATTERNS = [
+    'รองศาสตราจารย์', 'ผู้ช่วยศาสตราจารย์', 'ศาสตราจารย์',
+    'อาจารย์', 'ดร\\.', 'รศ\\.', 'ผศ\\.', 'ศ\\.', 'อ\\.',
 ];
 
-function shortenTitle(name) {
+function stripTitles(name) {
     if (!name) return name;
     let s = name;
-    for (const [full, abbr] of TITLE_ABBREVIATIONS) {
-        s = s.replaceAll(full, abbr);
+    for (const pat of TITLE_PATTERNS) {
+        s = s.replace(new RegExp(pat, 'g'), '');
     }
-    return s;
-}
-
-function splitInstructors(name) {
-    if (!name) return [];
-    const shortened = shortenTitle(name);
-    // Split before each title prefix
-    const parts = shortened.split(/(?=(?:รศ\.|ผศ\.|ศ\.|อ\.|ดร\.))/g)
-        .map(s => s.trim())
-        .filter(Boolean);
-    const list = parts.length ? parts : [shortened];
-    // Separate title prefix from actual name
-    return list.map(s => {
-        const m = s.match(/^((?:รศ\.|ผศ\.|ศ\.|อ\.|ดร\.)+)\s*(.*)/);
-        if (m) return { title: m[1], name: m[2] };
-        return { title: '', name: s };
-    });
+    return s.replace(/\s+/g, ' ').trim();
 }
 
 export default function SchedulePage() {
@@ -568,7 +549,7 @@ export default function SchedulePage() {
                                                                 {entry.course.teach_name && (
                                                                     <>
                                                                         <span>·</span>
-                                                                        <span className="truncate">{splitInstructors(entry.course.teach_name).map(i => `${i.title}${i.name}`).join(', ')}</span>
+                                                                        <span className="truncate">{stripTitles(entry.course.teach_name)}</span>
                                                                     </>
                                                                 )}
                                                             </div>
@@ -625,16 +606,7 @@ export default function SchedulePage() {
                                                         {course.subject_name_th || course.subject_name_en}
                                                     </td>
                                                     <td className="p-3 text-sm text-white/70 font-prompt">
-                                                        {course.teach_name ? (
-                                                            <div className="space-y-0.5">
-                                                                {splitInstructors(course.teach_name).map((inst, i) => (
-                                                                    <div key={i} className="flex whitespace-nowrap">
-                                                                        <span className="w-16 shrink-0 text-white/40">{inst.title}</span>
-                                                                        <span>{inst.name}</span>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        ) : '—'}
+                                                        {stripTitles(course.teach_name) || '—'}
                                                     </td>
                                                     <td className="p-3 text-sm text-white/60 font-montserrat text-center">
                                                         {course.section}
@@ -690,15 +662,9 @@ export default function SchedulePage() {
                                             </span>
                                         </div>
                                         {course.teach_name && (
-                                            <div className="text-xs text-white/60 font-prompt mb-2 space-y-0.5">
-                                                {splitInstructors(course.teach_name).map((inst, i) => (
-                                                    <div key={i} className="flex items-center gap-1">
-                                                        <UserIcon size={12} className="shrink-0" />
-                                                        <span className="w-12 shrink-0 text-white/40">{inst.title}</span>
-                                                        <span>{inst.name}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
+                                            <p className="text-xs text-white/60 font-prompt mb-2 flex items-center gap-1">
+                                                <UserIcon size={12} className="shrink-0" /> {stripTitles(course.teach_name)}
+                                            </p>
                                         )}
                                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-white/50">
                                             <span>
