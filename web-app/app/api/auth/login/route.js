@@ -82,9 +82,18 @@ export async function POST(request) {
         // --- REAL API INTEGRATION (regapiweb2) ---
         const BASE_URL = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
 
+        // Validate encryption key early
+        const ENCRYPT_SECRET_KEY = process.env.ENCRYPT_SECRET_KEY;
+        if (!ENCRYPT_SECRET_KEY) {
+            console.error('[API] ENCRYPT_SECRET_KEY is not set in environment');
+            return NextResponse.json(
+                { success: false, message: 'Server configuration error' },
+                { status: 500 }
+            );
+        }
+
         // Encryption function using native Node.js crypto (matches .NET server-side decryption)
         function encryptData(plaintext) {
-            const ENCRYPT_SECRET_KEY = process.env.ENCRYPT_SECRET_KEY || 'mySecretKeyHere';
             const salt = crypto.randomBytes(16);
             // PBKDF2 with SHA1, 32 bytes (256-bit key), 100 iterations
             const derivedKey = crypto.pbkdf2Sync(ENCRYPT_SECRET_KEY, salt, 100, 32, 'sha1');

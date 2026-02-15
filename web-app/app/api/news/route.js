@@ -22,7 +22,7 @@ const MOCK_NEWS = [
     }
 ];
 
-const ADMIN_USER_ID = 's6701091611290';
+const ADMIN_USER_ID = process.env.ADMIN_USER_ID || 's6701091611290';
 const BASE_URL = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
 
 export async function GET() {

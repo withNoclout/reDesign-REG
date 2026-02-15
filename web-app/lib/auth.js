@@ -2,20 +2,20 @@
 import { cookies } from 'next/headers';
 import axios from 'axios';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://reg1.kmutnb.ac.th/regapiweb1/api/th';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
 
 /**
  * Retrieves the authenticated user's ID (Student Code or User Code).
- * Supports MOCK_AUTH=true in .env to bypass external API checks during dev.
+ * Validates session against the external REG API, then retrieves user ID
+ * from the std_code cookie (set during login).
  * 
  * @returns {Promise<string|null>} The user ID if authenticated, or null.
  */
 export async function getAuthUser() {
     // 1. Check for Mock Mode (Dev Only)
-    // Note: In production, ensure MOCK_AUTH is NOT set or set to false.
     if (process.env.MOCK_AUTH === 'true') {
         console.warn('[Auth] ⚠️ Using MOCK_AUTH mode. Bypassing external API.');
-        const mockId = '00000000-0000-0000-0000-000000000067'; // Valid UUID for testing
+        const mockId = '00000000-0000-0000-0000-000000000067';
         return mockId;
     }
 
@@ -29,18 +29,24 @@ export async function getAuthUser() {
     }
 
     try {
-        // console.log(`[Auth] Verifying token against: ${BASE_URL}/Schg/Getacadstd`);
+        // Validate token is still active by hitting the REG API
         const authRes = await axios.get(`${BASE_URL}/Schg/Getacadstd`, {
             headers: { 'Authorization': `Bearer ${token}` },
             validateStatus: status => status < 500
         });
 
-        if (authRes.status !== 200 || !authRes.data) {
+        if (authRes.status !== 200) {
             console.log(`[Auth] External API rejected token. Status: ${authRes.status}`);
             return null;
         }
 
-        const userId = authRes.data.studentCode || authRes.data.usercode || authRes.data.studentId;
+        // Token is valid — get user ID from std_code cookie (set during login)
+        const userId = cookieStore.get('std_code')?.value;
+        if (!userId) {
+            console.warn('[Auth] Token valid but std_code cookie missing');
+            return null;
+        }
+
         return userId;
     } catch (err) {
         console.error('[Auth] Check failed:', err.message);

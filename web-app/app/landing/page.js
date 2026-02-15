@@ -20,7 +20,7 @@ import ErrorAlert from '../components/ErrorAlert';
 import PortfolioGrid from '../components/PortfolioGrid';
 import '../globals.css';
 
-const ADMIN_USER_ID = 's6701091611290';
+const ADMIN_USER_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID || 's6701091611290';
 
 export default function Landing() {
     const router = useRouter();
@@ -55,7 +55,7 @@ export default function Landing() {
 
             if (result.success) {
                 setStudentInfo(result.data);
-            } else if (result.status === 401 || result.code === 'SESSION_EXPIRED') {
+            } else if (response.status === 401 || result.code === 'SESSION_EXPIRED') {
                 handleLogout();
             } else {
                 // If profile fails (e.g. 503 partial), we might still have some data?

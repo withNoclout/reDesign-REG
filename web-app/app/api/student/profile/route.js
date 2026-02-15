@@ -4,7 +4,7 @@ import axios from 'axios';
 import https from 'https';
 import { getServiceSupabase } from '@/lib/supabase';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://reg1.kmutnb.ac.th/regapiweb1/api/th';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
 
 // Ignore self-signed certs
 const agent = new https.Agent({ rejectUnauthorized: false });
@@ -13,7 +13,14 @@ export async function GET() {
     try {
         const cookieStore = await cookies();
         const token = cookieStore.get('reg_token')?.value;
-        const supabase = getServiceSupabase();
+
+        // Lazy-init Supabase — it's optional (cache only)
+        let supabase = null;
+        try {
+            supabase = getServiceSupabase();
+        } catch (e) {
+            console.warn('[Profile API] Supabase not available (cache disabled):', e.message);
+        }
 
         // MOCK_AUTH block removed as per user request (User wants REAL data)
 
@@ -136,20 +143,24 @@ export async function GET() {
                 };
 
                 // --- CACHE STEP ---
-                if (studentId) {
-                    await supabase.from('student_profiles').upsert({
-                        student_id: studentId,
-                        faculty: profile.faculty,
-                        department: profile.department,
-                        major: profile.major,
-                        advisor1: profile.advisor1,
-                        advisor2: profile.advisor2,
-                        advisor3: profile.advisor3,
-                        admit_year: profile.admitYear,
-                        current_year: profile.currentYear,
-                        current_semester: profile.currentSemester,
-                        updated_at: new Date()
-                    });
+                if (studentId && supabase) {
+                    try {
+                        await supabase.from('student_profiles').upsert({
+                            student_id: studentId,
+                            faculty: profile.faculty,
+                            department: profile.department,
+                            major: profile.major,
+                            advisor1: profile.advisor1,
+                            advisor2: profile.advisor2,
+                            advisor3: profile.advisor3,
+                            admit_year: profile.admitYear,
+                            current_year: profile.currentYear,
+                            current_semester: profile.currentSemester,
+                            updated_at: new Date()
+                        });
+                    } catch (cacheErr) {
+                        console.warn('[Profile API] Cache upsert failed:', cacheErr.message);
+                    }
                 }
 
                 return NextResponse.json({ success: true, data: profile });
@@ -158,7 +169,9 @@ export async function GET() {
                 // Check if it was a 401
                 const errorStatus = bioResult.status === 'rejected' ? bioResult.reason?.response?.status : bioResult.value?.status;
                 if (errorStatus === 401) {
-                    throw { response: { status: 401 } }; // Throw to catch block for consistent handling
+                    const authError = new Error('Unauthorized');
+                    authError.response = { status: 401 };
+                    throw authError;
                 }
                 throw new Error(`Profile API Failed. Status: ${errorStatus}`);
             }
@@ -178,33 +191,35 @@ export async function GET() {
             console.warn(`[Profile API] External API Failed or Timed Out. Trying Cache...`);
 
             // --- ATTEMPT 2: Fallback to Cache ---
-            // We need an ID. If we don't have it, we are in trouble.
-            // Try getting it from cookies if previously saved
             const backupId = cookieStore.get('std_code')?.value;
 
-            if (backupId) {
-                const { data: cached, error } = await supabase
-                    .from('student_profiles')
-                    .select('*')
-                    .eq('student_id', backupId)
-                    .single();
+            if (backupId && supabase) {
+                try {
+                    const { data: cached, error } = await supabase
+                        .from('student_profiles')
+                        .select('*')
+                        .eq('student_id', backupId)
+                        .single();
 
-                if (cached && !error) {
-                    console.log('[API] Serving Cached Profile for:', backupId);
-                    return NextResponse.json({
-                        success: true,
-                        data: {
-                            faculty: cached.faculty,
-                            department: cached.department,
-                            major: cached.major,
-                            advisor1: cached.advisor1,
-                            advisor2: cached.advisor2,
-                            advisor3: cached.advisor3,
-                            admitYear: cached.admit_year,
-                            currentYear: cached.current_year,
-                            currentSemester: cached.current_semester
-                        }
-                    });
+                    if (cached && !error) {
+                        console.log('[API] Serving Cached Profile for:', backupId);
+                        return NextResponse.json({
+                            success: true,
+                            data: {
+                                faculty: cached.faculty,
+                                department: cached.department,
+                                major: cached.major,
+                                advisor1: cached.advisor1,
+                                advisor2: cached.advisor2,
+                                advisor3: cached.advisor3,
+                                admitYear: cached.admit_year,
+                                currentYear: cached.current_year,
+                                currentSemester: cached.current_semester
+                            }
+                        });
+                    }
+                } catch (cacheErr) {
+                    console.warn('[Profile API] Cache lookup failed:', cacheErr.message);
                 }
             }
 

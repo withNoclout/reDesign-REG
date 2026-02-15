@@ -1,7 +1,10 @@
 import jwt from 'jsonwebtoken';
 
-// Get JWT secret from environment, with fallback for development
-const SECRET = process.env.JWT_SECRET || 'fallback-secret-change-in-production-min-32-chars';
+// Get JWT secret from environment — must be set in .env.local
+const SECRET = process.env.JWT_SECRET;
+if (!SECRET) {
+    console.warn('[JWT] WARNING: JWT_SECRET is not set in environment. Share token features will not work.');
+}
 
 /**
  * Generate a share token with JWT
