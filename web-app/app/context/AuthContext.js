@@ -43,7 +43,7 @@ export function AuthProvider({ children }) {
                 const parsed = JSON.parse(stored);
                 if (parsed?.usercode) {
                     const customImg = localStorage.getItem(`custom_profile_img_${parsed.usercode}`);
-                    if (customImg) parsed.img = customImg;
+                    if (customImg && !parsed.img) parsed.img = customImg;
 
                     // Check verification status
                     const verified = localStorage.getItem(`drive_connected_${parsed.usercode}`) === 'true';
@@ -64,7 +64,7 @@ export function AuthProvider({ children }) {
     const login = useCallback((userData) => {
         if (userData?.usercode) {
             const customImg = localStorage.getItem(`custom_profile_img_${userData.usercode}`);
-            if (customImg) userData.img = customImg;
+            if (customImg && !userData.img) userData.img = customImg;
 
             // Check verification status
             const verified = localStorage.getItem(`drive_connected_${userData.usercode}`) === 'true';
@@ -125,8 +125,7 @@ export function AuthProvider({ children }) {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        image: newImgUrl,
-                        usercode: user.usercode
+                        image: newImgUrl
                     })
                 });
 
@@ -142,12 +141,24 @@ export function AuthProvider({ children }) {
 
             localStorage.setItem(key, finalParams.img);
         } else {
+            try {
+                await fetch('/api/user/upload-image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reset: true })
+                });
+            } catch (err) {
+                console.error('Reset upload error:', err);
+            }
             localStorage.removeItem(key);
             finalParams.img = null;
         }
 
         setUser(prev => {
-            const updated = { ...prev, img: finalParams.img || prev.originalImg || prev.img };
+            const updated = {
+                ...prev,
+                img: finalParams.img || (newImgUrl === null ? (prev.originalImg || null) : prev.img)
+            };
             sessionStorage.setItem(SESSION_KEY, JSON.stringify(updated));
             return updated;
         });

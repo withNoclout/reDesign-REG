@@ -197,9 +197,26 @@ export async function POST(request) {
                 }
 
                 // Build user data for frontend (no raw JWTs exposed)
+                let persistedProfileImage = '';
+                if (userProfile.usercode) {
+                    try {
+                        const supabase = getServiceSupabase();
+                        const { data: profileImageRow } = await supabase
+                            .from('user_verifications')
+                            .select('profile_image_url')
+                            .eq('user_code', String(userProfile.usercode))
+                            .single();
+                        persistedProfileImage = profileImageRow?.profile_image_url || '';
+                    } catch (imgErr) {
+                        console.warn('[API] profile image fetch failed (non-blocking):', imgErr.message);
+                    }
+                }
+
+                const fallbackImg = apiData.img || apiData.navimg || '';
                 const userData = {
                     ...userProfile,
-                    img: apiData.img || apiData.navimg || '',
+                    img: persistedProfileImage || fallbackImg,
+                    originalImg: fallbackImg,
                     navimg: apiData.navimg || '',
                 };
 
