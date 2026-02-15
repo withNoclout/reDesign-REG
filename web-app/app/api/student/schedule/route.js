@@ -85,8 +85,9 @@ function decodeGzipResponse(base64String) {
 function parseTimeHtml(timeHtml) {
     if (!timeHtml) return { weekday: null, timefrom: null, timeto: null };
     
-    // Extract day abbreviation (จ, อ, พ, พฤ, ศ, ส)
-    const dayMatch = timeHtml.match(/>([จอพพฤศส])\.?</);
+    // Extract day abbreviation (จ, อ, พ, พฤ, ศ, ส, อา)
+    // Must check 2-char days first (พฤ, อา) before single chars
+    const dayMatch = timeHtml.match(/>(พฤ|อา|จ|อ|พ|ศ|ส)\.?</);
     const dayMap = { 'จ': 2, 'อ': 3, 'พ': 4, 'พฤ': 5, 'ศ': 6, 'ส': 7, 'อา': 1 };
     
     // Extract time range (HH:MM-HH:MM)
