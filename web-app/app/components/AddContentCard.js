@@ -39,7 +39,7 @@ export default function AddContentCard({ onClick, className = '' }) {
                         <line x1="5" y1="12" x2="19" y2="12" />
                     </svg>
                 </motion.div>
-                <span className="text-white font-prompt font-bold tracking-wide">Add Content</span>
+                <span className="text-white font-prompt font-bold tracking-wider uppercase text-sm">Add Content</span>
             </div>
         </motion.div>
     );

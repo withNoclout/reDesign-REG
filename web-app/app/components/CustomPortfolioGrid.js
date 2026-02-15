@@ -20,15 +20,45 @@ export default function CustomPortfolioGrid({
 
     // Generate layout from items if no saved layout exists
     const generateLayout = () => {
-        return items.map((item, i) => ({
-            i: item.id.toString(),
-            x: ((i * 4) + 4) % 12,
-            y: Math.floor(((i * 4) + 4) / 12) * 4, // Rough est
-            w: 4,
-            h: 2, // Default height 2
-            minW: 2,
-            minH: 2
-        }));
+        return items.map((item, i) => {
+            const isFirst = i === 0;
+            
+            if (isFirst) {
+                // First item ALWAYS next to Add Button (x:4, y:0, w:4)
+                return {
+                    i: item.id.toString(),
+                    x: 4,
+                    y: 0,
+                    w: 4,
+                    h: 2,
+                    minW: 4,
+                    minH: 2,
+                    maxW: 4,
+                    maxH: 2,
+                    isResizable: false
+                };
+            }
+
+            // Subsequent items (Index 1+) start at Row 1 (x:8) or next row
+            const adjIndex = i - 1;
+            const colsPerRow = 3; 
+            const itemW = 4;
+            
+            // Re-calculate position to flow naturally after the first two items
+            // First two items (AddBtn & Item 0) take up slots 0 (x=0) and 1 (x=4)
+            // So subsequent items should start at slot 2 (x=8)
+            const positionIndex = adjIndex + 2; 
+            
+            return {
+                i: item.id.toString(),
+                x: (positionIndex % colsPerRow) * itemW, 
+                y: Math.floor(positionIndex / colsPerRow) * 2,
+                w: itemW,
+                h: 2,
+                minW: 2,
+                minH: 2
+            };
+        });
     };
 
     const [currentLayout, setCurrentLayout] = useState(savedLayout || generateLayout());
@@ -47,10 +77,15 @@ export default function CustomPortfolioGrid({
             const newItems = items.filter(i => !existingLayoutIds.includes(i.id.toString()));
 
             // 2. Create layout for new items (Append to bottom)
-            const newLayoutItems = newItems.map(item => ({
+            // Need to find the bottom-most y to append correctly
+            const maxY = savedLayout.length > 0 
+                ? savedLayout.reduce((max, item) => Math.max(max, item.y + item.h), 0)
+                : 2; // Default start below header row
+            
+            const newLayoutItems = newItems.map((item, idx) => ({
                 i: item.id.toString(),
-                x: 0,
-                y: Infinity,
+                x: (idx % 3) * 4, // Simple 3-col packing
+                y: maxY + (Math.floor(idx / 3) * 2),
                 w: 4,
                 h: 2,
                 minW: 2,
@@ -64,14 +99,14 @@ export default function CustomPortfolioGrid({
             mergedLayout = mergedLayout.filter(l => currentIds.includes(l.i));
 
             // *** ENFORCEMENT LOGIC ***
-            // Force First Item (if exists) to match Add Button Size
+            // Force First Item (if exists) to match Add Button Size (33% Width)
             if (items.length > 0) {
                 const firstItemId = items[0].id.toString();
                 mergedLayout = mergedLayout.map(l => {
                     if (l.i === firstItemId) {
                         return {
                             ...l,
-                            w: 4,
+                            w: 4, // 33% of 12 columns
                             h: 2,
                             minW: 4,
                             minH: 2,
@@ -94,15 +129,13 @@ export default function CustomPortfolioGrid({
                 const isFirst = i === 0;
                 return {
                     i: item.id.toString(),
-                    x: ((i + 1) * 4) % 12, // +1 to skip Add button slot visually if we want default flow? No, RGL packs.
-                    // Actually, let's just let RGL pack it.
-                    x: (i * 4) % 12,
-                    y: Math.floor(i / 3) * 2,
-                    w: 4,
+                    x: isFirst ? 6 : (i * 4) % 12, // First item starts at col 6 (after Add New)
+                    y: isFirst ? 0 : Math.floor(i / 3) * 2,
+                    w: isFirst ? 6 : 4,
                     h: 2,
-                    minW: isFirst ? 4 : 2,
+                    minW: isFirst ? 6 : 2,
                     minH: 2,
-                    maxW: isFirst ? 4 : undefined,
+                    maxW: isFirst ? 6 : undefined,
                     maxH: isFirst ? 2 : undefined,
                     isResizable: !isFirst // Lock first item
                 };
@@ -118,7 +151,7 @@ export default function CustomPortfolioGrid({
                 i: 'addNew',
                 x: 0,
                 y: 0,
-                w: 4,
+                w: 4, // Reduced from 6 (50%) to 4 (33%)
                 h: 2,
                 minW: 4,
                 maxW: 4,

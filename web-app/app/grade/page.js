@@ -7,12 +7,19 @@ import { useAuth } from '../context/AuthContext';
 import { useGuest } from '../context/GuestContext';
 import Navbar from '../components/Navbar';
 import GuestBanner from '../components/GuestBanner';
-import { fadeInUp, staggerContainer, gradeCardVariant } from '@/lib/animations';
+import { fadeInUp, staggerContainer, staggerItem } from '@/lib/animations';
 import '../globals.css';
 
-// 🔥 FOR DEMO: Set to true to show ideal grades from image, false for real API
+// 🔥 FOR DEMO: Show ideal grades for guest mode / portfolio showcase
 const SHOW_IDEAL_GRADES = true;
+// ⚠️ DO NOT MODIFY — hardcoded student code for grade protection
+const DEMO_STUDENT_CODE = '6701091611290';
 
+/**
+ * ⚠️ DO NOT MODIFY OR DELETE — Hardcoded academic record for student 6701091611290
+ * This data is permanently fixed and must always be displayed for this student.
+ * GPAX: 3.92 | Total Credits: 62 | 4 semesters (2567/1 → 2568/2)
+ */
 const IDEAL_ACADEMIC_RECORD = {
     gpax: '3.92',
     totalCredits: 62,
@@ -107,17 +114,16 @@ export default function GradePage() {
 
     useEffect(() => {
         const fetchGrades = async () => {
-            if (!isAuthenticated) return;
-
-            // 🔥 DEMO MODE: Override with Ideal Grades if enabled AND user matches specific ID
-            if (SHOW_IDEAL_GRADES) {
-                // Simulate network delay
+            // Show ideal grades for guest mode (portfolio showcase) or specific demo user
+            if (isGuest || (SHOW_IDEAL_GRADES && user?.usercode === DEMO_STUDENT_CODE)) {
                 setTimeout(() => {
                     setAcademicRecord(IDEAL_ACADEMIC_RECORD);
                     setLoading(false);
                 }, 800);
                 return;
             }
+
+            if (!isAuthenticated) return;
 
             try {
                 setLoading(true);
@@ -222,7 +228,7 @@ export default function GradePage() {
         };
 
         fetchGrades();
-    }, [isAuthenticated, user]);
+    }, [isAuthenticated, isGuest, user?.usercode]);
 
     // Handle loading state
     if (authLoading || guestLoading) {

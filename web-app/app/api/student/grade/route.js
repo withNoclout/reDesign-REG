@@ -35,7 +35,7 @@ export async function GET() {
             // Some endpoints return HTML (login page) with 200 OK if token is invalid for that system
             if (response.status === 200 && response.data && typeof response.data === 'object') {
                 // Additional check: If it's the expected array
-                if (Array.isArray(response.data) || response.data.length >= 0) {
+                if (Array.isArray(response.data) && response.data.length > 0) {
                     return NextResponse.json({
                         success: true,
                         data: response.data
@@ -90,7 +90,7 @@ export async function GET() {
             console.error('[API] Getgrade failed:', err.message);
         }
 
-        // Attempt 3: Try GetStudyResult (Common alternative)
+        // Attempt 4: Try GetStudyResult (Common alternative)
         try {
             const response = await axios.get(`${BASE_URL}/Schg/GetStudyResult`, {
                 headers: {

@@ -227,24 +227,33 @@ export default function PortfolioGrid() {
                     maxRows={4}
                 />
             ) : (
-                /* Masonry Layout using CSS Columns */
-                <div className={`transition-all duration-500 ease-in-out ${columnClass} ${gapClass} px-4`}>
+                /* CSS Grid Layout for ProMax Split-Header */
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 px-4">
 
-                    {/* Add Trigger (Fits in flow) */}
-                    <div className="break-inside-avoid mb-6">
-                        <AddContentCard onClick={() => setIsModalOpen(true)} className="w-full aspect-[2/1] shadow-xl hover:shadow-[#ff5722]/10" />
+                    {/* Add Trigger (Always First, 33% Width on Desktop) */}
+                    <div className="md:col-span-4 h-full min-h-[250px]">
+                        <AddContentCard onClick={() => setIsModalOpen(true)} className="w-full h-full shadow-xl hover:shadow-[#ff5722]/10" />
                     </div>
 
                     {/* Content Items */}
-                    <AnimatePresence>
-                        {items.slice(0, settings.maxItemsPerPage || 12).map((item, index) => (
+                    <AnimatePresence mode='popLayout'>
+                        {items.slice(0, settings.maxItemsPerPage || 12).map((item, index) => {
+                            // First item is 33% width to match Add Button
+                            const isFirstItem = index === 0;
+                            // Dynamic Column Span Calculation based on Slider
+                            const columns = settings.fixedConfig?.columnCount || 3;
+                            const otherSpan = 12 / columns;
+                            const colSpanClass = isFirstItem ? 'md:col-span-4' : `md:col-span-${otherSpan}`;
+                            
+                            return (
                             <motion.div
                                 key={item.id}
+                                layout
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: item.is_visible === false && !isManageMode ? 0.3 : 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.9 }}
                                 transition={{ delay: index * 0.05 }}
-                                className={`break-inside-avoid ${settings.fixedConfig?.gapSize === 'compact' ? 'mb-1.5 p-3 rounded-xl' : 'mb-6 p-4 rounded-3xl'} group relative bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-[box-shadow,background-color,border-color] duration-300 hover:shadow-2xl ${item.is_visible === false && !isManageMode ? 'grayscale opacity-50' : ''}`}
+                                className={`${colSpanClass} h-full min-h-[250px] p-4 rounded-3xl group relative bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-[box-shadow,background-color,border-color] duration-300 hover:shadow-2xl ${item.is_visible === false && !isManageMode ? 'grayscale opacity-50' : ''}`}
                             >
                                 {/* Management Overlays */}
                                 {isManageMode && (
@@ -280,7 +289,7 @@ export default function PortfolioGrid() {
                                 )}
 
                                 {/* Image Container with Natural Aspect Ratio */}
-                                <div className={`relative overflow-hidden ${settings.fixedConfig?.gapSize === 'compact' ? 'rounded-lg mb-2' : 'rounded-2xl mb-4'} bg-black/20`}>
+                                <div className={`relative overflow-hidden rounded-2xl mb-4 bg-black/20 h-48`}>
                                     {item.is_visible === false && (
                                         <div className="absolute inset-0 z-10 bg-black/50 flex items-center justify-center pointer-events-none">
                                             <span className="bg-black/50 backdrop-blur px-2 py-1 rounded text-xs text-white/70 font-bold border border-white/10">Hidden</span>
@@ -290,7 +299,7 @@ export default function PortfolioGrid() {
                                         <img
                                             src={item.image_url}
                                             alt={item.description}
-                                            className="w-full h-auto object-cover"
+                                            className="w-full h-full object-cover"
                                             loading="lazy"
                                         />
                                     ) : (
@@ -313,22 +322,22 @@ export default function PortfolioGrid() {
                                 </div>
 
                                 {/* Content Below Image */}
-                                <div className={settings.fixedConfig?.gapSize === 'compact' ? 'space-y-1' : 'space-y-3'}>
+                                <div className='space-y-3'>
 
                                     {/* Topic (New Field) */}
                                     {item.topic && (
-                                        <h3 className={`font-prompt font-bold text-white leading-tight ${settings.fixedConfig?.gapSize === 'compact' ? 'text-sm' : 'text-lg'}`}>
+                                        <h3 className='font-prompt font-bold text-white leading-tight text-lg'>
                                             {item.topic}
                                         </h3>
                                     )}
 
                                     {/* Description */}
-                                    <p className={`text-white font-prompt font-light text-white/80 ${settings.fixedConfig?.gapSize === 'compact' ? 'text-xs line-clamp-2' : 'text-sm leading-relaxed'}`}>
+                                    <p className='text-white font-prompt font-light text-white/80 text-sm leading-relaxed line-clamp-2'>
                                         {item.description}
                                     </p>
 
                                     {/* Metadata & Actions */}
-                                    <div className={`flex items-center justify-between border-t border-white/5 ${settings.fixedConfig?.gapSize === 'compact' ? 'pt-2' : 'pt-3'}`}>
+                                    <div className='flex items-center justify-between border-t border-white/5 pt-3'>
                                         <span className="text-white/40 text-xs font-light">
                                             {new Date(item.created_at).toLocaleDateString('th-TH', {
                                                 year: 'numeric',
@@ -366,7 +375,8 @@ export default function PortfolioGrid() {
                                     </div>
                                 </div>
                             </motion.div>
-                        ))}
+                            );
+                        })}
                     </AnimatePresence>
                 </div>
             )}

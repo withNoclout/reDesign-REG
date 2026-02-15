@@ -1,2 +1,98 @@
 [2026-02-15T12:22:17.203Z] [TEST] [TestScript] This is a test log entry from the verification script.
 --------------------------------------------------------------------------------
+[2026-02-15T12:37:36.808Z] [ERROR] [GlobalErrorPage] Can't find variable: staggerItem
+URL: http://localhost:3000/grade
+@http://localhost:3000/_next/static/chunks/_5d7f6181._.js:2282:54
+map@[native code]
+GradePage@http://localhost:3000/_next/static/chunks/_5d7f6181._.js:2281:64
+react_stack_bottom_frame@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:14826:33
+renderWithHooks@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:4651:42
+updateFunctionComponent@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:6112:36
+runWithFiberInDEV@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:965:139
+performUnitOfWork@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9562:114
+workLoopSync@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9456:57
+renderRootSync@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9440:25
+performWorkOnRoot@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9105:61
+performWorkOnRootViaSchedulerTask@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:10230:26
+performWorkUntilDeadline@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_a0e4c7b4._.js:2647:72
+--------------------------------------------------------------------------------
+[2026-02-15T12:37:36.807Z] [ERROR] [GlobalErrorPage] Can't find variable: staggerItem
+URL: http://localhost:3000/grade
+@http://localhost:3000/_next/static/chunks/_5d7f6181._.js:2282:54
+map@[native code]
+GradePage@http://localhost:3000/_next/static/chunks/_5d7f6181._.js:2281:64
+react_stack_bottom_frame@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:14826:33
+renderWithHooks@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:4651:42
+updateFunctionComponent@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:6112:36
+runWithFiberInDEV@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:965:139
+performUnitOfWork@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9562:114
+workLoopSync@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9456:57
+renderRootSync@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9440:25
+performWorkOnRoot@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9105:61
+performWorkOnRootViaSchedulerTask@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:10230:26
+performWorkUntilDeadline@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_a0e4c7b4._.js:2647:72
+--------------------------------------------------------------------------------
+[2026-02-15T12:37:39.494Z] [ERROR] [GlobalErrorPage] Can't find variable: staggerItem
+URL: http://localhost:3000/grade
+@http://localhost:3000/_next/static/chunks/_5d7f6181._.js:2282:54
+map@[native code]
+GradePage@http://localhost:3000/_next/static/chunks/_5d7f6181._.js:2281:64
+react_stack_bottom_frame@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:14826:33
+renderWithHooks@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:4651:42
+updateFunctionComponent@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:6112:36
+runWithFiberInDEV@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:965:139
+performUnitOfWork@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9562:114
+workLoopSync@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9456:57
+renderRootSync@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9440:25
+performWorkOnRoot@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9105:61
+performWorkOnRootViaSchedulerTask@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:10230:26
+performWorkUntilDeadline@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_a0e4c7b4._.js:2647:72
+--------------------------------------------------------------------------------
+[2026-02-15T12:37:39.493Z] [ERROR] [GlobalErrorPage] Can't find variable: staggerItem
+URL: http://localhost:3000/grade
+@http://localhost:3000/_next/static/chunks/_5d7f6181._.js:2282:54
+map@[native code]
+GradePage@http://localhost:3000/_next/static/chunks/_5d7f6181._.js:2281:64
+react_stack_bottom_frame@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:14826:33
+renderWithHooks@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:4651:42
+updateFunctionComponent@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:6112:36
+runWithFiberInDEV@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:965:139
+performUnitOfWork@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9562:114
+workLoopSync@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9456:57
+renderRootSync@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9440:25
+performWorkOnRoot@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9105:61
+performWorkOnRootViaSchedulerTask@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:10230:26
+performWorkUntilDeadline@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_a0e4c7b4._.js:2647:72
+--------------------------------------------------------------------------------
+[2026-02-15T12:45:34.447Z] [ERROR] [GlobalErrorPage] Can't find variable: staggerItem
+URL: http://localhost:3000/grade
+@http://localhost:3000/_next/static/chunks/_5d7f6181._.js:2282:54
+map@[native code]
+GradePage@http://localhost:3000/_next/static/chunks/_5d7f6181._.js:2281:64
+react_stack_bottom_frame@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:14826:33
+renderWithHooks@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:4651:42
+updateFunctionComponent@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:6112:36
+runWithFiberInDEV@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:965:139
+performUnitOfWork@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9562:114
+workLoopSync@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9456:57
+renderRootSync@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9440:25
+performWorkOnRoot@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9105:61
+performWorkOnRootViaSchedulerTask@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:10230:26
+performWorkUntilDeadline@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_a0e4c7b4._.js:2647:72
+--------------------------------------------------------------------------------
+[2026-02-15T12:45:34.448Z] [ERROR] [GlobalErrorPage] Can't find variable: staggerItem
+URL: http://localhost:3000/grade
+@http://localhost:3000/_next/static/chunks/_5d7f6181._.js:2282:54
+map@[native code]
+GradePage@http://localhost:3000/_next/static/chunks/_5d7f6181._.js:2281:64
+react_stack_bottom_frame@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:14826:33
+renderWithHooks@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:4651:42
+updateFunctionComponent@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:6112:36
+runWithFiberInDEV@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:965:139
+performUnitOfWork@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9562:114
+workLoopSync@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9456:57
+renderRootSync@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9440:25
+performWorkOnRoot@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9105:61
+performWorkOnRootViaSchedulerTask@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:10230:26
+performWorkUntilDeadline@http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_a0e4c7b4._.js:2647:72
+--------------------------------------------------------------------------------
