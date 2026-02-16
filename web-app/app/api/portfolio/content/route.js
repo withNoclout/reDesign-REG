@@ -137,6 +137,7 @@ export async function POST(request) {
         }
 
         const title = formData.get('title') || 'Untitled';
+        const topic = formData.get('topic');
         const description = formData.get('description');
         const image = formData.get('image');
 
@@ -173,6 +174,7 @@ export async function POST(request) {
 
                 // Optimize with Sharp
                 const optimizedBuffer = await sharp(buffer)
+                    .rotate()
                     .resize(1000, 1000, {
                         fit: 'inside',
                         withoutEnlargement: true
@@ -216,6 +218,7 @@ export async function POST(request) {
             .from('news_items')
             .insert([{
                 title,
+                topic: topic || null,
                 description,
                 image_url: tempFilePath, // Store temp path for now
                 temp_path: tempFilePath, // Additional field for upload script
