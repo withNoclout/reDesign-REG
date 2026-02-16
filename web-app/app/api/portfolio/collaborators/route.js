@@ -11,6 +11,7 @@ export async function GET(request) {
     try {
         const userId = await getAuthUser();
         if (!userId) return unauthorized();
+        const userCodes = [String(userId), `s${String(userId)}`];
 
         const { searchParams } = new URL(request.url);
         const portfolioId = searchParams.get('portfolio_id');
@@ -42,7 +43,7 @@ export async function GET(request) {
                 .from('portfolio_collaborators')
                 .select('id')
                 .eq('portfolio_id', portfolioId)
-                .eq('student_code', userId)
+                .in('student_code', userCodes)
                 .eq('status', 'accepted')
                 .single();
 

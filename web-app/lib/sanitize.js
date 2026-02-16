@@ -70,8 +70,8 @@ export function sanitizeSearchQuery(query, { minLength = 1, maxLength = 100 } = 
  */
 export function isValidStudentCode(code) {
     if (typeof code !== 'string') return false;
-    // Accept: pure digits (6-15 chars) or 's' prefix + digits
-    return /^s?\d{6,15}$/i.test(code);
+    const normalized = code.trim().replace(/^s/i, '');
+    return /^\d{6,15}$/.test(normalized);
 }
 
 /**
@@ -90,7 +90,8 @@ export function sanitizeStudentCodes(codes, { maxItems = 100 } = {}) {
         return { valid: false, sanitized: [], error: `Maximum ${maxItems} collaborators allowed` };
     }
 
-    const unique = [...new Set(codes)];
+    const normalized = codes.map((c) => String(c ?? '').trim().replace(/^s/i, ''));
+    const unique = [...new Set(normalized)];
     const invalid = unique.filter(c => !isValidStudentCode(c));
 
     if (invalid.length > 0) {

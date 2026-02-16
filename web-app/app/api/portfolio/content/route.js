@@ -23,6 +23,7 @@ export async function GET(request) {
         }
 
         const supabase = getServiceSupabase();
+        const userCodes = [String(userId), `s${String(userId)}`];
 
         // Fetch user's own items
         const { data: ownItems, error: ownError } = await supabase
@@ -59,7 +60,7 @@ export async function GET(request) {
         const { data: collabRecords } = await supabase
             .from('portfolio_collaborators')
             .select('portfolio_id, added_by')
-            .eq('student_code', String(userId))
+            .in('student_code', userCodes)
             .eq('status', 'accepted');
 
         let collabItems = [];
@@ -89,7 +90,7 @@ export async function GET(request) {
         const { count: pendingCount } = await supabase
             .from('portfolio_collaborators')
             .select('id', { count: 'exact', head: true })
-            .eq('student_code', String(userId))
+            .in('student_code', userCodes)
             .eq('status', 'pending');
 
         return NextResponse.json({

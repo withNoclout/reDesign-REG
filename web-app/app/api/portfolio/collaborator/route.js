@@ -10,6 +10,7 @@ export async function GET() {
     try {
         const userId = await getAuthUser();
         if (!userId) return unauthorized();
+        const userCodes = [String(userId), `s${String(userId)}`];
 
         const supabase = getServiceSupabase();
 
@@ -17,7 +18,7 @@ export async function GET() {
         const { data: pending, error: pendingErr } = await supabase
             .from('portfolio_collaborators')
             .select('id, portfolio_id, added_by, created_at')
-            .eq('student_code', String(userId))
+            .in('student_code', userCodes)
             .eq('status', 'pending')
             .order('created_at', { ascending: false })
             .limit(50);
@@ -75,6 +76,7 @@ export async function PATCH(request) {
     try {
         const userId = await getAuthUser();
         if (!userId) return unauthorized();
+        const userCodes = [String(userId), `s${String(userId)}`];
 
         const body = await request.json();
         const { portfolio_id, action } = body;
@@ -100,14 +102,14 @@ export async function PATCH(request) {
             .from('portfolio_collaborators')
             .select('id, student_code, status')
             .eq('portfolio_id', portfolioIdNum)
-            .eq('student_code', userId)
+            .in('student_code', userCodes)
             .single();
 
         if (findErr || !existing) {
             return notFound('Collaboration not found');
         }
 
-        if (existing.student_code !== userId) {
+        if (!userCodes.includes(existing.student_code)) {
             return forbidden('You can only respond to your own tags');
         }
 
@@ -119,7 +121,7 @@ export async function PATCH(request) {
                 responded_at: new Date().toISOString(),
             })
             .eq('portfolio_id', portfolioIdNum)
-            .eq('student_code', userId);
+            .in('student_code', userCodes);
 
         if (updateErr) {
             console.error('[API] Collaborator update error:', updateErr.message);
