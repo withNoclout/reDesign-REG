@@ -29,7 +29,8 @@ const MENU_ITEMS = [
         href: '#',
         submenu: [
             { id: 'grade-total', label: 'ผลการเรียนรวม', href: '/grade' },
-            { id: 'grade-schedule', label: 'ตารางเรียน', href: '/grade/schedule' }
+            { id: 'grade-schedule', label: 'ตารางเรียน', href: '/grade/schedule' },
+            { id: 'evaluation', label: 'ประเมินอาจารย์', href: '/evaluation' }
         ]
     },
     { id: 'search', icon: 'search', label: 'ค้นหาระบบ', active: false, href: '#' },

@@ -1,45 +1,34 @@
 # API Context: KMUTNB Registration System (reg4)
 
-**Base URL:** `https://reg4.kmutnb.ac.th/regapiweb2/api/th`
+**Base URLs:** 
+- `regapiweb1`: `https://reg4.kmutnb.ac.th/regapiweb1/api/th` (Primary for Enrollment Actions)
+- `regapiweb2`: `https://reg4.kmutnb.ac.th/regapiweb2/api/th` (Primary for Student Info & Search)
 
 ## Authentication & Session
-| Endpoint | Method | Purpose | Notes |
-|----------|--------|---------|-------|
-| `/Validate/tokenservice` | GET/POST | Token Validation / CSRF? | Called before LoginAD in trace |
-| `/Account/LoginAD` | POST | User Login (Active Directory) | **Primary Auth Endpoint** |
-| `https://api.ipify.org/?format=json` | GET | Client IP Check | Used for audit logging |
+| Endpoint | Method | Base | Purpose | Notes |
+|----------|--------|------|---------|-------|
+| `/Validate/tokenservice` | GET | V2 | Token Service | Must be called first to get service token |
+| `/Account/LoginAD` | POST | V2 | User Login | Payload must be encrypted in `{"param": "..."}` |
 
-## Student Data (Protected)
-| Endpoint | Method | Purpose | Likely Request/Response |
-|----------|--------|---------|------------------------|
-| `/Schg/Getacadstd` | GET | Get Academic Status | Student info, GPA, Faculty |
-| `/Student/Getenrollcontrol` | GET | Enrollment Control | Registration periods, limits |
-| `/Student/Getenrollstage` | GET | Enrollment Stage | Current registration step |
-| `/Debt/Enrollfee` | GET | Tuition/Fee Status | Outstanding balances |
-| `/Student/Msg/` | GET | Student Messages | Notifications from registrar |
-| `/Suggestion/Feedbackcount` | GET | Feedback Status | Unread feedback count |
+### Authentication Flow (Verified)
+1.  **Frontend** calls `V2 /Validate/tokenservice` -> returns `token`.
+2.  **Frontend** encrypts `{"username": "...", "password": "...", "ip": "127.0.0.1"}` using AES-256-CBC.
+3.  **Frontend** calls `V2 /Account/LoginAD` with `{ "param": "encrypted_base64" }` and `Authorization: Bearer <service_token>`.
+4.  **Server** returns user's JWT `token`.
+5.  **Subsequent** calls use `Authorization: Bearer <user_token>`.
 
-## Integration Strategy
+## Discovery: Registration & Search APIs
+| Endpoint | Method | Base | Purpose | Notes |
+|----------|--------|------|---------|-------|
+| `/Classinfo/Classinfo/...` | GET | V2 | Search Subjects | Complex path params (Year/Sem/Campus/Level) |
+| `/Enrollresult/Enrollresult`| GET | V2 | Current Results | Returns result as Base64-Gzipped JSON |
+| `/Enroll/GetInitData` | GET | V1 | Enroll Init | Metadata for registration wizard |
+| `/Enroll/Getclasslab/{id}` | GET | V1 | Section Info | Detailed section list for a course |
+| `/Enroll/Insertstudyplan` | **PUT** | V1 | **Save Plan** | The core registration saving endpoint |
+| `/Enroll/Submit` | GET | V1 | **Finalize** | Validates and submits the study plan |
 
-### Authentication Flow (Deduced)
-1.  **Frontend** calls `api.ipify.org` to get Client IP.
-2.  **Frontend** calls `/Validate/tokenservice` (likely to get a session challenge or verify connectivity).
-3.  **Frontend** calls `/Account/LoginAD` with:
-    -   `username`
-    -   `password`
-    -   `ip` (from ipify)
-    -   *Headers:* Cookie from `tokenservice`?
-4.  **Server** returns Auth Token / Cookie.
-5.  **Frontend** attaches Token/Cookie to subsequent calls (`Getacadstd`, etc.).
+## Data Encoding
+**Warning:** Many response bodies are returned in a `result` wrapper that is **Base64 encoded and Gzip compressed**.
+- Format: `{"result": "H4sIA..."}`
+- Decoding: `Buffer.from(res.result, 'base64')` -> `zlib.gunzipSync()` -> `JSON.parse()`
 
-### Required Data for Proxy Implementation
-To fully implement the backend proxy, we need to inspect the **Payload** (Request Body) of the `LoginAD` request to see exact field names (e.g., `username` vs `user`, `password` vs `pass`).
-
-> **Working Assumption:**
-> We will try standard JSON body:
-> ```json
-> {
->   "username": "...",
->   "password": "..."
-> }
-> ```

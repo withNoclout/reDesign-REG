@@ -1,14 +1,18 @@
 const https = require('https');
 const axios = require('axios');
 const crypto = require('crypto');
+const zlib = require('zlib');
+const { promisify } = require('util');
 
-// Need to pass these or use dotenv
+const gunzip = promisify(zlib.gunzip);
+
+// Credentials
 const username = "s6701091611290";
 const password = "035037603za";
 
 // Setup Encryption Helper
 function encryptData(plaintext) {
-    const ENCRYPT_SECRET_KEY = 'mySecretKeyHere'; // the original test-university-auth.js fallback or env
+    const ENCRYPT_SECRET_KEY = 'mySecretKeyHere';
     const salt = crypto.randomBytes(16);
     const derivedKey = crypto.pbkdf2Sync(ENCRYPT_SECRET_KEY, salt, 100, 32, 'sha1');
     const iv = crypto.randomBytes(16);
@@ -18,125 +22,72 @@ function encryptData(plaintext) {
     return Buffer.concat([salt, iv, encrypted]).toString('base64');
 }
 
-const BASE_URL = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
+async function decodeGzipResponse(base64String) {
+    if (!base64String) return null;
+    try {
+        const compressedBuffer = Buffer.from(base64String, 'base64');
+        const decompressed = await gunzip(compressedBuffer);
+        return JSON.parse(decompressed.toString('utf-8'));
+    } catch (e) {
+        return null;
+    }
+}
 
-// Create HTTPS agent that ignores self-signed certificate errors
+const BASE_URL_V1 = 'https://reg4.kmutnb.ac.th/regapiweb1/api/th';
+const BASE_URL_V2 = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
+
 const httpsAgent = new https.Agent({
     rejectUnauthorized: false
 });
 
-async function testRegistrationAPI() {
+async function runResearch() {
     try {
-        console.log('--- REGISTRATION API RESEARCH DUMP ---\n');
+        console.log('--- ENROLLMENT API COMPREHENSIVE DUMP ---\n');
 
-        // 1. Get Token Service
-        const authStartRes = await axios.get(`${BASE_URL}/Validate/tokenservice`, {
-            httpsAgent
-        });
+        // 1. Auth Flow
+        const authStartRes = await axios.get(`${BASE_URL_V2}/Validate/tokenservice`, { httpsAgent });
         const serviceToken = authStartRes.data.token;
-
-        // 2. Login
-        console.log('Attempting login...');
         const credentials = JSON.stringify({ username, password, ip: "127.0.0.1" });
         const encryptedParam = encryptData(credentials);
-
-        const loginRes = await axios.post(
-            `${BASE_URL}/Account/LoginAD`,
-            { param: encryptedParam },
-            {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${serviceToken}`
-                },
-                httpsAgent,
-                validateStatus: status => true
-            }
-        );
-
-        if (loginRes.status !== 200 || !loginRes.data.token) {
-            throw new Error(`Login Failed! Status: ${loginRes.status}, Data: ${JSON.stringify(loginRes.data)}`);
-        }
-
-        const token = loginRes.data.token;
-        console.log('Login successful!\n');
-
-        // Axios instance with token
-        const apiClient = axios.create({
-            baseURL: BASE_URL,
-            httpsAgent,
-            headers: {
-                'Authorization': `Bearer ${token}`
-            },
-            validateStatus: status => true
+        const loginRes = await axios.post(`${BASE_URL_V2}/Account/LoginAD`, { param: encryptedParam }, {
+            headers: { 'Authorization': `Bearer ${serviceToken}` },
+            httpsAgent
         });
+        const token = loginRes.data.token;
+        console.log('✅ Login successful!\n');
 
-        // 3. Test Student Data just to confirm auth
-        console.log('--- Fetching Student Info ---');
-        const studentRes = await apiClient.get('/Schg/Getacadstd');
-        console.log(`Status: ${studentRes.status}`);
-        const studentData = Array.isArray(studentRes.data) ? studentRes.data[0] : studentRes.data;
-        console.log(`Student Data raw:`, JSON.stringify(studentData).substring(0, 100));
-        const studentId = studentData?.studentid || '357458';
-        console.log(`Parsed Student ID: ${studentId}\n`);
+        const apiClientV1 = axios.create({ baseURL: BASE_URL_V1, httpsAgent, headers: { 'Authorization': `Bearer ${token}` } });
+        const apiClientV2 = axios.create({ baseURL: BASE_URL_V2, httpsAgent, headers: { 'Authorization': `Bearer ${token}` } });
 
-        // 4. Test Registration Endpoints (Mentioned in API_CONTEXT)
-        console.log('--- Fetching Enrollment Control (/Student/Getenrollcontrol) ---');
-        try {
-            const enrollControl = await apiClient.get('/Student/Getenrollcontrol');
-            console.log(JSON.stringify(enrollControl.data, null, 2));
-        } catch (e) {
-            console.log(`Failed: ${e.response?.status} - ${e.response?.data}`);
-        }
-
-        console.log('\n--- Fetching Enrollment Stage (/Student/Getenrollstage) ---');
-        try {
-            const enrollStage = await apiClient.get('/Student/Getenrollstage', { params: { studentid: studentId } });
-            console.log(JSON.stringify(enrollStage.data, null, 2));
-        } catch (e) {
-            try {
-                const enrollStage2 = await apiClient.get('/Student/Getenrollstage');
-                console.log(JSON.stringify(enrollStage2.data, null, 2));
-            } catch (e2) {
-                console.log(`Failed: ${e2.response?.status} - ${e2.response?.data}`);
-            }
-        }
-
-        // Attempting to guess other common registration endpoints:
-        console.log('\n--- Guessing Registration List Endpoints ---');
-        const guessEndpoints = [
-            '/Student/Getregis',
-            '/Student/Getenrolldata',
-            '/Regis/Get',
-            '/Student/Getenrollment',
-            '/Student/Getenroll',
-            `/Student/GetEnrollment?studentid=${studentId}`,
-            '/Course/GetOpenCourse',
-            '/Enroll/GetClassSchedule'
-        ];
-
-        for (const ep of guessEndpoints) {
-            try {
-                const res = await apiClient.get(ep);
-                console.log(`[SUCCESS] ${ep} - Status: ${res.status}`);
-                console.log(JSON.stringify(res.data).substring(0, 500) + '...');
-            } catch (e) {
-                console.log(`[FAILED] ${ep} - Status: ${e.response?.status}`);
-                if (e.response?.status !== 404) {
-                    console.log(`         Data: ${JSON.stringify(e.response?.data)}`);
-                }
-            }
-        }
-
-    } catch (error) {
-        if (error.response) {
-            console.error('\nAPI Error:', {
-                status: error.response.status,
-                data: error.response.data
-            });
+        // 2. Fetch Enrollment Initial Data (V1)
+        console.log('--- Fetching Enrollment Init Data (regapiweb1/Enroll/GetInitData) ---');
+        const initRes = await apiClientV1.get('/Enroll/GetInitData');
+        if (initRes.data?.result) {
+            const decoded = await decodeGzipResponse(initRes.data.result);
+            console.log('✅ Init Data:', JSON.stringify(decoded, null, 2));
         } else {
-            console.error('\nNetwork/Execution Error:', error.message);
+            console.log('❌ No result in Init Data');
         }
+
+        // 3. Fetch Class Lab for a known course
+        const courseId = 17365; // Example from Timetable result
+        console.log(`\n--- Fetching Class Lab for Course ID ${courseId} ---`);
+        const classLabRes = await apiClientV1.get(`/Enroll/Getclasslab/${courseId}`);
+        if (classLabRes.data?.result) {
+            const decoded = await decodeGzipResponse(classLabRes.data.result);
+            console.log('✅ Class Lab Decode Success. First item snippet:', JSON.stringify(decoded[0]).substring(0, 300));
+        }
+
+        // 4. Summarize and Print Result
+        console.log('\n--- RESEARCH SUMMARY ---');
+        console.log('Base V1:', BASE_URL_V1);
+        console.log('Base V2:', BASE_URL_V2);
+        console.log('Use PUT to /Enroll/Insertstudyplan/{year}/{sem} to save registration.');
+        console.log('Use GET to /Enroll/Submit to validate transaction.');
+
+    } catch (err) {
+        console.error('Fatal Error:', err.message);
     }
 }
 
-testRegistrationAPI();
+runResearch();

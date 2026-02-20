@@ -834,6 +834,7 @@ body {
   text-decoration: none;
   transition: top 0.2s ease;
 }
+
 .skip-to-content:focus {
   top: 0;
 }

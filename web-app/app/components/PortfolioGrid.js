@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { useGuest } from '../context/GuestContext';
 import { usePortfolioSettings } from '../hooks/usePortfolioSettings';
 import AddContentCard from './AddContentCard';
 import PortfolioEditorModal from './PortfolioEditorModal';
@@ -36,19 +37,14 @@ function sortItems(items, collaborations, sortMode, customItemOrder) {
         return all.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     }
 
-    // Default: auto sort
+    // Default: auto sort (Chronological & Collaborators, ignoring visibility for stable ordering)
     return all.sort((a, b) => {
-        // 1. Visible items first
-        const visA = a.is_visible !== false ? 1 : 0;
-        const visB = b.is_visible !== false ? 1 : 0;
-        if (visA !== visB) return visB - visA;
-
-        // 2. More collaborators first
+        // 1. More collaborators first
         const collabA = a.collaborator_count || 0;
         const collabB = b.collaborator_count || 0;
         if (collabA !== collabB) return collabB - collabA;
 
-        // 3. Newer first
+        // 2. Newer first
         return new Date(b.created_at) - new Date(a.created_at);
     });
 }
@@ -170,6 +166,7 @@ function PendingTagsBanner({ count, userId, onRespond }) {
 
 export default function PortfolioGrid() {
     const { user, logout } = useAuth();
+    const { isGuest } = useGuest();
 
     // Portfolio Settings Hook
     const {
@@ -289,16 +286,17 @@ export default function PortfolioGrid() {
 
     const isCustomMode = settings.mode === 'custom';
 
-    // Sorted items for rendering
+    // Sorted items for rendering (Filter out hidden if Guest)
     const sortedItems = useMemo(() => {
-        return sortItems(items, collaborations, settings.sortMode, settings.customItemOrder);
-    }, [items, collaborations, settings.sortMode, settings.customItemOrder]);
+        const activeItems = isGuest ? items.filter(i => i.is_visible !== false) : items;
+        return sortItems(activeItems, collaborations, settings.sortMode, settings.customItemOrder);
+    }, [items, collaborations, settings.sortMode, settings.customItemOrder, isGuest]);
 
     // --- Pagination Logic ---
-    const ITEMS_PER_PAGE = settings.maxItemsPerPage || 9; // Changed from 12 to 9
+    const ITEMS_PER_PAGE = 9; // Hardcoded to 9 as requested
 
-    // Page 1 has Add Content Card (1 slot), so it can fit ITEMS_PER_PAGE - 1 items
-    const firstPageItemCount = ITEMS_PER_PAGE - 1;
+    // Page 1 has Add Content Card (1 slot) for owners, so it fits ITEMS_PER_PAGE - 1 items. Guests get all 9.
+    const firstPageItemCount = isGuest ? ITEMS_PER_PAGE : ITEMS_PER_PAGE - 1;
 
     const totalPages = useMemo(() => {
         if (sortedItems.length === 0) return 1;
@@ -446,17 +444,19 @@ export default function PortfolioGrid() {
                     )}
                 </AnimatePresence>
 
-                <button
-                    onClick={() => setShowControls(!showControls)}
-                    aria-label={showControls ? 'ปิดการตั้งค่า Portfolio' : 'เปิดการตั้งค่า Portfolio'}
-                    aria-expanded={showControls}
-                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${showControls ? 'bg-[#ff5722] text-white' : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'}`}
-                >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
-                </button>
+                {!isGuest && (
+                    <button
+                        onClick={() => setShowControls(!showControls)}
+                        aria-label={showControls ? 'ปิดการตั้งค่า Portfolio' : 'เปิดการตั้งค่า Portfolio'}
+                        aria-expanded={showControls}
+                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${showControls ? 'bg-[#ff5722] text-white' : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'}`}
+                    >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                )}
             </div>
 
             {/* Layout Rendering */}
@@ -474,7 +474,7 @@ export default function PortfolioGrid() {
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-6 px-4">
 
                     {/* Add Trigger (Always First, 33% Width on Desktop) - ONLY ON PAGE 1 */}
-                    {currentPage === 1 && (
+                    {currentPage === 1 && !isGuest && (
                         <div className="md:col-span-4 flex">
                             <AddContentCard onClick={() => { setEditingItem(null); setIsModalOpen(true); }} className="w-full shadow-xl hover:shadow-[#ff5722]/10" />
                         </div>
