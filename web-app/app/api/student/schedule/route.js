@@ -56,7 +56,7 @@ function serverLog(level, message) {
     const timestamp = new Date().toISOString();
     const entry = `[${timestamp}] [${level}] [Schedule API] ${message}\n`;
     const logPath = path.join(process.cwd(), 'logs', 'app.log');
-    fs.appendFile(logPath, entry).catch(() => {});
+    fs.appendFile(logPath, entry).catch(() => { });
     console.log(`[Schedule API] ${message}`);
 }
 
@@ -68,6 +68,13 @@ function formatTime(hour, minute) {
 
 const BASE_URL_V1 = 'https://reg3.kmutnb.ac.th/regapiweb1/api/th';
 const BASE_URL_V2 = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
+
+const scheduleCache = new Map();
+const SCHEDULE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+let globalAcadInfo = null;
+let globalAcadInfoTimestamp = 0;
+const ACAD_INFO_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 const agent = new https.Agent({ rejectUnauthorized: false });
 
@@ -85,15 +92,15 @@ async function decodeGzipResponse(base64String) {
 // Returns: { weekday: 4, timefrom: "13:00", timeto: "16:00" }
 function parseTimeHtml(timeHtml) {
     if (!timeHtml) return { weekday: null, timefrom: null, timeto: null };
-    
+
     // Extract day abbreviation (จ, อ, พ, พฤ, ศ, ส, อา)
     // Must check 2-char days first (พฤ, อา) before single chars
     const dayMatch = timeHtml.match(/>(พฤ|อา|จ|อ|พ|ศ|ส)\.?</);
     const dayMap = { 'จ': 2, 'อ': 3, 'พ': 4, 'พฤ': 5, 'ศ': 6, 'ส': 7, 'อา': 1 };
-    
+
     // Extract time range (HH:MM-HH:MM)
     const timeMatch = timeHtml.match(/(\d{2}:\d{2})-(\d{2}:\d{2})/);
-    
+
     return {
         weekday: dayMatch ? dayMap[dayMatch[1]] : null,
         timefrom: timeMatch ? timeMatch[1] : null,
@@ -123,6 +130,7 @@ const ScheduleItemSchema = z.object({
 export async function GET() {
     const cookieStore = await cookies();
     const token = cookieStore.get('reg_token')?.value;
+    const stdCode = cookieStore.get('std_code')?.value;
 
     serverLog('INFO', `=== Request Start === Has token: ${!!token}, Token length: ${token?.length || 0}`);
 
@@ -147,28 +155,47 @@ export async function GET() {
         });
     }
 
+    // 🚀 FAST PATH: Check Active Memory Cache first
+    if (stdCode && process.env.MOCK_AUTH !== 'true') {
+        const cached = scheduleCache.get(stdCode);
+        if (cached && (Date.now() - cached.timestamp < SCHEDULE_CACHE_TTL_MS)) {
+            serverLog('INFO', `Fast Memory Cache hit (latency ~0ms) for schedule: ${stdCode}`);
+            return NextResponse.json(cached.data);
+        }
+    }
+
     const apiConfig = {
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         httpsAgent: agent,
         validateStatus: () => true,
-        timeout: 10000
+        timeout: 5000 // Reduced from 10000 to fail fast
     };
 
     try {
-        // 1. Get current semester info
-        serverLog('INFO', 'Calling Schg/Getacadstd...');
-        const acadRes = await axios.get(`${BASE_URL_V2}/Schg/Getacadstd`, apiConfig);
-        
+        // 1. Get current semester info (Cached Globally)
         let semester = '2/2568';
         let acadyear = 2568;
         let semesterNum = 2;
-        
-        if (acadRes.status === 200 && acadRes.data) {
-            const acad = acadRes.data;
-            if (acad.enrollsemester && acad.enrollacadyear) {
-                semester = `${acad.enrollsemester}/${acad.enrollacadyear}`;
-                acadyear = acad.enrollacadyear;
-                semesterNum = acad.enrollsemester;
+
+        if (globalAcadInfo && (Date.now() - globalAcadInfoTimestamp < ACAD_INFO_TTL_MS)) {
+            serverLog('INFO', 'Using globally cached Acad Info (latency ~0ms)');
+            semester = globalAcadInfo.semester;
+            acadyear = globalAcadInfo.acadyear;
+            semesterNum = globalAcadInfo.semesterNum;
+        } else {
+            serverLog('INFO', 'Calling Schg/Getacadstd...');
+            const acadRes = await axios.get(`${BASE_URL_V2}/Schg/Getacadstd`, apiConfig);
+
+            if (acadRes.status === 200 && acadRes.data) {
+                const acad = acadRes.data;
+                if (acad.enrollsemester && acad.enrollacadyear) {
+                    semester = `${acad.enrollsemester}/${acad.enrollacadyear}`;
+                    acadyear = acad.enrollacadyear;
+                    semesterNum = acad.enrollsemester;
+
+                    globalAcadInfo = { semester, acadyear, semesterNum };
+                    globalAcadInfoTimestamp = Date.now();
+                }
             }
         }
 
@@ -191,7 +218,7 @@ export async function GET() {
         // 3. Decode gzip-compressed response
         serverLog('INFO', 'Decoding gzip-compressed timetable...');
         const rawData = await decodeGzipResponse(timetableRes.data.result);
-        
+
         serverLog('INFO', `Timetable decoded: ${Array.isArray(rawData) ? rawData.length : 'N/A'} courses`);
 
         if (!Array.isArray(rawData) || rawData.length === 0) {
@@ -212,7 +239,7 @@ export async function GET() {
                 const schedule = parseTimeHtml(item.time);
                 const teacherName = stripHtml(item.classofficer);
                 const roomName = stripHtml(item.roomtime);
-                
+
                 return {
                     weekday: schedule.weekday,
                     timefrom: schedule.timefrom,
@@ -233,10 +260,10 @@ export async function GET() {
         // 5. Separate scheduled vs unscheduled courses
         const scheduledCourses = transformed.filter(item => item.weekday !== null);
         const unscheduledCourses = transformed.filter(item => item.weekday === null);
-        
+
         serverLog('INFO', `Final: ${rawData.length} total → ${scheduledCourses.length} scheduled + ${unscheduledCourses.length} unscheduled`);
 
-        return NextResponse.json({
+        const responseData = {
             success: true,
             data: transformed,  // All courses
             scheduled: scheduledCourses,  // Courses with time
@@ -247,7 +274,14 @@ export async function GET() {
                 withSchedule: scheduledCourses.length,
                 withoutSchedule: unscheduledCourses.length
             }
-        });
+        };
+
+        // Update Memory Cache
+        if (stdCode && process.env.MOCK_AUTH !== 'true') {
+            scheduleCache.set(stdCode, { timestamp: Date.now(), data: { ...responseData, cached: true } });
+        }
+
+        return NextResponse.json(responseData);
 
     } catch (error) {
         serverLog('ERROR', `Schedule Fetch Error: ${error.message}`);

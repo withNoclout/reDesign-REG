@@ -1,8 +1,15 @@
 'use client';
 
 import { AlertTriangleIcon } from '../components/Icons';
+import { logError } from '@/lib/logger';
+import { useEffect } from 'react';
 
 export default function GradeError({ error, reset }) {
+    useEffect(() => {
+        console.error('Grade Error:', error);
+        logError(error, 'GradeErrorPage');
+    }, [error]);
+
     return (
         <main className="main-content">
             <div className="bg-image"></div>

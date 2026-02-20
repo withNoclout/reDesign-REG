@@ -11,36 +11,8 @@ const loginLimiter = createRateLimiter({
     windowMs: 15 * 60 * 1000,
 });
 
-// Server IP cache with promise locking (ipify.org returns the server's outbound IP, same for all requests)
-const IP_CACHE_TTL = 60 * 60 * 1000; // 1 hour
-let _ipCache = { value: '', timestamp: 0, promise: null };
-
-async function getServerIp() {
-    const now = Date.now();
-    if (_ipCache.value && (now - _ipCache.timestamp) < IP_CACHE_TTL) {
-        console.log('[API] IP cache hit:', _ipCache.value);
-        return _ipCache.value;
-    }
-    // Promise lock: reuse in-flight request for concurrent callers
-    if (_ipCache.promise) {
-        console.log('[API] IP cache: awaiting in-flight request');
-        return _ipCache.promise;
-    }
-    console.log('[API] IP cache miss — fetching from ipify.org');
-    _ipCache.promise = axios.get('https://api.ipify.org/?format=json', { timeout: 2000 })
-        .then(res => {
-            _ipCache.value = res.data?.ip || '';
-            _ipCache.timestamp = Date.now();
-            console.log('[API] IP cached:', _ipCache.value);
-            return _ipCache.value;
-        })
-        .catch(err => {
-            console.warn('[API] ipify.org failed, using fallback:', err.message);
-            return '';
-        })
-        .finally(() => { _ipCache.promise = null; });
-    return _ipCache.promise;
-}
+// Skipping external IP fetch for performance optimization (saving ~300ms)
+const getServerIp = () => '';
 
 function generateSecureToken() {
     const array = new Uint8Array(32);
@@ -116,10 +88,8 @@ export async function POST(request) {
         }
 
         try {
-            // Step 0: Get server's public IP (cached, with promise locking)
-            console.time('Login-GetIP');
-            const serverIp = await getServerIp();
-            console.timeEnd('Login-GetIP');
+            // Step 0: Get server's public IP (skipped for performance)
+            const serverIp = getServerIp();
 
             // Step 1: Get JWT Token from tokenservice
             console.log('[API] 1. Calling tokenservice...');

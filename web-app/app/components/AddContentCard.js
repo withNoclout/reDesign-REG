@@ -7,7 +7,7 @@ export default function AddContentCard({ onClick, className = '' }) {
         <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className={`group relative aspect-square rounded-2xl overflow-hidden cursor-pointer border-2 border-dashed border-white/20 hover:border-[#ff5722]/50 transition-colors bg-white/5 ${className}`}
+            className={`group flex-grow relative rounded-2xl overflow-hidden cursor-pointer border-2 border-dashed border-white/20 hover:border-[#ff5722]/50 transition-colors bg-white/5 min-h-[300px] ${className}`}
             onClick={onClick}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(); } }}
             role="button"

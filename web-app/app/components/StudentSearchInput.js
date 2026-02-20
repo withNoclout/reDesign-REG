@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { UserIcon } from './Icons';
+import { UserIcon, XIcon } from './Icons';
 
 /**
  * StudentSearchInput — Autocomplete search for tagging students.
@@ -163,7 +163,7 @@ export default function StudentSearchInput({ selectedStudents, onStudentsChange 
                                 className="ml-0.5 text-[#ff5722]/60 hover:text-white transition-colors"
                                 aria-label={`Remove ${s.name_th || s.user_code}`}
                             >
-                                ✕
+                                <XIcon size={12} />
                             </button>
                         </span>
                     ))}
@@ -219,11 +219,10 @@ export default function StudentSearchInput({ selectedStudents, onStudentsChange 
                             aria-selected={idx === highlightIndex}
                             onClick={() => handleSelect(student)}
                             onMouseEnter={() => setHighlightIndex(idx)}
-                            className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-                                idx === highlightIndex
+                            className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${idx === highlightIndex
                                     ? 'bg-[#ff5722]/20 text-white'
                                     : 'text-white/80 hover:bg-white/5'
-                            }`}
+                                }`}
                         >
                             {student.avatar_url ? (
                                 <img src={student.avatar_url} alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />

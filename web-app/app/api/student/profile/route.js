@@ -9,6 +9,11 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://reg4.kmutnb.ac.th/r
 // Ignore self-signed certs
 const agent = new https.Agent({ rejectUnauthorized: false });
 
+// Global in-memory cache to massively speed up Profile loads
+// Keys are std_code, Values are { timestamp, data }
+const profileCache = new Map();
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes cache
+
 export async function GET() {
     try {
         const cookieStore = await cookies();
@@ -51,15 +56,17 @@ export async function GET() {
         // If Fail -> We can only cache-hit if we know the ID.
         // Let's look for a `std_code` or similar cookie.
 
-        const storedStudentId = cookieStore.get('std_code')?.value; // Assuming we might store this?
-        // If not, we might be stuck on "First Fail".
-        // But the user requested "Persistent Cache".
-        // Let's check if we can query Supabase by *something*? No.
+        // Initialize standard variables
+        const storedStudentId = cookieStore.get('std_code')?.value;
 
-        // Let's stick to the Plan: Fetch Real -> Upsert.
-        // If Fetch Real fails, we try to use the `storedStudentId` if available to fetch from DB.
-
-        // NOTE: To make this robust, the LOGIN process should set a `std_code` cookie readable by server.
+        // 🚀 FAST PATH: Check Active Memory Cache first
+        if (storedStudentId) {
+            const cached = profileCache.get(storedStudentId);
+            if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
+                console.log(`[Profile API] Fast Memory Cache hit (latency ~0ms) for ${storedStudentId}`);
+                return NextResponse.json({ success: true, data: cached.data });
+            }
+        }
 
         // Setup Timeout (3 seconds)
         const TIMEOUT_MS = 3000;
@@ -146,8 +153,14 @@ export async function GET() {
                             updated_at: new Date()
                         });
                     } catch (cacheErr) {
-                        console.warn('[Profile API] Cache upsert failed:', cacheErr.message);
+                        console.warn('[Profile API] Database cache upsert failed:', cacheErr.message);
                     }
+
+                    // Update Memory Cache
+                    profileCache.set(studentId, {
+                        timestamp: Date.now(),
+                        data: profile
+                    });
                 }
 
                 return NextResponse.json({ success: true, data: profile });

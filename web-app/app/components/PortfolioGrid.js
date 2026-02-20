@@ -5,7 +5,7 @@ import { usePortfolioSettings } from '../hooks/usePortfolioSettings';
 import AddContentCard from './AddContentCard';
 import PortfolioEditorModal from './PortfolioEditorModal';
 import CustomPortfolioGrid from './CustomPortfolioGrid';
-import { TagIcon, FileTextIcon, SparklesIcon, LinkIcon, UsersIcon } from './Icons';
+import { TagIcon, FileTextIcon, SparklesIcon, LinkIcon, UsersIcon, CheckIcon, XIcon } from './Icons';
 
 /**
  * Smart sort: visible first → more collaborators first → newer first.
@@ -145,18 +145,18 @@ function PendingTagsBanner({ count, userId, onRespond }) {
                                     <button
                                         onClick={() => handleRespond(tag.portfolio_id, 'accepted')}
                                         disabled={responding === tag.portfolio_id}
-                                        className="px-3 py-1.5 bg-green-500/20 hover:bg-green-500 text-green-400 hover:text-white border border-green-500/30 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
+                                        className="px-3 py-1.5 bg-green-500/20 hover:bg-green-500 text-green-400 hover:text-white border border-green-500/30 rounded-lg text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-1"
                                         aria-label="Accept collaboration"
                                     >
-                                        ✓ ยอมรับ
+                                        <CheckIcon size={14} className="inline" /> ยอมรับ
                                     </button>
                                     <button
                                         onClick={() => handleRespond(tag.portfolio_id, 'rejected')}
                                         disabled={responding === tag.portfolio_id}
-                                        className="px-3 py-1.5 bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
+                                        className="px-3 py-1.5 bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 rounded-lg text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-1"
                                         aria-label="Reject collaboration"
                                     >
-                                        ✕ ปฏิเสธ
+                                        <XIcon size={14} className="inline" /> ปฏิเสธ
                                     </button>
                                 </div>
                             </div>
@@ -190,6 +190,7 @@ export default function PortfolioGrid() {
     const [isManageMode, setIsManageMode] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
 
     // Helper Classes
     const columnClass = `columns-${settings.fixedConfig?.columnCount || 3}`;
@@ -292,6 +293,45 @@ export default function PortfolioGrid() {
     const sortedItems = useMemo(() => {
         return sortItems(items, collaborations, settings.sortMode, settings.customItemOrder);
     }, [items, collaborations, settings.sortMode, settings.customItemOrder]);
+
+    // --- Pagination Logic ---
+    const ITEMS_PER_PAGE = settings.maxItemsPerPage || 9; // Changed from 12 to 9
+
+    // Page 1 has Add Content Card (1 slot), so it can fit ITEMS_PER_PAGE - 1 items
+    const firstPageItemCount = ITEMS_PER_PAGE - 1;
+
+    const totalPages = useMemo(() => {
+        if (sortedItems.length === 0) return 1;
+        // If items can fit on page 1
+        if (sortedItems.length <= firstPageItemCount) return 1;
+
+        // Remaining items after page 1
+        const remainingItems = sortedItems.length - firstPageItemCount;
+        return 1 + Math.ceil(remainingItems / ITEMS_PER_PAGE);
+    }, [sortedItems.length, firstPageItemCount, ITEMS_PER_PAGE]);
+
+    // Ensure currentPage is valid if items are deleted
+    useEffect(() => {
+        if (currentPage > totalPages) {
+            setCurrentPage(Math.max(1, totalPages));
+        }
+    }, [totalPages, currentPage]);
+
+    const paginatedItems = useMemo(() => {
+        if (isCustomMode) {
+            // In custom mode, pagination might ruin absolute positioning layouts unless strictly handled.
+            // For now, let's just return all items up to the max safe limit or simply all items.
+            return sortedItems;
+        }
+
+        if (currentPage === 1) {
+            return sortedItems.slice(0, firstPageItemCount);
+        } else {
+            const startIndex = firstPageItemCount + (currentPage - 2) * ITEMS_PER_PAGE;
+            const endIndex = startIndex + ITEMS_PER_PAGE;
+            return sortedItems.slice(startIndex, endIndex);
+        }
+    }, [sortedItems, currentPage, isCustomMode, firstPageItemCount, ITEMS_PER_PAGE]);
 
     // Save manual order (for drag-to-reorder in Fixed mode)
     const handleManualReorder = useCallback((newOrder) => {
@@ -433,190 +473,227 @@ export default function PortfolioGrid() {
                 /* CSS Grid Layout for ProMax Split-Header */
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-6 px-4">
 
-                    {/* Add Trigger (Always First, 33% Width on Desktop) */}
-                    <div className="md:col-span-4 h-full min-h-[250px]">
-                        <AddContentCard onClick={() => { setEditingItem(null); setIsModalOpen(true); }} className="w-full h-full shadow-xl hover:shadow-[#ff5722]/10" />
-                    </div>
+                    {/* Add Trigger (Always First, 33% Width on Desktop) - ONLY ON PAGE 1 */}
+                    {currentPage === 1 && (
+                        <div className="md:col-span-4 flex">
+                            <AddContentCard onClick={() => { setEditingItem(null); setIsModalOpen(true); }} className="w-full shadow-xl hover:shadow-[#ff5722]/10" />
+                        </div>
+                    )}
 
                     {/* Content Items */}
                     <AnimatePresence mode='popLayout'>
-                        {sortedItems.slice(0, settings.maxItemsPerPage || 12).map((item, index) => {
-                            // First item is 33% width to match Add Button
-                            const isFirstItem = index === 0;
+                        {paginatedItems.map((item, index) => {
+                            // First item is 33% width to match Add Button ONLY ON PAGE 1
+                            const isFirstItem = currentPage === 1 && index === 0;
                             // Dynamic Column Span Calculation based on Slider
                             const columns = settings.fixedConfig?.columnCount || 3;
                             const otherSpan = 12 / columns;
                             const colSpanClass = isFirstItem ? 'md:col-span-4' : `md:col-span-${otherSpan}`;
-                            
+
                             return (
-                            <motion.div
-                                key={item.id}
-                                layout
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: item.is_visible === false && !isManageMode ? 0.3 : 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.9 }}
-                                transition={{ delay: index * 0.05 }}
-                                className={`${colSpanClass} h-full min-h-[250px] p-4 rounded-3xl group relative bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-[box-shadow,background-color,border-color] duration-300 hover:shadow-2xl ${item.is_visible === false && !isManageMode ? 'grayscale opacity-50' : ''}`}
-                            >
-                                {/* Management Overlays */}
-                                {isManageMode && (
-                                    <div className="absolute top-2 right-2 z-30 flex items-center gap-2">
-                                        {/* Edit Button (own items only) */}
-                                        {!item.is_collaboration && (
+                                <motion.div
+                                    key={item.id}
+                                    layout
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: item.is_visible === false && !isManageMode ? 0.3 : 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                    transition={{ delay: index * 0.05 }}
+                                    className={`${colSpanClass} flex flex-col p-4 rounded-3xl group relative bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-[box-shadow,background-color,border-color] duration-300 hover:shadow-2xl ${item.is_visible === false && !isManageMode ? 'grayscale opacity-50' : ''}`}
+                                >
+                                    {/* Management Overlays */}
+                                    {isManageMode && (
+                                        <div className="absolute top-2 right-2 z-30 flex items-center gap-2">
+                                            {/* Edit Button (own items only) */}
+                                            {!item.is_collaboration && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setEditingItem(item);
+                                                        setIsModalOpen(true);
+                                                    }}
+                                                    className="p-2 rounded-full bg-white/20 text-white hover:bg-[#ff5722] backdrop-blur-md shadow-lg transition-all"
+                                                    title="Edit"
+                                                >
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                                                </button>
+                                            )}
+
+                                            {/* Visibility Toggle */}
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    setEditingItem(item);
-                                                    setIsModalOpen(true);
+                                                    handleToggleVisibility(item.id, item.is_visible);
                                                 }}
-                                                className="p-2 rounded-full bg-white/20 text-white hover:bg-[#ff5722] backdrop-blur-md shadow-lg transition-all"
-                                                title="Edit"
+                                                className={`p-2 rounded-full backdrop-blur-md shadow-lg transition-all ${item.is_visible !== false ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'}`}
+                                                title={item.is_visible !== false ? "Visible" : "Hidden"}
                                             >
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
-                                            </button>
-                                        )}
-
-                                        {/* Visibility Toggle */}
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleToggleVisibility(item.id, item.is_visible);
-                                            }}
-                                            className={`p-2 rounded-full backdrop-blur-md shadow-lg transition-all ${item.is_visible !== false ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'}`}
-                                            title={item.is_visible !== false ? "Visible" : "Hidden"}
-                                        >
-                                            {item.is_visible !== false ? (
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                                            ) : (
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
-                                            )}
-                                        </button>
-
-                                        {/* Delete Button */}
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleDelete(item.id);
-                                            }}
-                                            className="p-2 rounded-full bg-red-500/20 text-red-500 hover:bg-red-500 hover:text-white backdrop-blur-md shadow-lg transition-all"
-                                            title="Delete"
-                                        >
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                                        </button>
-                                    </div>
-                                )}
-
-                                {/* Image Container with Natural Aspect Ratio */}
-                                <div className={`relative overflow-hidden rounded-2xl mb-4 bg-black/20 h-48`}>
-                                    {item.is_visible === false && (
-                                        <div className="absolute inset-0 z-10 bg-black/50 flex items-center justify-center pointer-events-none">
-                                            <span className="bg-black/50 backdrop-blur px-2 py-1 rounded text-xs text-white/70 font-bold border border-white/10">Hidden</span>
-                                        </div>
-                                    )}
-                                    {item.image_url && item.uploaded_to_supabase ? (
-                                        <img
-                                            src={item.image_url}
-                                            alt={item.description}
-                                            className="w-full h-full object-cover"
-                                            loading="lazy"
-                                        />
-                                    ) : (
-                                        <div className="w-full aspect-[4/3] flex flex-col items-center justify-center text-white/20">
-                                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mb-2">
-                                                <circle cx="12" cy="12" r="10" />
-                                                <line x1="12" y1="8" x2="12" y2="12" />
-                                                <line x1="12" y1="16" x2="12.01" y2="16" />
-                                            </svg>
-                                            <span className="text-sm">Not Uploaded</span>
-                                        </div>
-                                    )}
-
-                                    {/* Status Badges */}
-                                    {!item.uploaded_to_supabase && !item.is_collaboration && (
-                                        <div className="absolute top-3 right-3 bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg z-10 backdrop-blur-md bg-opacity-90">
-                                            Upload Pending
-                                        </div>
-                                    )}
-
-                                    {/* Collaboration Badge */}
-                                    {item.is_collaboration && (
-                                        <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white/90 px-3 py-1 rounded-full text-xs font-medium shadow-lg z-10 border border-white/10 flex items-center gap-1.5">
-                                            <LinkIcon size={14} className="inline" /> Shared with you
-                                        </div>
-                                    )}
-
-                                    {/* Collaborator Count Badge (own items) */}
-                                    {!item.is_collaboration && item.collaborator_count > 0 && (
-                                        <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white/90 px-2.5 py-1 rounded-full text-xs font-medium shadow-lg z-10 border border-white/10 flex items-center gap-1">
-                                            <UsersIcon size={14} className="inline" /> {item.collaborator_count}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Content Below Image */}
-                                <div className='space-y-3'>
-
-                                    {/* Topic (New Field) */}
-                                    {item.topic && (
-                                        <h3 className='font-prompt font-bold text-white leading-tight text-lg'>
-                                            {item.topic}
-                                        </h3>
-                                    )}
-
-                                    {/* Description */}
-                                    <p className='text-white font-prompt font-light text-white/80 text-sm leading-relaxed line-clamp-2'>
-                                        {item.description}
-                                    </p>
-
-                                    {/* Metadata & Actions */}
-                                    <div className='flex items-center justify-between border-t border-white/5 pt-3'>
-                                        <div className="flex flex-col gap-0.5">
-                                            <span className="text-white/70 text-xs font-light">
-                                                {new Date(item.created_at).toLocaleDateString('th-TH', {
-                                                    year: 'numeric',
-                                                    month: 'short',
-                                                    day: 'numeric'
-                                                })}
-                                            </span>
-                                            {item.is_collaboration && item.added_by && (
-                                                <span className="text-white/40 text-[10px]">
-                                                    Added by: {item.added_by}
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        {/* Retry Button */}
-                                        {!item.uploaded_to_supabase && item.temp_path && (
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleRetryItem(item.id);
-                                                }}
-                                                disabled={retryingItem === item.id}
-                                                className="px-3 py-1.5 bg-orange-500/10 hover:bg-orange-500 text-orange-400 hover:text-white border border-orange-500/20 hover:border-orange-500 rounded-lg text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-                                            >
-                                                {retryingItem === item.id ? (
-                                                    <>
-                                                        <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                                                        <span>Uploading...</span>
-                                                    </>
+                                                {item.is_visible !== false ? (
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
                                                 ) : (
-                                                    <>
-                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                            <path d="M23 4v6h-6" />
-                                                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-                                                        </svg>
-                                                        <span>Retry</span>
-                                                    </>
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
                                                 )}
                                             </button>
+
+                                            {/* Delete Button */}
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDelete(item.id);
+                                                }}
+                                                className="p-2 rounded-full bg-red-500/20 text-red-500 hover:bg-red-500 hover:text-white backdrop-blur-md shadow-lg transition-all"
+                                                title="Delete"
+                                            >
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* Image Container with Natural Aspect Ratio */}
+                                    <div className={`relative overflow-hidden rounded-2xl mb-4 bg-black/20 h-48`}>
+                                        {item.is_visible === false && (
+                                            <div className="absolute inset-0 z-10 bg-black/50 flex items-center justify-center pointer-events-none">
+                                                <span className="bg-black/50 backdrop-blur px-2 py-1 rounded text-xs text-white/70 font-bold border border-white/10">Hidden</span>
+                                            </div>
+                                        )}
+                                        {item.image_url && item.uploaded_to_supabase ? (
+                                            <img
+                                                src={item.image_url}
+                                                alt={item.description}
+                                                className="w-full h-full object-cover"
+                                                loading="lazy"
+                                            />
+                                        ) : (
+                                            <div className="w-full aspect-[4/3] flex flex-col items-center justify-center text-white/20">
+                                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mb-2">
+                                                    <circle cx="12" cy="12" r="10" />
+                                                    <line x1="12" y1="8" x2="12" y2="12" />
+                                                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                                                </svg>
+                                                <span className="text-sm">Not Uploaded</span>
+                                            </div>
+                                        )}
+
+                                        {/* Status Badges */}
+                                        {!item.uploaded_to_supabase && !item.is_collaboration && (
+                                            <div className="absolute top-3 right-3 bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg z-10 backdrop-blur-md bg-opacity-90">
+                                                Upload Pending
+                                            </div>
+                                        )}
+
+                                        {/* Collaboration Badge */}
+                                        {item.is_collaboration && (
+                                            <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white/90 px-3 py-1 rounded-full text-xs font-medium shadow-lg z-10 border border-white/10 flex items-center gap-1.5">
+                                                <LinkIcon size={14} className="inline" /> Shared with you
+                                            </div>
+                                        )}
+
+                                        {/* Collaborator Count Badge (own items) */}
+                                        {!item.is_collaboration && item.collaborator_count > 0 && (
+                                            <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white/90 px-2.5 py-1 rounded-full text-xs font-medium shadow-lg z-10 border border-white/10 flex items-center gap-1">
+                                                <UsersIcon size={14} className="inline" /> {item.collaborator_count}
+                                            </div>
                                         )}
                                     </div>
-                                </div>
-                            </motion.div>
+
+                                    {/* Content Below Image (Flex Grow to push footer to bottom) */}
+                                    <div className='flex flex-col flex-grow space-y-3'>
+
+                                        {/* Topic (New Field) */}
+                                        {item.topic && (
+                                            <h3 className='font-prompt font-bold text-white leading-tight text-lg'>
+                                                {item.topic}
+                                            </h3>
+                                        )}
+
+                                        {/* Description */}
+                                        <p className='text-white font-prompt font-light text-white/80 text-sm leading-relaxed line-clamp-2'>
+                                            {item.description}
+                                        </p>
+
+                                        {/* Metadata & Actions (Pushed to bottom using mt-auto) */}
+                                        <div className='flex items-center justify-between border-t border-white/5 pt-3 mt-auto'>
+                                            <div className="flex flex-col gap-0.5">
+                                                <span className="text-white/70 text-xs font-light">
+                                                    {new Date(item.created_at).toLocaleDateString('th-TH', {
+                                                        year: 'numeric',
+                                                        month: 'short',
+                                                        day: 'numeric'
+                                                    })}
+                                                </span>
+                                                {item.is_collaboration && item.added_by && (
+                                                    <span className="text-white/40 text-[10px]">
+                                                        Added by: {item.added_by}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {/* Retry Button */}
+                                            {!item.uploaded_to_supabase && item.temp_path && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleRetryItem(item.id);
+                                                    }}
+                                                    disabled={retryingItem === item.id}
+                                                    className="px-3 py-1.5 bg-orange-500/10 hover:bg-orange-500 text-orange-400 hover:text-white border border-orange-500/20 hover:border-orange-500 rounded-lg text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                                                >
+                                                    {retryingItem === item.id ? (
+                                                        <>
+                                                            <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                                                            <span>Uploading...</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                <path d="M23 4v6h-6" />
+                                                                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                                                            </svg>
+                                                            <span>Retry</span>
+                                                        </>
+                                                    )}
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </motion.div>
                             );
                         })}
                     </AnimatePresence>
+                </div>
+            )}
+
+            {/* Pagination Controls (Only for Fixed Mode) */}
+            {!isCustomMode && totalPages > 1 && (
+                <div className="flex justify-center items-center mt-12 mb-8 gap-2">
+                    <button
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="p-2 rounded-xl bg-white/5 text-white/50 hover:bg-white/10 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                        aria-label="Previous Page"
+                    >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    </button>
+
+                    <div className="flex items-center gap-1 bg-black/40 backdrop-blur-md p-1 rounded-xl border border-white/5">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                            <button
+                                key={page}
+                                onClick={() => setCurrentPage(page)}
+                                className={`w-10 h-10 rounded-lg text-sm font-bold transition-all ${currentPage === page ? 'bg-[#ff5722] text-white shadow-lg shadow-[#ff5722]/20' : 'text-white/50 hover:bg-white/10 hover:text-white'}`}
+                            >
+                                {page}
+                            </button>
+                        ))}
+                    </div>
+
+                    <button
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                        className="p-2 rounded-xl bg-white/5 text-white/50 hover:bg-white/10 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                        aria-label="Next Page"
+                    >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </button>
                 </div>
             )}
 
