@@ -45,9 +45,13 @@ export function AuthProvider({ children }) {
                     const customImg = localStorage.getItem(`custom_profile_img_${parsed.usercode}`);
                     if (customImg && !parsed.img) parsed.img = customImg;
 
-                    // Check verification status
-                    const verified = localStorage.getItem(`drive_connected_${parsed.usercode}`) === 'true';
-                    setIsVerified(verified);
+                    // Check verification status from server
+                    fetch('/api/user/verify-status')
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) setIsVerified(!!data.is_verified);
+                        })
+                        .catch(err => console.warn('[Auth] Failed to fetch verification status', err));
                 }
                 setUser(parsed);
                 setIsAuthenticated(true);
@@ -66,9 +70,13 @@ export function AuthProvider({ children }) {
             const customImg = localStorage.getItem(`custom_profile_img_${userData.usercode}`);
             if (customImg && !userData.img) userData.img = customImg;
 
-            // Check verification status
-            const verified = localStorage.getItem(`drive_connected_${userData.usercode}`) === 'true';
-            setIsVerified(verified);
+            // Check verification status from server
+            fetch('/api/user/verify-status')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) setIsVerified(!!data.is_verified);
+                })
+                .catch(err => console.warn('[Auth] Failed to fetch verification status', err));
         }
 
         setUser(userData);
@@ -80,17 +88,10 @@ export function AuthProvider({ children }) {
         }
     }, []);
 
-    // Connect Google Drive (Mock)
-    const connectGoogleDrive = useCallback(async () => {
-        if (!user?.usercode) return false;
-
-        // Simulate API call / Popup
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        localStorage.setItem(`drive_connected_${user.usercode}`, 'true');
+    // Mark as verified
+    const markAsVerified = useCallback(() => {
         setIsVerified(true);
-        return true;
-    }, [user]);
+    }, []);
 
     // Logout: clear everything
     const logout = useCallback(async () => {
@@ -172,8 +173,8 @@ export function AuthProvider({ children }) {
         login,
         logout,
         updateProfileImage,
-        connectGoogleDrive,
-    }), [user, isAuthenticated, loading, isVerified, login, logout, updateProfileImage, connectGoogleDrive]);
+        markAsVerified,
+    }), [user, isAuthenticated, loading, isVerified, login, logout, updateProfileImage, markAsVerified]);
 
     return (
         <AuthContext.Provider value={value}>

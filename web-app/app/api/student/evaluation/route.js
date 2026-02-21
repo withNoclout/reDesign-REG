@@ -6,7 +6,7 @@ import zlib from 'zlib';
 import { promisify } from 'util';
 
 const gunzip = promisify(zlib.gunzip);
-const BASE_URL = 'https://reg1.kmutnb.ac.th/regapiweb3/api/th';
+const BASE_URL = 'https://reg3.kmutnb.ac.th/regapiweb1/api/th';
 
 // Ignore self-signed certs
 const agent = new https.Agent({ rejectUnauthorized: false });

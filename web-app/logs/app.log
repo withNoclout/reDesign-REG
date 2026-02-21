@@ -856,3 +856,9 @@ ReferenceError: useGuest is not defined
     at applyUpdate (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_a0e4c7b4._.js:878:31)
     at http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_a0e4c7b4._.js:886:13
 --------------------------------------------------------------------------------
+[2026-02-21T19:15:21.675Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-21T19:15:21.676Z] [INFO] [Schedule API] Calling Schg/Getacadstd...
+[2026-02-21T19:15:21.731Z] [INFO] [Schedule API] Calling Timetable/Timetable/2568/2...
+[2026-02-21T19:15:21.791Z] [INFO] [Schedule API] Decoding gzip-compressed timetable...
+[2026-02-21T19:15:21.793Z] [INFO] [Schedule API] Timetable decoded: 6 courses
+[2026-02-21T19:15:21.794Z] [INFO] [Schedule API] Final: 6 total → 6 scheduled + 0 unscheduled

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/app/context/AuthContext';
@@ -11,13 +11,10 @@ import { ArrowLeftIcon, CheckCircleIcon, AlertTriangleIcon, ClockIcon, SparklesI
 import '@/app/globals.css';
 
 export default function EvaluationFormPage({ params }) {
+    const { id: evaluateId } = use(params);
     const router = useRouter();
     const { user, isAuthenticated, loading: authLoading } = useAuth();
     const { isGuest, allowedModules, guestName, loading: guestLoading } = useGuest();
-
-    // Unwrapping params directly in the effect/render or using React.use (if passing async params)
-    // Next.js 15+ usually requires async component, but using plain params.id is okay for client components with standard slugs.
-    const evaluateId = params?.id || '';
 
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
