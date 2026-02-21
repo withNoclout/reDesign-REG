@@ -1,13 +1,9 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import axios from 'axios';
-import https from 'https';
 import { getServiceSupabase } from '@/lib/supabase';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
-
-// Ignore self-signed certs
-const agent = new https.Agent({ rejectUnauthorized: false });
 
 // Global in-memory cache to massively speed up Profile loads
 // Keys are std_code, Values are { timestamp, data }
@@ -72,7 +68,6 @@ export async function GET() {
         const TIMEOUT_MS = 3000;
         const apiCallConfig = {
             headers: { 'Authorization': `Bearer ${token}` },
-            httpsAgent: agent,
             timeout: TIMEOUT_MS,
             validateStatus: () => true
         };
@@ -115,11 +110,13 @@ export async function GET() {
                     return value;
                 };
 
-                // Get student ID from parallel result (no extra sequential call)
-                let studentId = null;
-                if (idResult.status === 'fulfilled' && idResult.value?.status === 200) {
-                    studentId = idResult.value.data.studentCode || idResult.value.data.usercode;
-                }
+                // Extract acad data safely from Getacadstd (idResult)
+                const idData = (idResult.status === 'fulfilled' && idResult.value?.status === 200)
+                    ? idResult.value.data
+                    : {};
+
+                // Get student ID from parallel result
+                let studentId = idData.studentCode || idData.usercode || null;
 
                 const profile = {
                     faculty: extract(['คณะ', 'Faculty']),
@@ -128,12 +125,13 @@ export async function GET() {
                     advisor1: extract(['ที่ปรึกษาคนที่ 1', 'Advisor 1']),
                     advisor2: extract(['ที่ปรึกษาคนที่ 2', 'Advisor 2']),
                     advisor3: extract(['ที่ปรึกษาคนที่ 3', 'Advisor 3']),
-                    admitYear: acadData?.admitacadyear || null,
-                    admitSemester: acadData?.admitsemester || null,
-                    currentYear: acadData?.currentacadyear || null,
-                    currentSemester: acadData?.currentsemester || null,
-                    enrollYear: acadData?.enrollacadyear || null,
-                    enrollSemester: acadData?.enrollsemester || null
+                    // Getacadstd returns these fields:
+                    admitYear: idData?.admitacadyear || null,
+                    admitSemester: idData?.admitsemester || null,
+                    currentYear: acadData?.currentacadyear || idData?.currentacadyear || null,
+                    currentSemester: acadData?.currentsemester || idData?.currentsemester || null,
+                    enrollYear: idData?.enrollacadyear || null,
+                    enrollSemester: idData?.enrollsemester || null
                 };
 
                 // --- CACHE STEP ---

@@ -19,7 +19,7 @@ import {
 
 // Menu configuration
 const MENU_ITEMS = [
-    { id: 'profile', icon: 'profile', label: 'ข้อมูลส่วนตัว', active: false, href: '/landing' },
+    { id: 'profile', icon: 'profile', label: 'ข้อมูลส่วนตัว', active: false, href: '/main' },
     { id: 'registration', icon: 'registration', label: 'ทะเบียน', active: false, href: '#' },
     {
         id: 'grade',
@@ -132,7 +132,7 @@ export default function Navbar({ activePage = 'profile' }) {
             {...navbarSlideDown}
         >
             <div className="nav-container">
-                <a href="/landing" className="nav-brand">
+                <a href="/main" className="nav-brand">
                     <motion.svg
                         className="nav-logo"
                         viewBox="0 0 40 40"

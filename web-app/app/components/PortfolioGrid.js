@@ -30,21 +30,29 @@ function sortItems(items, collaborations, sortMode, customItemOrder) {
         return [...ordered, ...unordered];
     }
 
-    if (sortMode === 'newest') {
-        return all.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    }
-    if (sortMode === 'oldest') {
-        return all.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-    }
-
-    // Default: auto sort (Chronological & Collaborators, ignoring visibility for stable ordering)
+    // Sort by visibility first for all non-manual modes
     return all.sort((a, b) => {
-        // 1. More collaborators first
+        const isVisibleA = a.is_visible !== false;
+        const isVisibleB = b.is_visible !== false;
+
+        // 1. Visible items always come before hidden items
+        if (isVisibleA && !isVisibleB) return -1;
+        if (!isVisibleA && isVisibleB) return 1;
+
+        // 2. Secondary sort based on the mode
+        if (sortMode === 'newest') {
+            return new Date(b.created_at) - new Date(a.created_at);
+        }
+
+        if (sortMode === 'oldest') {
+            return new Date(a.created_at) - new Date(b.created_at);
+        }
+
+        // Default: auto sort (More collaborators first, then Chronological)
         const collabA = a.collaborator_count || 0;
         const collabB = b.collaborator_count || 0;
         if (collabA !== collabB) return collabB - collabA;
 
-        // 2. Newer first
         return new Date(b.created_at) - new Date(a.created_at);
     });
 }
@@ -162,6 +170,22 @@ function PendingTagsBanner({ count, userId, onRespond }) {
             )}
         </div>
     );
+}
+
+function getPaginationGroup(currentPage, totalPages) {
+    if (totalPages <= 7) {
+        return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    if (currentPage <= 4) {
+        return [1, 2, 3, 4, 5, '...', totalPages];
+    }
+
+    if (currentPage >= totalPages - 3) {
+        return [1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    }
+
+    return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
 }
 
 export default function PortfolioGrid() {
@@ -338,7 +362,7 @@ export default function PortfolioGrid() {
     }, [updateSetting]);
 
     return (
-        <section className="relative pt-0">
+        <section className="relative pt-0 flex flex-col min-h-[750px]">
             {/* Pending Collaboration Tags Banner */}
             {pendingCount > 0 && (
                 <PendingTagsBanner count={pendingCount} userId={user?.usercode} onRespond={fetchContent} />
@@ -471,7 +495,7 @@ export default function PortfolioGrid() {
                 />
             ) : (
                 /* CSS Grid Layout for ProMax Split-Header */
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 px-4">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 px-4 content-start min-h-[800px] md:min-h-[1100px]">
 
                     {/* Add Trigger (Always First, 33% Width on Desktop) - ONLY ON PAGE 1 */}
                     {currentPage === 1 && !isGuest && (
@@ -664,7 +688,7 @@ export default function PortfolioGrid() {
 
             {/* Pagination Controls (Only for Fixed Mode) */}
             {!isCustomMode && totalPages > 1 && (
-                <div className="flex justify-center items-center mt-12 mb-8 gap-2">
+                <div className="flex justify-center items-center mt-auto pt-12 pb-12 gap-2 w-full">
                     <button
                         onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                         disabled={currentPage === 1}
@@ -675,14 +699,20 @@ export default function PortfolioGrid() {
                     </button>
 
                     <div className="flex items-center gap-1 bg-black/40 backdrop-blur-md p-1 rounded-xl border border-white/5">
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                            <button
-                                key={page}
-                                onClick={() => setCurrentPage(page)}
-                                className={`w-10 h-10 rounded-lg text-sm font-bold transition-all ${currentPage === page ? 'bg-[#ff5722] text-white shadow-lg shadow-[#ff5722]/20' : 'text-white/50 hover:bg-white/10 hover:text-white'}`}
-                            >
-                                {page}
-                            </button>
+                        {getPaginationGroup(currentPage, totalPages).map((page, idx) => (
+                            page === '...' ? (
+                                <span key={`ellipsis-${idx}`} className="w-10 h-10 flex items-center justify-center text-white/40 font-bold select-none text-sm">
+                                    ...
+                                </span>
+                            ) : (
+                                <button
+                                    key={page}
+                                    onClick={() => setCurrentPage(page)}
+                                    className={`w-10 h-10 rounded-lg text-sm font-bold transition-all ${currentPage === page ? 'bg-[#ff5722] text-white shadow-lg shadow-[#ff5722]/20' : 'text-white/50 hover:bg-white/10 hover:text-white'}`}
+                                >
+                                    {page}
+                                </button>
+                            )
                         ))}
                     </div>
 

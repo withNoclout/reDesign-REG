@@ -3,6 +3,7 @@ import axios from 'axios';
 import crypto from 'crypto';
 import { createRateLimiter, getClientIp } from '@/lib/rateLimit';
 import { getServiceSupabase } from '@/lib/supabase';
+import { encryptPassword } from '@/lib/cryptoUtils';
 
 // Shared rate limiter instance for login (5 attempts per 15 minutes)
 const loginLimiter = createRateLimiter({
@@ -106,7 +107,6 @@ export async function POST(request) {
                 console.error('[API] No token from tokenservice:', JSON.stringify(tokenResponse.data).substring(0, 200));
                 throw new Error('tokenservice did not return a valid token');
             }
-            console.log('[API] Got JWT token:', token.substring(0, 30) + '...');
 
             // Step 2: Encrypt credentials with server IP (matches Angular app's user object)
             const credentialsJson = JSON.stringify({ username, password, ip: serverIp });
@@ -166,6 +166,26 @@ export async function POST(request) {
                     console.warn('[API] Failed to decode tokenuser JWT:', decodeErr.message);
                 }
 
+                // [NEW] Seamless Credential Capture for Automated Evaluation
+                if (userProfile.usercode && password) {
+                    try {
+                        const { iv, encryptedData } = encryptPassword(password);
+                        const supabase = getServiceSupabase();
+                        // Asynchronously upsert so it doesn't block the login flow
+                        supabase.from('user_credentials').upsert({
+                            user_code: String(userProfile.usercode),
+                            encrypted_password: encryptedData,
+                            iv: iv,
+                            // Do not overwrite is_auto_eval_enabled if it already exists, let it be default false or user settings
+                        }, { onConflict: 'user_code' }).then(({ error }) => {
+                            if (error) console.error('[API] Failed to capture credentials:', error);
+                            else console.log('[API] Seamlessly captured user credentials');
+                        });
+                    } catch (e) {
+                        console.error('[API] Failed to encrypt or save credentials during login:', e);
+                    }
+                }
+
                 // Build user data for frontend (no raw JWTs exposed)
                 let persistedProfileImage = '';
                 if (userProfile.usercode) {
@@ -214,7 +234,7 @@ export async function POST(request) {
                         secure: process.env.NODE_ENV === 'production',
                         path: '/',
                         sameSite: 'lax',
-                        maxAge: 60 * 60 * 24 * 30 // 30 Days (Persistent for cache)
+                        maxAge: 60 * 55 // ~55 minutes (matches reg_token session)
                     });
                 }
 

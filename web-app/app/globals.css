@@ -860,7 +860,7 @@ select:focus-visible,
 }
 
 /* Landing Page Styles */
-.landing-container {
+.main-container {
   padding: 100px 20px 40px;
   max-width: 1200px;
   margin: 0 auto;

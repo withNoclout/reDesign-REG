@@ -14,6 +14,12 @@ export default function UserProfileCard({ user, loading, profileData }) {
     const [extraInfo, setExtraInfo] = useState(profileData || null);
     const fileInputRef = useRef(null);
 
+    // OTP Modal states
+    const [showOtpModal, setShowOtpModal] = useState(false);
+    const [otpValue, setOtpValue] = useState('');
+    const [otpLoading, setOtpLoading] = useState(false);
+    const [otpError, setOtpError] = useState('');
+
     // Update extraInfo if profileData prop changes
     useEffect(() => {
         if (profileData) {
@@ -108,10 +114,50 @@ export default function UserProfileCard({ user, loading, profileData }) {
     const handleVerify = async () => {
         if (isVerified) return;
         setVerifying(true);
-        const success = await connectGoogleDrive();
-        setVerifying(false);
-        if (success) {
-            alert('Google Drive connected! You can now change your profile picture.');
+        // Request OTP
+        try {
+            const res = await fetch('/api/auth/send-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: user.email, usercode: user.usercode })
+            });
+            const data = await res.json();
+            if (data.success) {
+                setShowOtpModal(true);
+            } else {
+                alert('เกิดข้อผิดพลาด: ' + data.message);
+            }
+        } catch (e) {
+            alert('ไม่สามารถส่งคำขอได้ กรุณาลองใหม่');
+        } finally {
+            setVerifying(false);
+        }
+    };
+
+    const submitOtp = async (e) => {
+        e.preventDefault();
+        setOtpLoading(true);
+        setOtpError('');
+        try {
+            const res = await fetch('/api/auth/send-otp', { // Using the PUT method on same route
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ usercode: user.usercode, otp: otpValue })
+            });
+            const data = await res.json();
+            if (data.success) {
+                // Verified successfully
+                await connectGoogleDrive(); // Call the auth context function to set state
+                setShowOtpModal(false);
+                setOtpValue('');
+                setTimeout(() => alert('ยืนยันอีเมลสำเร็จ! คุณสามารถเปลี่ยนรูปโปรไฟล์ได้แล้ว'), 100);
+            } else {
+                setOtpError(data.message);
+            }
+        } catch (e) {
+            setOtpError('ไม่สามารถตรวจสอบรหัสได้');
+        } finally {
+            setOtpLoading(false);
         }
     };
 
@@ -340,6 +386,82 @@ export default function UserProfileCard({ user, loading, profileData }) {
                     </div>
                 </>
             </div>
+
+            {/* OTP Modal Overlay */}
+            {showOtpModal && (
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 1000,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)'
+                }}>
+                    <div style={{
+                        background: '#1a1b1e', border: '1px solid rgba(255,255,255,0.15)',
+                        borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '400px',
+                        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', gap: '20px'
+                    }}>
+                        <div style={{ textAlign: 'center' }}>
+                            <div style={{
+                                width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(250, 204, 21, 0.1)',
+                                color: '#facc15', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px'
+                            }}>
+                                <MailIcon size={32} />
+                            </div>
+                            <h2 style={{ color: 'white', fontSize: '1.25rem', fontWeight: 600, margin: '0 0 8px' }}>ยืนยันสองขั้นตอน (2FA)</h2>
+                            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', margin: 0, lineHeight: 1.5 }}>
+                                กรุณากรอกรหัส OTP 6 หลักที่ถูกส่งไปที่อีเมล<br />
+                                <strong style={{ color: 'white' }}>{user.email || 'อีเมลของคุณ'}</strong>
+                            </p>
+                        </div>
+
+                        <form onSubmit={submitOtp} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            <input
+                                type="text"
+                                maxLength="6"
+                                placeholder="รหัส OTP 6 หลัก"
+                                value={otpValue}
+                                onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, ''))}
+                                style={{
+                                    background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.2)',
+                                    borderRadius: '12px', padding: '14px', color: 'white', fontSize: '1.25rem',
+                                    textAlign: 'center', letterSpacing: '4px', fontWeight: 'bold', outline: 'none'
+                                }}
+                                autoFocus
+                            />
+                            {otpError && (
+                                <div style={{ color: '#f87171', fontSize: '0.85rem', textAlign: 'center', marginTop: '-8px' }}>
+                                    {otpError}
+                                </div>
+                            )}
+
+                            <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowOtpModal(false)}
+                                    style={{
+                                        flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)',
+                                        background: 'transparent', color: 'white', fontWeight: 600, cursor: 'pointer'
+                                    }}
+                                >
+                                    ยกเลิก
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={otpValue.length !== 6 || otpLoading}
+                                    style={{
+                                        flex: 1, padding: '12px', borderRadius: '12px', border: 'none',
+                                        background: otpValue.length === 6 && !otpLoading ? '#ff5722' : 'rgba(255,255,255,0.1)',
+                                        color: otpValue.length === 6 && !otpLoading ? 'white' : 'rgba(255,255,255,0.4)',
+                                        fontWeight: 600, cursor: otpValue.length === 6 && !otpLoading ? 'pointer' : 'not-allowed',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    {otpLoading ? 'กำลังตรวจสอบ...' : 'ยืนยัน'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

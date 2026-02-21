@@ -343,3 +343,47 @@ export function XIcon({ size, className, ...props }) {
         </Icon>
     );
 }
+
+export function CpuIcon({ size, className, ...props }) {
+    return (
+        <Icon size={size} className={className} {...props}>
+            <rect x="4" y="4" width="16" height="16" rx="2" ry="2" />
+            <rect x="9" y="9" width="6" height="6" />
+            <line x1="9" y1="1" x2="9" y2="4" />
+            <line x1="15" y1="1" x2="15" y2="4" />
+            <line x1="9" y1="20" x2="9" y2="23" />
+            <line x1="15" y1="20" x2="15" y2="23" />
+            <line x1="20" y1="9" x2="23" y2="9" />
+            <line x1="20" y1="14" x2="23" y2="14" />
+            <line x1="1" y1="9" x2="4" y2="9" />
+            <line x1="1" y1="14" x2="4" y2="14" />
+        </Icon>
+    );
+}
+
+export function ArrowLeftIcon({ size, className, ...props }) {
+    return (
+        <Icon size={size} className={className} {...props}>
+            <line x1="19" y1="12" x2="5" y2="12" />
+            <polyline points="12 19 5 12 12 5" />
+        </Icon>
+    );
+}
+
+export function CheckCircleIcon({ size, className, ...props }) {
+    return (
+        <Icon size={size} className={className} {...props}>
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+            <polyline points="22 4 12 14.01 9 11.01" />
+        </Icon>
+    );
+}
+
+export function SendIcon({ size, className, ...props }) {
+    return (
+        <Icon size={size} className={className} {...props}>
+            <line x1="22" y1="2" x2="11" y2="13" />
+            <polygon points="22 2 15 22 11 13 2 9 22 2" />
+        </Icon>
+    );
+}

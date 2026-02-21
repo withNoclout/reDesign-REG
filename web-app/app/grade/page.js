@@ -275,7 +275,7 @@ export default function GradePage() {
             {/* Guest Banner - only show when in guest mode */}
             {isGuest && <GuestBanner guestName={guestName} />}
 
-            <div className="landing-container pt-32 pb-20 px-4 md:px-8 max-w-7xl mx-auto flex flex-col gap-8">
+            <div className="main-container pt-32 pb-20 px-4 md:px-8 max-w-7xl mx-auto flex flex-col gap-8">
                 {/* Header Section */}
                 <motion.div
                     variants={fadeInUp}

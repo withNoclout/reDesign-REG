@@ -48,7 +48,7 @@ export default function SharePage() {
             <GuestBanner guestName={guestName} />
             <Navbar activePage="profile" />
 
-            <div className="landing-container pt-32 pb-20 px-4 md:px-8 max-w-7xl mx-auto">
+            <div className="main-container pt-32 pb-20 px-4 md:px-8 max-w-7xl mx-auto">
                 <motion.div
                     {...fadeInUp}
                     className="text-center py-20"

@@ -30,7 +30,7 @@ export default function Home() {
     const axiosSourceRef = useRef(null);
 
     // Navigation path from environment
-    const LANDING_PATH = process.env.NEXT_PUBLIC_LANDING_PATH || '/landing';
+    const LANDING_PATH = process.env.NEXT_PUBLIC_LANDING_PATH || '/main';
 
     // Load last users from localStorage on mount
     useEffect(() => {

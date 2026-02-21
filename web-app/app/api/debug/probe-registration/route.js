@@ -5,6 +5,11 @@ import axios from 'axios';
 const BASE_URL = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
 
 export async function GET() {
+    // Block in production — debug endpoints should never be accessible
+    if (process.env.NODE_ENV === 'production') {
+        return NextResponse.json({ error: 'Not available in production' }, { status: 404 });
+    }
+
     const cookieStore = await cookies();
     const token = cookieStore.get('reg_token')?.value;
 

@@ -1,8 +1,18 @@
 import { NextResponse } from 'next/server';
 import { generateShareToken } from '../../../../utils/jwt';
+import { getAuthUser } from '@/lib/auth';
 
 export async function POST(request) {
     try {
+        // Auth check — only authenticated users can generate share links
+        const userId = await getAuthUser();
+        if (!userId) {
+            return NextResponse.json(
+                { success: false, error: 'Authentication required' },
+                { status: 401 }
+            );
+        }
+
         const { permissions, expiration, guestName } = await request.json();
 
         // Validate inputs
@@ -45,16 +55,11 @@ export async function POST(request) {
             );
         }
 
-        // Generate JWT token
-        // Get userId from auth cookie for proper ownership tracking
-        const { cookies: getCookies } = await import('next/headers');
-        const cookieStore = await getCookies();
-        const storedUserId = cookieStore.get('std_code')?.value || 'anonymous';
-
+        // Generate JWT token using authenticated user ID
         const payload = {
-            userId: storedUserId,
+            userId: String(userId),
             permissions,
-            guestName: guestName.trim(),
+            guestName: guestName.trim().substring(0, 100), // Limit guest name length
             createdAt: new Date().toISOString()
         };
 

@@ -33,12 +33,18 @@ export async function GET() {
             const supabase = getServiceSupabase();
             const { data, error } = await supabase
                 .from('news_items')
-                .select('*')
+                .select('id, title, description, image_url, topic, created_at, is_visible')
+                .eq('is_visible', true)
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
 
-            return NextResponse.json({ success: true, data: data });
+            // Strip any residual internal fields for safety
+            const sanitizedData = (data || []).map(({ id, title, description, image_url, topic, created_at }) => ({
+                id, title, description, image_url, topic, created_at
+            }));
+
+            return NextResponse.json({ success: true, data: sanitizedData });
         } catch (dbError) {
             console.warn('[API] Supabase fetch failed:', dbError.message);
             return NextResponse.json(

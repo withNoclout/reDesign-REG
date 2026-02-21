@@ -766,3 +766,93 @@ ReferenceError: useEffect is not defined
 [2026-02-20T20:58:00.981Z] [INFO] [Schedule API] Decoding gzip-compressed timetable...
 [2026-02-20T20:58:00.983Z] [INFO] [Schedule API] Timetable decoded: 6 courses
 [2026-02-20T20:58:00.984Z] [INFO] [Schedule API] Final: 6 total → 6 scheduled + 0 unscheduled
+[2026-02-21T17:16:36.117Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-21T17:16:36.119Z] [INFO] [Schedule API] Calling Schg/Getacadstd...
+[2026-02-21T17:16:36.172Z] [INFO] [Schedule API] Calling Timetable/Timetable/2568/2...
+[2026-02-21T17:16:36.231Z] [INFO] [Schedule API] Decoding gzip-compressed timetable...
+[2026-02-21T17:16:36.233Z] [INFO] [Schedule API] Timetable decoded: 6 courses
+[2026-02-21T17:16:36.234Z] [INFO] [Schedule API] Final: 6 total → 6 scheduled + 0 unscheduled
+[2026-02-21T17:16:46.476Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-21T17:16:46.477Z] [INFO] [Schedule API] Fast Memory Cache hit (latency ~0ms) for schedule: 6701091611290
+[2026-02-21T17:17:14.348Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-21T17:17:14.350Z] [INFO] [Schedule API] Fast Memory Cache hit (latency ~0ms) for schedule: 6701091611290
+[2026-02-21T17:19:44.343Z] [test] [Unknown] test
+--------------------------------------------------------------------------------
+[2026-02-21T17:40:38.601Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-21T17:40:38.602Z] [INFO] [Schedule API] Using globally cached Acad Info (latency ~0ms)
+[2026-02-21T17:40:38.604Z] [INFO] [Schedule API] Calling Timetable/Timetable/2568/2...
+[2026-02-21T17:40:38.686Z] [INFO] [Schedule API] Decoding gzip-compressed timetable...
+[2026-02-21T17:40:38.688Z] [INFO] [Schedule API] Timetable decoded: 6 courses
+[2026-02-21T17:40:38.689Z] [INFO] [Schedule API] Final: 6 total → 6 scheduled + 0 unscheduled
+[2026-02-21T17:40:38.714Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-21T17:40:38.715Z] [INFO] [Schedule API] Fast Memory Cache hit (latency ~0ms) for schedule: 6701091611290
+[2026-02-21T17:40:43.337Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-21T17:40:43.338Z] [INFO] [Schedule API] Fast Memory Cache hit (latency ~0ms) for schedule: 6701091611290
+[2026-02-21T17:50:49.626Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-21T17:50:49.639Z] [INFO] [Schedule API] Calling Schg/Getacadstd...
+[2026-02-21T17:50:49.695Z] [INFO] [Schedule API] Calling Timetable/Timetable/2568/2...
+[2026-02-21T17:50:49.764Z] [INFO] [Schedule API] Decoding gzip-compressed timetable...
+[2026-02-21T17:50:49.766Z] [INFO] [Schedule API] Timetable decoded: 6 courses
+[2026-02-21T17:50:49.768Z] [INFO] [Schedule API] Final: 6 total → 6 scheduled + 0 unscheduled
+[2026-02-21T18:08:59.201Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-21T18:08:59.202Z] [INFO] [Schedule API] Using globally cached Acad Info (latency ~0ms)
+[2026-02-21T18:08:59.203Z] [INFO] [Schedule API] Calling Timetable/Timetable/2568/2...
+[2026-02-21T18:08:59.320Z] [INFO] [Schedule API] Decoding gzip-compressed timetable...
+[2026-02-21T18:08:59.322Z] [INFO] [Schedule API] Timetable decoded: 6 courses
+[2026-02-21T18:08:59.323Z] [INFO] [Schedule API] Final: 6 total → 6 scheduled + 0 unscheduled
+[2026-02-21T18:08:59.336Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-21T18:08:59.337Z] [INFO] [Schedule API] Fast Memory Cache hit (latency ~0ms) for schedule: 6701091611290
+[2026-02-21T18:18:07.194Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-21T18:18:07.196Z] [INFO] [Schedule API] Calling Schg/Getacadstd...
+[2026-02-21T18:18:07.246Z] [INFO] [Schedule API] Calling Timetable/Timetable/2568/2...
+[2026-02-21T18:18:07.317Z] [INFO] [Schedule API] Decoding gzip-compressed timetable...
+[2026-02-21T18:18:07.319Z] [INFO] [Schedule API] Timetable decoded: 6 courses
+[2026-02-21T18:18:07.322Z] [INFO] [Schedule API] Final: 6 total → 6 scheduled + 0 unscheduled
+[2026-02-21T18:18:07.336Z] [INFO] [Schedule API] === Request Start === Has token: true, Token length: 350
+[2026-02-21T18:18:07.336Z] [INFO] [Schedule API] Fast Memory Cache hit (latency ~0ms) for schedule: 6701091611290
+[2026-02-21T18:21:53.927Z] [ERROR] [GlobalErrorPage] useGuest is not defined
+URL: http://localhost:3000/evaluation/form/125
+ReferenceError: useGuest is not defined
+    at EvaluationFormPage (http://localhost:3000/_next/static/chunks/app_evaluation_form_%5Bid%5D_page_1696e5cf.js?id=%255Bproject%255D%252Fapp%252Fevaluation%252Fform%252F%255Bid%255D%252Fpage.js+%255Bapp-client%255D+%2528ecmascript%2529:27:75)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:14826:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:4651:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:6112:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:6708:24)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:965:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9562:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9456:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9440:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9105:47)
+    at performSyncWorkOnRoot (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:10238:9)
+    at flushSyncWorkAcrossRoots_impl (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:10154:316)
+    at flushSyncWork$1 (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9237:86)
+    at Object.scheduleRefresh (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:299:13)
+    at http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_a0e4c7b4._.js:391:33
+    at Set.forEach (<anonymous>)
+    at Object.performReactRefresh (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_a0e4c7b4._.js:384:38)
+    at applyUpdate (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_a0e4c7b4._.js:878:31)
+    at http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_a0e4c7b4._.js:886:13
+--------------------------------------------------------------------------------
+[2026-02-21T18:21:53.984Z] [ERROR] [GlobalErrorPage] useGuest is not defined
+URL: http://localhost:3000/evaluation/form/125
+ReferenceError: useGuest is not defined
+    at EvaluationFormPage (http://localhost:3000/_next/static/chunks/app_evaluation_form_%5Bid%5D_page_1696e5cf.js?id=%255Bproject%255D%252Fapp%252Fevaluation%252Fform%252F%255Bid%255D%252Fpage.js+%255Bapp-client%255D+%2528ecmascript%2529:27:75)
+    at Object.react_stack_bottom_frame (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:14826:24)
+    at renderWithHooks (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:4651:24)
+    at updateFunctionComponent (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:6112:21)
+    at beginWork (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:6708:24)
+    at runWithFiberInDEV (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:965:74)
+    at performUnitOfWork (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9562:97)
+    at workLoopSync (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9456:40)
+    at renderRootSync (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9440:13)
+    at performWorkOnRoot (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9105:47)
+    at performSyncWorkOnRoot (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:10238:9)
+    at flushSyncWorkAcrossRoots_impl (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:10154:316)
+    at flushSyncWork$1 (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9237:86)
+    at Object.scheduleRefresh (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:299:13)
+    at http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_a0e4c7b4._.js:391:33
+    at Set.forEach (<anonymous>)
+    at Object.performReactRefresh (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_a0e4c7b4._.js:384:38)
+    at applyUpdate (http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_a0e4c7b4._.js:878:31)
+    at http://localhost:3000/_next/static/chunks/node_modules_next_dist_compiled_a0e4c7b4._.js:886:13
+--------------------------------------------------------------------------------

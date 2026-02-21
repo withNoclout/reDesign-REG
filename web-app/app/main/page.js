@@ -23,7 +23,7 @@ import '../globals.css';
 
 const ADMIN_USER_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID || 's6701091611290';
 
-export default function Landing() {
+export default function Main() {
     const router = useRouter();
     const { user, isAuthenticated, loading: authLoading, logout: handleLogout } = useAuth();
     const { isGuest, allowedModules, guestName, loading: guestLoading } = useGuest();
@@ -64,7 +64,7 @@ export default function Landing() {
                 setError(result.message || 'ไม่สามารถดึงข้อมูลได้');
             }
         } catch (err) {
-            console.error('[Landing] Failed to fetch student info:', err);
+            console.error('[Main] Failed to fetch student info:', err);
             setError('เกิดข้อผิดพลาดในการเชื่อมต่อ');
         } finally {
             setLoadingInfo(false);
@@ -128,7 +128,7 @@ export default function Landing() {
             {isGuest && <GuestBanner guestName={guestName} />}
 
             {/* Dashboard Content */}
-            <div className="landing-container">
+            <div className="main-container">
                 <ErrorAlert
                     message={error}
                     type="error"

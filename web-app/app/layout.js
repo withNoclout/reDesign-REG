@@ -1,6 +1,7 @@
 import { Prompt, Montserrat } from 'next/font/google';
 import { AuthProvider } from './context/AuthContext';
 import { GuestProvider } from './context/GuestContext';
+import { CredentialProvider } from './context/CredentialContext';
 import GlobalErrorListener from './components/GlobalErrorListener';
 
 const prompt = Prompt({
@@ -34,7 +35,9 @@ export default function RootLayout({ children }) {
                 <GlobalErrorListener />
                 <AuthProvider>
                     <GuestProvider>
-                        {children}
+                        <CredentialProvider>
+                            {children}
+                        </CredentialProvider>
                     </GuestProvider>
                 </AuthProvider>
             </body>

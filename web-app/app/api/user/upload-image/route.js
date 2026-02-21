@@ -43,6 +43,15 @@ export async function POST(request) {
             return NextResponse.json({ success: false, message: 'Missing image' }, { status: 400 });
         }
 
+        // Validate base64 payload size (approx 5MB image = ~6.6MB base64)
+        const MAX_BASE64_LENGTH = 7 * 1024 * 1024; // 7MB max payload
+        if (image.length > MAX_BASE64_LENGTH) {
+            return NextResponse.json(
+                { success: false, message: 'Image file too large (max 5MB)' },
+                { status: 413 }
+            );
+        }
+
         // Remove header "data:image/jpeg;base64,"
         const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
         const buffer = Buffer.from(base64Data, 'base64');

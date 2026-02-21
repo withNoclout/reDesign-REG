@@ -12,5 +12,14 @@ export async function POST() {
         maxAge: 0 // Expire immediately
     });
 
+    // Clear the student code cookie (was persisted for 30 days — must be cleared on logout)
+    response.cookies.set('std_code', '', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        sameSite: 'lax',
+        maxAge: 0
+    });
+
     return response;
 }

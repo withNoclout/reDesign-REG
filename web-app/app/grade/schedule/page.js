@@ -307,7 +307,7 @@ export default function SchedulePage() {
 
             {isGuest && <GuestBanner guestName={guestName} />}
 
-            <div className="landing-container pt-32 pb-20 px-4 md:px-8 max-w-7xl mx-auto flex flex-col gap-8">
+            <div className="main-container pt-32 pb-20 px-4 md:px-8 max-w-7xl mx-auto flex flex-col gap-8">
                 {/* Header */}
                 <motion.div
                     variants={fadeInUp}

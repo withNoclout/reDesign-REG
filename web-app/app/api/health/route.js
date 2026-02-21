@@ -29,13 +29,13 @@ export async function GET() {
 
         if (error) {
             health.database = 'error';
-            health.dbError = error.message;
+            health.dbError = process.env.NODE_ENV === 'production' ? 'Database connection failed' : error.message;
         } else {
             health.database = 'connected';
         }
     } catch (e) {
         health.database = 'error';
-        health.dbError = e.message;
+        health.dbError = process.env.NODE_ENV === 'production' ? 'Database connection failed' : e.message;
     }
 
     // Cache the result
