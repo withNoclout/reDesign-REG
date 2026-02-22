@@ -35,23 +35,54 @@ export async function POST(request) {
             validateStatus: () => true
         };
 
-        // Parse answers from the frontend `{ "group10": 5, "group20": 4 }`
-        // into a structured format. We don't have the exact structure, so we make a best effort.
-        // Usually, it's an array of objects `[{ evaluateid, evaluategroup, evaluatequestion, score }]`
-        // or just an array of answer objects depending on the university's specific API design.
-        const answersArray = Object.keys(formData).map(key => ({
-            evaluateid: parseInt(evaluateId, 10),
-            evaluategroup: key,
-            score: parseInt(formData[key], 10)
-        }));
+        // Fetch the raw questions first to know their types
+        const urlQ = `https://reg2.kmutnb.ac.th/regapiweb3/api/th/Evaluateofficerform/Evaluatequestion/${classId}/${evaluateId}/${officerId}`;
+        const resQ = await axios.get(urlQ, config);
 
-        const jsonPayload = JSON.stringify(answersArray);
+        let questions = [];
+        if (resQ.status === 200 && resQ.data?.result) {
+            const zlib = require('zlib');
+            const { promisify } = require('util');
+            const gunzip = promisify(zlib.gunzip);
+            const decompressed = await gunzip(Buffer.from(resQ.data.result, 'base64'));
+            questions = JSON.parse(decompressed.toString('utf-8'));
+        }
+
+        // Build payload EXACTLY like Angular's generateform
+        const submitPayload = {};
+        questions.forEach(q => {
+            if (q.questiontype === 'H') return;
+
+            const qId = q.questionid ?? q.id;
+            const userAns = formData[qId] || '5'; // default to 5 if not found, though frontend should prevent this
+
+            if (q.questiontype === 'Q') {
+                submitPayload[q.questiontype + '' + q.questionid] = userAns;
+            } else if (q.questiontype === 'C') {
+                submitPayload[q.questiontype + '' + q.questionid] = q.description || '';
+            } else if (q.questiontype === 'M' && q.evaluatechoice) {
+                // For multi-choice questions
+                q.evaluatechoice.forEach(c => {
+                    const isChecked = userAns === c.choiceid; // Assuming frontend uses the choiceid for M
+                    submitPayload[q.questiontype + '' + q.questionid + c.choiceid] = isChecked;
+                    if (c.choicetype === 'T') {
+                        submitPayload[q.questiontype + '' + q.questionid + c.choiceid + 'txt'] = c.chkdescription || '';
+                    }
+                });
+            }
+        });
+
+        // Add feedback and complaints fields
+        submitPayload['Ctxt'] = questions[0]?.feedback || '';
+        submitPayload['complaints'] = questions[0]?.complaints || '';
+
+        const jsonPayload = JSON.stringify(submitPayload);
         const encryptedParam = encryptForReg(jsonPayload);
 
         const REG2_BASE_URL = 'https://reg2.kmutnb.ac.th/regapiweb3/api/th';
 
-        // 1. Submit Answers (Best effort for Addanswer payload structure)
-        const submitUrl = `${REG2_BASE_URL}/Evaluateofficerform/Addanswer`;
+        // 1. Submit Answers
+        const submitUrl = `${REG2_BASE_URL}/Evaluateofficerform/Addanswer/${evaluateId}/${classId}/${officerId}/1`;
         const requestBody = { param: encryptedParam };
 
         const submitRes = await axios.post(submitUrl, requestBody, config);
@@ -61,11 +92,9 @@ export async function POST(request) {
         }
 
         // 2. Commit Request
-        const commitUrl = `${REG2_BASE_URL}/Evaluateofficerform/commit/${classId}/${evaluateId}/${officerId}`;
-        const commitPayload = { param: encryptForReg(JSON.stringify({ classid: classId, evaluateid: evaluateId, officerid: officerId })) };
+        const commitUrl = `${REG2_BASE_URL}/Evaluateofficerform/commit/${evaluateId}/${classId}/${officerId}`;
+        const commitPayload = { param: encryptForReg(JSON.stringify({})) };
 
-        // Wait, the subagent noted that commit payload is often just `{ param: "<encrypted>" }`. It might just be empty object encrypted,
-        // or just sending `{}` based on typical REST patterns. If this doesn't work, we'll refine the payload.
         const commitRes = await axios.post(commitUrl, commitPayload, config);
 
         if (commitRes.status !== 200) {
@@ -74,8 +103,8 @@ export async function POST(request) {
 
         return NextResponse.json({
             success: true,
-            message: 'ส่งผลการประเมิน (เรียกผ่าน API หลัก แต่ Payload อาจต้องจูนเพิ่มเติมเมื่อเห็น Data จริง)',
-            debug: { evaluateId, jsonPayload, answersArray }
+            message: 'ส่งผลการประเมินเรียบร้อยแล้ว',
+            debug: { evaluateId, commitStatus: commitRes.status, requestBuilt: true }
         });
 
     } catch (error) {

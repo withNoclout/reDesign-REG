@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { GraduationCapIcon, CalendarIcon, BuildingIcon, CogIcon, IdCardIcon, MailIcon, BookOpenIcon, BookIcon, UserCheckIcon } from './Icons';
+import OtpVerifyModal from './OtpVerifyModal';
 
 
 export default function UserProfileCard({ user, loading, profileData }) {
@@ -12,7 +13,13 @@ export default function UserProfileCard({ user, loading, profileData }) {
     const [isHovered, setIsHovered] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [extraInfo, setExtraInfo] = useState(profileData || null);
+    const [showOtpModal, setShowOtpModal] = useState(false);
     const fileInputRef = useRef(null);
+
+    const handleOtpVerified = () => {
+        setShowOtpModal(false);
+        // Refresh check or logic could go here
+    };
 
     // Update extraInfo if profileData prop changes
     useEffect(() => {

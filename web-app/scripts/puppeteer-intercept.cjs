@@ -1,87 +1,42 @@
-/**
- * Script to automate logging in, opening Evaluate, and intercepting the POST payload
- */
 const puppeteer = require('puppeteer');
 require('dotenv').config({ path: '.env.local' });
 
-async function main() {
-    const browser = await puppeteer.launch({ headless: true });
+async function run() {
+    console.log('Starting Puppeteer with headed mode...');
+    const browser = await puppeteer.launch({ headless: false, defaultViewport: null });
     const page = await browser.newPage();
-
-    // Intercept network
+    
+    // Intercept network requests
     await page.setRequestInterception(true);
-    page.on('request', request => {
-        if (request.method() === 'POST' && request.url().includes('api/th')) {
-            console.log(`\n==== INTERCEPTED POST TO: ${request.url()} ====`);
-            console.log('Payload Data:', request.postData());
+    page.on('request', interceptedRequest => {
+        const url = interceptedRequest.url();
+        if ((url.includes('Addanswer') || url.includes('commit') || url.includes('Evaluateofficerform')) && interceptedRequest.method() === 'POST') {
+            console.log(`\n\n==== INTERCEPTED POST TO: ${url} ====`);
+            console.log('Payload Data:', interceptedRequest.postData());
         }
-        request.continue();
+        interceptedRequest.continue();
     });
 
-    console.log('Navigating to reg...');
-    await page.goto('https://reg2.kmutnb.ac.th/regapiweb3/th/', { waitUntil: 'networkidle2' });
-
-    // Login
+    console.log('Navigating to portal...');
+    // We will just let the user login in the opened browser window
+    await page.goto('https://reg2.kmutnb.ac.th/regapiweb3/th/');
+    
+    // Fill credentials if possible
     try {
-        console.log('Checking for login...');
-        const inputs = await page.$$('input.form-control');
-        if (inputs.length >= 2) {
-            console.log('Typing credentials...');
-            await inputs[0].type(process.env.REG_USERNAME);
-            await inputs[1].type(process.env.REG_PASSWORD);
-            await page.click('button.w-100');
-            await new Promise(r => setTimeout(r, 5000));
-        }
-    } catch (e) {
-        console.log('Login skip or error:', e.message);
-    }
+        await page.waitForSelector('input[type="text"]', { timeout: 5000 });
+        await page.type('input[type="text"]', process.env.REG_USERNAME || '');
+        await page.type('input[type="password"]', process.env.REG_PASSWORD || '');
+    } catch(e) {}
 
-    // Direct navigation
-    console.log('Navigating to evaluation...');
-    await page.goto('https://reg2.kmutnb.ac.th/regapiweb3/th/#/course-evaluation', { waitUntil: 'networkidle2' });
-    await new Promise(r => setTimeout(r, 5000));
-
-    try {
-        console.log('Looking for evaluate buttons...');
-        const clicked = await page.evaluate(() => {
-            const btns = Array.from(document.querySelectorAll('button'));
-            const evalBtn = btns.find(b => b.textContent.includes('ประเมิน'));
-            if (evalBtn) {
-                evalBtn.click();
-                return true;
-            }
-            return false;
-        });
-
-        if (!clicked) {
-            console.log('No Evaluate button found.');
-        }
-
-        await new Promise(r => setTimeout(r, 5000));
-
-        console.log('Answering questions...');
-        await page.evaluate(() => {
-            const radios = document.querySelectorAll('input[type="radio"][value="5"]');
-            radios.forEach(r => r.click());
-        });
-
-        await new Promise(r => setTimeout(r, 2000));
-
-        console.log('Submitting...');
-        await page.evaluate(() => {
-            const btns = Array.from(document.querySelectorAll('button'));
-            const submitBtn = btns.find(b => b.textContent.includes('บันทึก'));
-            if (submitBtn) submitBtn.click();
-        });
-
-        console.log('Waiting for network capture...');
-        await new Promise(r => setTimeout(r, 15000));
-
-    } catch (e) {
-        console.error('Task error:', e.message);
-    }
-
+    console.log('\n--- ATTENTION ---');
+    console.log('Please log in manually if needed, solve the captcha, and click to evaluate a professor.');
+    console.log('The script will wait for 120 seconds to capture the POST payload on submit.');
+    
+    // Wait for user interaction
+    await new Promise(resolve => setTimeout(resolve, 120000));
+    console.log('Finished waiting. Closing browser.');
     await browser.close();
 }
 
-main().catch(console.error);
+run().catch(console.error);
+

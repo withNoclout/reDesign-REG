@@ -38,7 +38,7 @@ export function AuthProvider({ children }) {
     // Restore session on mount
     useEffect(() => {
         try {
-            const stored = sessionStorage.getItem(SESSION_KEY);
+            const stored = localStorage.getItem(SESSION_KEY);
             if (stored) {
                 const parsed = JSON.parse(stored);
                 if (parsed?.usercode) {
@@ -50,7 +50,7 @@ export function AuthProvider({ children }) {
             }
         } catch (e) {
             console.warn('[Auth] Failed to restore session:', e.message);
-            sessionStorage.removeItem(SESSION_KEY);
+            localStorage.removeItem(SESSION_KEY);
         } finally {
             setLoading(false);
         }
@@ -66,7 +66,7 @@ export function AuthProvider({ children }) {
         setUser(userData);
         setIsAuthenticated(true);
         try {
-            sessionStorage.setItem(SESSION_KEY, JSON.stringify(userData));
+            localStorage.setItem(SESSION_KEY, JSON.stringify(userData));
         } catch (e) {
             console.warn('[Auth] Failed to store session:', e.message);
         }
@@ -82,7 +82,7 @@ export function AuthProvider({ children }) {
         setUser(null);
         setIsAuthenticated(false);
         setIsVerified(false);
-        sessionStorage.removeItem(SESSION_KEY);
+        localStorage.removeItem(SESSION_KEY);
 
         try {
             await fetch('/api/auth/logout', { method: 'POST' });
@@ -144,7 +144,7 @@ export function AuthProvider({ children }) {
                 ...prev,
                 img: finalParams.img || (newImgUrl === null ? (prev.originalImg || null) : prev.img)
             };
-            sessionStorage.setItem(SESSION_KEY, JSON.stringify(updated));
+            localStorage.setItem(SESSION_KEY, JSON.stringify(updated));
             return updated;
         });
     }, [user]);
