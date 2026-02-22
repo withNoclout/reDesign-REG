@@ -24,7 +24,8 @@ export function middleware(request) {
         // If NOT logged in and trying to access any protected route, redirect to login
         if (!isPublicPath && !token) {
             const url = new URL('/', request.url);
-            // Optional: You could append a query param like ?returnUrl=${pathname} here if needed
+            // Append session=expired so the login page can show a helpful toast
+            url.searchParams.set('session', 'expired');
             return NextResponse.redirect(url);
         }
     }

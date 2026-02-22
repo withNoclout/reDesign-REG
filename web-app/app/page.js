@@ -1,14 +1,26 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { HeartIcon } from './components/Icons';
-
-const LAST_USERS_KEY = 'reg_last_users';
-const MAX_SAVED_USERS = 3;
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
 import { useAuth } from './context/AuthContext';
 import './globals.css';
+
+const LAST_USERS_KEY = 'reg_last_users';
+const MAX_SAVED_USERS = 3;
+
+// Tiny component to detect session expiry from query param
+// (Must be wrapped in Suspense because useSearchParams requires it)
+function SessionExpiredDetector({ onDetect }) {
+    const searchParams = useSearchParams();
+    useEffect(() => {
+        if (searchParams.get('session') === 'expired') {
+            onDetect(true);
+        }
+    }, [searchParams, onDetect]);
+    return null;
+}
 
 export default function Home() {
     const router = useRouter();
@@ -20,6 +32,7 @@ export default function Home() {
     const [showPassword, setShowPassword] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
     const [shakeTrigger, setShakeTrigger] = useState(0);
+    const [sessionExpired, setSessionExpired] = useState(false);
 
     // Last-login suggestion state
     const [lastUsers, setLastUsers] = useState([]);
@@ -228,6 +241,11 @@ export default function Home() {
 
             {/* Login Box */}
             <div className="login-wrapper">
+                {/* Detect session=expired query param safely in Suspense */}
+                <Suspense fallback={null}>
+                    <SessionExpiredDetector onDetect={setSessionExpired} />
+                </Suspense>
+
                 <div className={`login-box ${error ? 'animate-shake' : ''}`}>
                     <div className="login-header">
                         <div className="university-crest">
@@ -236,6 +254,26 @@ export default function Home() {
                         <h1 className="login-title">ระบบลงทะเบียนนักศึกษา</h1>
                         <p className="login-subtitle">King Mongkut's University of Technology North Bangkok</p>
                     </div>
+
+                    {/* Session Expired Banner */}
+                    {sessionExpired && (
+                        <div role="alert" style={{
+                            display: 'flex', alignItems: 'center', gap: '10px',
+                            background: 'rgba(250, 204, 21, 0.12)',
+                            border: '1px solid rgba(250, 204, 21, 0.4)',
+                            borderRadius: '10px', padding: '10px 14px',
+                            marginBottom: '12px',
+                        }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#facc15" strokeWidth="2">
+                                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                                <line x1="12" y1="9" x2="12" y2="13" />
+                                <line x1="12" y1="17" x2="12.01" y2="17" />
+                            </svg>
+                            <span style={{ color: '#facc15', fontSize: '0.85rem', fontWeight: 500, fontFamily: 'Prompt, sans-serif' }}>
+                                เซสชันหมดอายุแล้ว กรุณาเข้าสู่ระบบใหม่อีกครั้ง
+                            </span>
+                        </div>
+                    )}
 
                     <form className="login-form" onSubmit={handleLogin}>
                         <div className="input-group" ref={usernameGroupRef}>

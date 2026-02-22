@@ -211,8 +211,8 @@ export default function UserProfileCard({ user, loading, profileData }) {
                             </p>
                         </div>
 
-                        {/* Reset Button (only if custom image and verified) */}
-                        {isCustomImage && isVerified && (
+                        {/* Reset Button (only if custom image) */}
+                        {isCustomImage && (
                             <button
                                 onClick={handleReset}
                                 style={{
@@ -229,7 +229,7 @@ export default function UserProfileCard({ user, loading, profileData }) {
                         )}
                     </div>
 
-                    {/* Status + Verify Row */}
+                    {/* Status Row */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
                         {/* Status Badge */}
                         <div style={{
@@ -242,31 +242,6 @@ export default function UserProfileCard({ user, loading, profileData }) {
                                 {user.statusdes || user.userstatusdes || 'N/A'}
                             </span>
                         </div>
-
-                        {/* Verify Badge/Button */}
-                        <button
-                            onClick={handleVerify}
-                            disabled={isVerified || verifying}
-                            style={{
-                                display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                background: isVerified ? 'rgba(74, 222, 128, 0.15)' : 'rgba(250, 204, 21, 0.15)',
-                                borderRadius: '20px', padding: '3px 10px',
-                                border: 'none',
-                                cursor: isVerified ? 'default' : 'pointer',
-                                transition: 'all 0.2s',
-                            }}
-                            title={isVerified ? 'Verified (Google Drive Connected)' : 'Click to Verify and Connect Drive'}
-                        >
-                            <span style={{ fontSize: '12px' }}>
-                                {isVerified ? '✓' : (verifying ? '...' : '⚠')}
-                            </span>
-                            <span style={{
-                                color: isVerified ? '#4ade80' : '#facc15',
-                                fontSize: '0.75rem', fontWeight: 500,
-                            }}>
-                                {isVerified ? 'Verified' : 'Verify'}
-                            </span>
-                        </button>
                     </div>
                 </div>
             </div>

@@ -44,14 +44,6 @@ export function AuthProvider({ children }) {
                 if (parsed?.usercode) {
                     const customImg = localStorage.getItem(`custom_profile_img_${parsed.usercode}`);
                     if (customImg && !parsed.img) parsed.img = customImg;
-
-                    // Check verification status from server
-                    fetch('/api/user/verify-status')
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.success) setIsVerified(!!data.is_verified);
-                        })
-                        .catch(err => console.warn('[Auth] Failed to fetch verification status', err));
                 }
                 setUser(parsed);
                 setIsAuthenticated(true);
@@ -69,14 +61,6 @@ export function AuthProvider({ children }) {
         if (userData?.usercode) {
             const customImg = localStorage.getItem(`custom_profile_img_${userData.usercode}`);
             if (customImg && !userData.img) userData.img = customImg;
-
-            // Check verification status from server
-            fetch('/api/user/verify-status')
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) setIsVerified(!!data.is_verified);
-                })
-                .catch(err => console.warn('[Auth] Failed to fetch verification status', err));
         }
 
         setUser(userData);
