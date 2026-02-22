@@ -29,10 +29,10 @@ export default function EvaluationPage() {
 
     // Redirect if not authenticated and not a guest
     useEffect(() => {
-        if (!authLoading && !guestLoading && !isAuthenticated && !isGuest) {
+        if (!authLoading && !guestLoading && !canAccess) {
             router.push('/');
         }
-    }, [isAuthenticated, isGuest, authLoading, guestLoading, router]);
+    }, [canAccess, authLoading, guestLoading, router]);
 
     useEffect(() => {
         const fetchEvaluations = async () => {
@@ -108,19 +108,7 @@ export default function EvaluationPage() {
 
     // Handle access denied
     if (!canAccess) {
-        return (
-            <main className="main-content">
-                <div className="bg-image"></div>
-                <div className="bg-overlay"></div>
-                <div className="flex items-center justify-center min-h-screen">
-                    <div className="text-white text-center">
-                        <div className="text-6xl mb-4"><LockIcon size={64} /></div>
-                        <h1 className="text-2xl font-bold mb-2">ไม่มีสิทธิ์เข้าถึง</h1>
-                        <p className="text-white/60">คุณไม่ได้รับอนุญาตให้ดูหน้านี้</p>
-                    </div>
-                </div>
-            </main>
-        );
+        return null;
     }
 
     return (
