@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, use } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/app/context/AuthContext';
 import { useGuest } from '@/app/context/GuestContext';
@@ -13,6 +13,9 @@ import '@/app/globals.css';
 export default function EvaluationFormPage({ params }) {
     const { id: evaluateId } = use(params);
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const classId = searchParams.get('classId');
+    const officerId = searchParams.get('officerId');
     const { user, isAuthenticated, loading: authLoading } = useAuth();
     const { isGuest, allowedModules, guestName, loading: guestLoading } = useGuest();
 
@@ -50,16 +53,12 @@ export default function EvaluationFormPage({ params }) {
             }
 
             try {
-                const res = await fetch(`/api/student/evaluation/form?id=${evaluateId}`);
+                const res = await fetch(`/api/student/evaluation/form?id=${evaluateId}&classId=${classId || ''}&officerId=${officerId || ''}`);
                 const result = await res.json();
 
                 if (result.success) {
                     setQuestions(result.data.questions || []);
-                    setFormMeta({
-                        __VIEWSTATE: result.data.__VIEWSTATE,
-                        __EVENTVALIDATION: result.data.__EVENTVALIDATION,
-                        __VIEWSTATEGENERATOR: result.data.__VIEWSTATEGENERATOR
-                    });
+                    // We don't need ViewState for REST API
                     setError(null);
                 } else {
                     if (result.needsSetup) {
@@ -91,16 +90,16 @@ export default function EvaluationFormPage({ params }) {
     const handleQuickAction = (value) => {
         const newAnswers = {};
         questions.forEach(q => {
-            if (q.options && q.options.length > 0) {
-                const targetOption = q.options.find(opt => opt.value === value || opt.label === value) || q.options[0];
-                newAnswers[q.id] = targetOption.value;
-            }
+            // Use questionid from the real API
+            const qId = q.questionid ?? q.id;
+            newAnswers[qId] = value;
         });
         setAnswers(newAnswers);
     };
 
     const handleSubmit = async () => {
-        const missing = questions.filter(q => !answers[q.id]);
+        // Use questionid from the real API as the key
+        const missing = questions.filter(q => !answers[q.questionid ?? q.id]);
         if (missing.length > 0 && !isGuest) {
             alert(`กรุณาตอบคำถามให้ครบทุกข้อ (ขาดอีก ${missing.length} ข้อ)`);
             return;
@@ -123,10 +122,10 @@ export default function EvaluationFormPage({ params }) {
 
             const payload = {
                 evaluateId,
+                classId,
+                officerId,
                 formData,
-                __VIEWSTATE: formMeta.__VIEWSTATE,
-                __EVENTVALIDATION: formMeta.__EVENTVALIDATION,
-                __VIEWSTATEGENERATOR: formMeta.__VIEWSTATEGENERATOR
+                isRestApi: true
             };
 
             const res = await fetch('/api/student/evaluation/submit', {
@@ -237,28 +236,45 @@ export default function EvaluationFormPage({ params }) {
                         </motion.div>
 
                         <motion.div variants={staggerContainer} initial="hidden" animate="show" className="flex flex-col gap-4">
-                            {questions.map((q, idx) => (
-                                <motion.div key={q.id} variants={staggerItem} className={`p-6 rounded-2xl border transition-colors ${answers[q.id] ? 'bg-white/10 border-white/20' : 'bg-[rgba(255,255,255,0.02)] border-[rgba(255,255,255,0.05)]'}`}>
-                                    <p className="text-white font-medium mb-4 leading-relaxed font-prompt text-lg">{idx + 1}. {q.text}</p>
-                                    <div className="flex flex-wrap gap-2 md:gap-4">
-                                        {q.options && q.options.map(opt => {
-                                            const isSelected = answers[q.id] === opt.value;
-                                            return (
-                                                <button
-                                                    key={opt.value}
-                                                    onClick={() => handleOptionSelect(q.id, opt.value)}
-                                                    className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all
+                            {questions.map((q, idx) => {
+                                // Use the correct keys from the reg2 API response
+                                const qId = q.questionid ?? q.id ?? idx;
+                                const qText = q.question || q.text || `คำถามที่ ${idx + 1}`;
+                                const choices = q.evaluatechoice || [
+                                    { choiceid: '5', description: 'มากที่สุด' },
+                                    { choiceid: '4', description: 'มาก' },
+                                    { choiceid: '3', description: 'ปานกลาง' },
+                                    { choiceid: '2', description: 'น้อย' },
+                                    { choiceid: '1', description: 'น้อยที่สุด' },
+                                ];
+                                // Dedup choices (API sometimes includes duplicates per type)
+                                const uniqueChoices = choices.filter((c, i, arr) =>
+                                    arr.findIndex(x => x.choiceid === c.choiceid) === i
+                                ).sort((a, b) => parseInt(b.choiceid) - parseInt(a.choiceid));
+
+                                return (
+                                    <motion.div key={qId} variants={staggerItem} className={`p-6 rounded-2xl border transition-colors ${answers[qId] ? 'bg-white/10 border-white/20' : 'bg-[rgba(255,255,255,0.02)] border-[rgba(255,255,255,0.05)]'}`}>
+                                        <p className="text-white font-medium mb-4 leading-relaxed font-prompt text-lg">{idx + 1}. {qText}</p>
+                                        <div className="flex flex-wrap gap-2 md:gap-4">
+                                            {uniqueChoices.map(choice => {
+                                                const isSelected = answers[qId] === choice.choiceid;
+                                                return (
+                                                    <button
+                                                        key={choice.choiceid}
+                                                        onClick={() => handleOptionSelect(qId, choice.choiceid)}
+                                                        className={`px-4 py-2 rounded-xl border text-sm font-bold transition-all font-prompt
                                                         ${isSelected
-                                                            ? 'bg-blue-600 border-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)]'
-                                                            : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/15'}`}
-                                                >
-                                                    {opt.label}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </motion.div>
-                            ))}
+                                                                ? 'bg-blue-600 border-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)]'
+                                                                : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/15'}`}
+                                                    >
+                                                        {choice.choiceid} — {choice.description}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </motion.div>
+                                )
+                            })}
                         </motion.div>
 
                         {/* Sticky Footer */}

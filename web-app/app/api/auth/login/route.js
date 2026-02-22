@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import { createRateLimiter, getClientIp } from '@/lib/rateLimit';
 import { getServiceSupabase } from '@/lib/supabase';
 import { encryptPassword } from '@/lib/cryptoUtils';
+import { encryptForReg } from '@/lib/regCipherUtils';
 
 // Shared rate limiter instance for login (5 attempts per 15 minutes)
 const loginLimiter = createRateLimiter({
@@ -75,19 +76,6 @@ export async function POST(request) {
             );
         }
 
-        // Encryption function using native Node.js crypto (matches .NET server-side decryption)
-        function encryptData(plaintext) {
-            const salt = crypto.randomBytes(16);
-            // PBKDF2 with SHA1, 32 bytes (256-bit key), 100 iterations
-            const derivedKey = crypto.pbkdf2Sync(ENCRYPT_SECRET_KEY, salt, 100, 32, 'sha1');
-            const iv = crypto.randomBytes(16);
-            const cipher = crypto.createCipheriv('aes-256-cbc', derivedKey, iv);
-            cipher.setAutoPadding(true); // PKCS7 padding
-            const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
-            // Output: Base64(salt + iv + ciphertext)
-            return Buffer.concat([salt, iv, encrypted]).toString('base64');
-        }
-
         try {
             // Step 0: Get server's public IP (skipped for performance)
             const serverIp = getServerIp();
@@ -110,7 +98,7 @@ export async function POST(request) {
 
             // Step 2: Encrypt credentials with server IP (matches Angular app's user object)
             const credentialsJson = JSON.stringify({ username, password, ip: serverIp });
-            const encryptedParam = encryptData(credentialsJson);
+            const encryptedParam = encryptForReg(credentialsJson);
             console.log('[API] 2. Encrypted param length:', encryptedParam.length);
 
             // Build the request body as a raw JSON string (matching the Angular app)
@@ -196,7 +184,9 @@ export async function POST(request) {
                             .select('profile_image_url')
                             .eq('user_code', String(userProfile.usercode))
                             .single();
-                        persistedProfileImage = profileImageRow?.profile_image_url || '';
+                        // Strip version query string (e.g. ?v=1234567890) to get clean URL
+                        const rawUrl = profileImageRow?.profile_image_url || '';
+                        persistedProfileImage = rawUrl.split('?')[0];
                     } catch (imgErr) {
                         console.warn('[API] profile image fetch failed (non-blocking):', imgErr.message);
                     }

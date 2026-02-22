@@ -3,20 +3,16 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { GraduationCapIcon, CalendarIcon, BuildingIcon, CogIcon, IdCardIcon, MailIcon, BookOpenIcon, BookIcon, UserCheckIcon } from './Icons';
-import OtpVerifyModal from './OtpVerifyModal';
+
 
 export default function UserProfileCard({ user, loading, profileData }) {
-    const { updateProfileImage, isVerified, markAsVerified, logout } = useAuth();
+    const { updateProfileImage, logout } = useAuth();
 
     // State declarations
     const [isHovered, setIsHovered] = useState(false);
     const [uploading, setUploading] = useState(false);
-    const [verifying, setVerifying] = useState(false);
     const [extraInfo, setExtraInfo] = useState(profileData || null);
     const fileInputRef = useRef(null);
-
-    // OTP Modal states
-    const [showOtpModal, setShowOtpModal] = useState(false);
 
     // Update extraInfo if profileData prop changes
     useEffect(() => {
@@ -60,8 +56,11 @@ export default function UserProfileCard({ user, loading, profileData }) {
     const statusColor = user.userstatus === 'Y' ? '#4ade80' : '#f87171';
     const statusBg = user.userstatus === 'Y' ? 'rgba(74, 222, 128, 0.15)' : 'rgba(248, 113, 113, 0.15)';
 
-    // Check if current image is custom
-    const isCustomImage = user.img?.startsWith('data:') || user.img?.startsWith('/uploads/');
+    // Check if a custom profile image (Supabase URL or uploaded)
+    const isCustomImage = user.img && (user.img.startsWith('https://') || user.img.startsWith('data:'));
+
+    // Display image: custom Supabase image > university original > null (shows letter avatar)
+    const displayImg = user.img || user.originalImg || null;
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -109,29 +108,8 @@ export default function UserProfileCard({ user, loading, profileData }) {
         }
     };
 
-    const handleVerify = () => {
-        if (!isVerified) {
-            setShowOtpModal(true);
-        }
-    };
-
-    const handleOtpVerified = async () => {
-        try {
-            // Update Supabase via our new API
-            await fetch('/api/user/verify-status', { method: 'POST' });
-            markAsVerified();
-            setShowOtpModal(false);
-            setTimeout(() => alert('ยืนยันอีเมลสำเร็จ! คุณสามารถเปลี่ยนรูปโปรไฟล์ได้แล้ว'), 100);
-        } catch (e) {
-            console.error('Failed to update verification status', e);
-        }
-    };
-
+    // No verification gate — anyone logged in can change their profile picture
     const handleProfileClick = () => {
-        if (!isVerified) {
-            alert('Please verify your account (connect Google Drive) to change your profile picture.');
-            return;
-        }
         fileInputRef.current?.click();
     };
 
@@ -154,7 +132,7 @@ export default function UserProfileCard({ user, loading, profileData }) {
                         position: 'relative',
                         width: '72px',
                         height: '72px',
-                        cursor: isVerified ? 'pointer' : 'not-allowed',
+                        cursor: 'pointer',
                     }}
                     onMouseEnter={() => setIsHovered(true)}
                     onMouseLeave={() => setIsHovered(false)}
@@ -162,7 +140,7 @@ export default function UserProfileCard({ user, loading, profileData }) {
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleProfileClick(); } }}
                     role="button"
                     tabIndex={0}
-                    aria-label={isVerified ? 'เปลี่ยนรูปโปรไฟล์' : 'รูปโปรไฟล์ (ต้องยืนยันตัวตนก่อน)'}
+                    aria-label="เปลี่ยนรูปโปรไฟล์"
                 >
                     <div style={{
                         width: '100%', height: '100%',
@@ -172,9 +150,9 @@ export default function UserProfileCard({ user, loading, profileData }) {
                         background: 'rgba(255, 255, 255, 0.1)',
                         position: 'relative',
                     }}>
-                        {user.img ? (
+                        {displayImg ? (
                             <img
-                                src={user.img}
+                                src={displayImg}
                                 alt={user.name || 'Profile'}
                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                 onError={(e) => { e.target.style.display = 'none'; }}
@@ -200,7 +178,7 @@ export default function UserProfileCard({ user, loading, profileData }) {
                             color: 'white', fontSize: '10px', flexDirection: 'column',
                             backdropFilter: 'blur(2px)',
                         }}>
-                            {uploading ? '...' : (isVerified ? 'Edit' : 'Locked')}
+                            {uploading ? '...' : 'แก้ไข'}
                         </div>
                     )}
 

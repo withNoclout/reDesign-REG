@@ -225,17 +225,8 @@ export default function EvaluationPage() {
                                 <motion.div key={`${item.class_id}-${item.officer_id}`} variants={staggerItem}>
                                     <EvaluationCard
                                         item={item}
-                                        onEvaluate={async (teacher) => {
-                                            const pwd = await requestCredential(
-                                                'ยืนยันตัวตนก่อนประเมิน',
-                                                'กรุณากรอกรหัสผ่านเพื่อเข้าสู่ระบบประเมินผลอาจารย์ (ระบบต้องการดึงข้อมูลฟอร์มจากสำนักทะเบียน)'
-                                            );
-
-                                            if (pwd) {
-                                                // Keep password in sessionStorage if the form page needs it for API submission
-                                                sessionStorage.setItem('eval_temp_pwd', pwd);
-                                                router.push(`/evaluation/form/${teacher.evaluate_id || teacher.evaluateid}`);
-                                            }
+                                        onEvaluate={(teacher) => {
+                                            router.push(`/evaluation/form/${teacher.evaluate_id || teacher.evaluateid}?classId=${teacher.class_id || teacher.classid}&officerId=${teacher.officer_id || teacher.officerid}`);
                                         }}
                                         onAutoEvaluate={(teacher) => {
                                             alert(`[DEMO] กำลังพัฒนาระบบ Auto Submit สำหรับ: ${teacher.officer_name}`);

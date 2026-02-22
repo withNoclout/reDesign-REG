@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
 import { getAuthUser } from '@/lib/auth';
 import { getServiceSupabase } from '@/lib/supabase';
+
+const STORAGE_BUCKET = 'profile-images';
 
 export async function POST(request) {
     try {
@@ -16,6 +16,8 @@ export async function POST(request) {
 
         if (reset) {
             const now = new Date().toISOString();
+
+            // Clear from Supabase verifications table
             const { error: verificationError } = await supabase
                 .from('user_verifications')
                 .upsert({
@@ -28,6 +30,7 @@ export async function POST(request) {
                 return NextResponse.json({ success: false, message: 'Failed to reset profile image: ' + verificationError.message }, { status: 500 });
             }
 
+            // Also clear from user_directory
             await supabase
                 .from('user_directory')
                 .upsert({
@@ -43,8 +46,8 @@ export async function POST(request) {
             return NextResponse.json({ success: false, message: 'Missing image' }, { status: 400 });
         }
 
-        // Validate base64 payload size (approx 5MB image = ~6.6MB base64)
-        const MAX_BASE64_LENGTH = 7 * 1024 * 1024; // 7MB max payload
+        // Validate base64 payload size (~5MB image = ~6.6MB base64)
+        const MAX_BASE64_LENGTH = 7 * 1024 * 1024;
         if (image.length > MAX_BASE64_LENGTH) {
             return NextResponse.json(
                 { success: false, message: 'Image file too large (max 5MB)' },
@@ -52,51 +55,60 @@ export async function POST(request) {
             );
         }
 
-        // Remove header "data:image/jpeg;base64,"
-        const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
+        // Remove data URI header, convert to buffer
+        const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
         const buffer = Buffer.from(base64Data, 'base64');
+        const fileName = `${usercode}.jpg`;
 
-        // Create uploads dir if not exists
-        const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
+        // Upload to Supabase Storage (upsert: overwrite if exists)
+        const { error: storageError } = await supabase.storage
+            .from(STORAGE_BUCKET)
+            .upload(fileName, buffer, {
+                contentType: 'image/jpeg',
+                upsert: true,
+            });
+
+        if (storageError) {
+            console.error('[Upload] Supabase Storage error:', storageError.message);
+            return NextResponse.json({ success: false, message: 'Failed to upload to storage: ' + storageError.message }, { status: 500 });
         }
 
-        const fileName = `profile_${usercode}.jpg`;
-        const filePath = path.join(uploadDir, fileName);
-        const imagePath = `/uploads/${fileName}`;
-        const versionedImagePath = `${imagePath}?v=${Date.now()}`;
+        // Get the public URL (no expiry, pure CDN URL)
+        const { data: pubData } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(fileName);
+        const publicUrl = pubData.publicUrl;
 
-        fs.writeFileSync(filePath, buffer);
         const now = new Date().toISOString();
-        const { error } = await supabase
+
+        // Persist URL to user_verifications table
+        const { error: upsertError } = await supabase
             .from('user_verifications')
             .upsert({
                 user_code: String(usercode),
-                profile_image_url: versionedImagePath,
+                profile_image_url: publicUrl,
                 updated_at: now
             }, { onConflict: 'user_code' });
 
-        if (error) {
-            return NextResponse.json({ success: false, message: 'Failed to persist profile image: ' + error.message }, { status: 500 });
+        if (upsertError) {
+            return NextResponse.json({ success: false, message: 'Failed to persist profile image URL: ' + upsertError.message }, { status: 500 });
         }
 
+        // Also sync to user_directory
         await supabase
             .from('user_directory')
             .upsert({
                 user_code: String(usercode),
-                avatar_url: versionedImagePath,
+                avatar_url: publicUrl,
                 last_login: now
             }, { onConflict: 'user_code' });
 
         return NextResponse.json({
             success: true,
-            path: versionedImagePath,
-            message: 'Image uploaded successfully'
+            path: publicUrl,
+            message: 'Image uploaded to Supabase Storage successfully'
         });
 
     } catch (error) {
-        console.error('Upload error:', error);
-        return NextResponse.json({ success: false, message: 'Upload failed' }, { status: 500 });
+        console.error('[Upload] Error:', error);
+        return NextResponse.json({ success: false, message: 'Upload failed: ' + error.message }, { status: 500 });
     }
 }
