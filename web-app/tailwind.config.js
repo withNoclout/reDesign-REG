@@ -30,6 +30,7 @@ module.exports = {
                 'scale-in': 'scaleIn 0.3s ease-out',
                 'pulse-glow': 'pulseGlow 2s infinite',
                 'bounce-subtle': 'bounceSubtle 0.5s ease-in-out',
+                'shimmer': 'shimmer 2s infinite',
             },
             keyframes: {
                 fadeIn: {
@@ -43,6 +44,9 @@ module.exports = {
                 slideUp: {
                     '0%': { transform: 'translateY(20px)', opacity: '0' },
                     '100%': { transform: 'translateY(0)', opacity: '1' },
+                },
+                shimmer: {
+                    '100%': { transform: 'translateX(100%)' },
                 },
                 slideDown: {
                     '0%': { transform: 'translateY(-20px)', opacity: '0' },

@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useRouter } from 'next/navigation';
 import Navbar from '../components/Navbar';
 import ToggleSwitch from '../components/ToggleSwitch';
-import ShareLinkBox from '../components/ShareLinkBox';
 import FailedUploadsBanner from '../components/FailedUploadsBanner';
 import { motion } from 'framer-motion';
 import { fadeInUp } from '@/lib/animations';
+import { LockIcon } from '../components/Icons';
 import '../globals.css';
 
 const MENU_ITEMS = [
@@ -19,20 +20,18 @@ const MENU_ITEMS = [
     { id: 'others', label: 'อื่นๆ' }
 ];
 
-const EXPIRATION_OPTIONS = [
-    { value: '1h', label: '1 ชั่วโมง' },
-    { value: '24h', label: '24 ชั่วโมง' },
-    { value: '7d', label: '7 วัน' },
-    { value: '30d', label: '30 วัน' },
-    { value: 'never', label: 'ไม่มีวันหมด' }
-];
-
 export default function PortfolioSettings() {
-    const { user } = useAuth();
+    const { user, isAuthenticated, loading: authLoading } = useAuth();
+    const router = useRouter();
     const [permissions, setPermissions] = useState({});
-    const [expiration, setExpiration] = useState('24h');
-    const [shareLink, setShareLink] = useState(null);
-    const [generating, setGenerating] = useState(false);
+    const [exporting, setExporting] = useState(false);
+
+    // Redirect if not authenticated
+    useEffect(() => {
+        if (!authLoading && !isAuthenticated) {
+            router.push('/');
+        }
+    }, [isAuthenticated, authLoading, router]);
 
     const togglePermission = (id) => {
         setPermissions((prev) => ({
@@ -41,8 +40,7 @@ export default function PortfolioSettings() {
         }));
     };
 
-    const generateShareLink = async () => {
-        // ... (Keep existing logic)
+    const exportHtml = async () => {
         const selectedModules = MENU_ITEMS
             .filter((item) => permissions[item.id])
             .map((item) => item.id);
@@ -52,31 +50,38 @@ export default function PortfolioSettings() {
             return;
         }
 
-        setGenerating(true);
+        setExporting(true);
 
         try {
-            const response = await fetch('/api/share/generate', {
+            const response = await fetch('/api/export/portfolio', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     permissions: selectedModules,
-                    expiration,
                     guestName: user?.name || 'Student'
                 })
             });
 
-            const data = await response.json();
-
-            if (data.success) {
-                setShareLink(data.shareLink);
-            } else {
-                alert(data.error || 'Failed to generate link');
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to generate HTML');
             }
+
+            // Get HTML string as blob and download
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `portfolio_${user?.username || 'student'}_export.html`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
         } catch (err) {
-            console.error('Generate share link error:', err);
-            alert('เกิดข้อผิดพลาด กรุณาลองใหม่');
+            console.error('Export HTML error:', err);
+            alert('เกิดข้อผิดพลาด กรุณาลองใหม่: ' + err.message);
         } finally {
-            setGenerating(false);
+            setExporting(false);
         }
     };
 
@@ -97,6 +102,31 @@ export default function PortfolioSettings() {
         hidden: { y: 20, opacity: 0 },
         show: { y: 0, opacity: 1 }
     };
+
+    // Loading State
+    if (authLoading) {
+        return (
+            <main className="main-content min-h-screen bg-[#0f172a] flex items-center justify-center">
+                <div className="text-center text-white">
+                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
+                    <p>กำลังตรวจสอบสิทธิ์...</p>
+                </div>
+            </main>
+        );
+    }
+
+    // Access Denied State (briefly seen before redirect)
+    if (!isAuthenticated) {
+        return (
+            <main className="main-content min-h-screen bg-[#0f172a] flex items-center justify-center">
+                <div className="text-center text-white">
+                    <div className="text-6xl mb-4 flex justify-center text-red-500"><LockIcon size={64} /></div>
+                    <h1 className="text-2xl font-bold mb-2 font-prompt">ต้องเข้าสู่ระบบ</h1>
+                    <p className="text-white/60">ระบบกำลังพากลับไปยังหน้าหลัก...</p>
+                </div>
+            </main>
+        );
+    }
 
     return (
         <main className="main-content min-h-screen bg-[#0f172a]" id="main-content">
@@ -128,11 +158,11 @@ export default function PortfolioSettings() {
                         <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 font-prompt leading-tight">
                             กำหนดการมองเห็น <br />
                             <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/50">
-                                และการแชร์ข้อมูล
+                                และส่งออกข้อมูล (ออฟไลน์)
                             </span>
                         </h1>
                         <p className="text-white/60 text-lg max-w-2xl font-light">
-                            เลือกข้อมูลที่คุณต้องการเปิดเผยในพอร์ตโฟลิโอสาธารณะ และกำหนดอายุของลิงก์แชร์
+                            เลือกข้อมูลที่คุณต้องการเปิดเผยในพอร์ตโฟลิโอ แล้วดาวน์โหลดเป็นไฟล์ HTML เพื่อส่งให้ผู้อื่นดูแบบออฟไลน์
                         </p>
                     </motion.div>
 
@@ -163,78 +193,44 @@ export default function PortfolioSettings() {
                                 </div>
                             </div>
 
-                            {/* Expiration Settings */}
-                            <div className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-3xl p-6 md:p-8">
-                                <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-3 font-prompt">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-primary">
-                                        <circle cx="12" cy="12" r="10" />
-                                        <polyline points="12 6 12 12 16 14" />
-                                    </svg>
-                                    อายุของลิงก์
-                                </h3>
-
-                                <div className="flex flex-wrap gap-2 bg-black/20 p-2 rounded-2xl">
-                                    {EXPIRATION_OPTIONS.map((option) => (
-                                        <button
-                                            key={option.value}
-                                            onClick={() => setExpiration(option.value)}
-                                            className={`relative px-4 py-3 rounded-xl text-sm font-medium transition-colors flex-1 min-w-[100px] ${expiration === option.value ? 'text-white' : 'text-white/50 hover:text-white/80'
-                                                }`}
-                                        >
-                                            {expiration === option.value && (
-                                                <motion.div
-                                                    layoutId="activeExpiration"
-                                                    className="absolute inset-0 bg-primary rounded-xl shadow-[0_0_15px_rgba(255,87,34,0.3)]"
-                                                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                                                />
-                                            )}
-                                            <span className="relative z-10">{option.label}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+                            {/* Note: Expiration removed for Static HTML Export approach */}
 
                         </motion.div>
 
                         {/* Sidebar / Floating Action */}
                         <motion.div variants={itemAnim} className="lg:col-span-4 space-y-6">
                             <div className="bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 backdrop-blur-2xl rounded-3xl p-6 sticky top-32">
-                                <h3 className="text-lg font-bold text-white mb-2 font-prompt">พร้อมแชร์แล้วใช่ไหม?</h3>
+                                <h3 className="text-lg font-bold text-white mb-2 font-prompt">พร้อมดาวน์โหลด?</h3>
                                 <p className="text-white/60 text-sm mb-6">
-                                    เมื่อสร้างลิงก์แล้ว คุณสามารถส่งให้ผู้อื่นดูพอร์ตโฟลิโอของคุณได้ทันที
+                                    ระบบจะดาวน์โหลดไฟล์ HTML คุณสามารถแนบส่งให้ผู้อื่นในแชทให้เปิดดูได้ทันที
                                 </p>
 
                                 <button
-                                    onClick={generateShareLink}
-                                    disabled={generating || !hasSelectedPermissions}
-                                    className="w-full py-4 bg-primary hover:bg-opacity-90 text-white rounded-xl font-bold text-lg shadow-lg shadow-orange-900/20 transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 font-prompt relative overflow-hidden group cursor-pointer"
+                                    onClick={exportHtml}
+                                    disabled={exporting || !hasSelectedPermissions}
+                                    className="w-full py-4 bg-primary hover:bg-opacity-90 text-white rounded-xl font-bold text-lg shadow-lg shadow-primary/20 transition-all hover:-translate-y-1 hover:shadow-primary/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-primary/20 font-prompt relative overflow-hidden group cursor-pointer"
                                 >
+                                    {/* Hover Glow Effect */}
+                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none" />
+
                                     <span className="relative z-10 flex items-center justify-center gap-2">
-                                        {generating ? (
+                                        {exporting ? (
                                             <>
                                                 <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
-                                                กำลังสร้าง...
+                                                กำลังสร้างไฟล์...
                                             </>
                                         ) : (
                                             <>
-                                                สร้างลิงก์แชร์
-                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="group-hover:translate-x-1 transition-transform">
-                                                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" />
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="group-hover:-translate-y-1 transition-transform group-hover:animate-pulse">
+                                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                                    <polyline points="7 10 12 15 17 10" />
+                                                    <line x1="12" y1="15" x2="12" y2="3" />
                                                 </svg>
+                                                ดาวน์โหลดไฟล์ HTML
                                             </>
                                         )}
                                     </span>
                                 </button>
-
-                                {shareLink && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className="mt-6"
-                                    >
-                                        <ShareLinkBox link={shareLink} />
-                                    </motion.div>
-                                )}
                             </div>
                         </motion.div>
                     </div>
