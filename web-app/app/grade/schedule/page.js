@@ -390,6 +390,7 @@ export default function SchedulePage() {
                         variants={staggerContainer}
                         initial="hidden"
                         animate="show"
+                        className="w-full"
                     >
                         {/* Desktop: full grid */}
                         <motion.div
@@ -566,6 +567,7 @@ export default function SchedulePage() {
                         variants={fadeInUp}
                         initial="initial"
                         animate="animate"
+                        className="w-full"
                     >
                         {/* Desktop Table */}
                         <div className="hidden md:block w-full bg-[rgba(255,255,255,0.06)] backdrop-blur-xl border border-[rgba(255,255,255,0.1)] rounded-3xl overflow-hidden shadow-2xl">
