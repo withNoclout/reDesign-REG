@@ -172,7 +172,10 @@ export default function EvaluationFormPage({ params }) {
                     <h2 className="text-2xl font-bold text-white font-prompt mb-2">ส่งผลประเมินสำเร็จ!</h2>
                     <p className="text-white/70 mb-8">ขอบคุณสำหรับความคิดเห็นเพื่อปรับปรุงการเรียนการสอน</p>
                     <button
-                        onClick={() => router.push('/evaluation')}
+                        onClick={() => {
+                            router.refresh(); // Force Next.js to dump client cache
+                            router.push('/evaluation');
+                        }}
                         className="w-full py-4 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold transition-colors"
                     >
                         กลับไปหน้ารายการ

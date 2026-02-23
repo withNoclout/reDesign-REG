@@ -14,6 +14,13 @@ const agent = new https.Agent({ rejectUnauthorized: false });
 const evalCache = new Map();
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
+export function clearEvalCache(stdCode) {
+    if (stdCode) {
+        evalCache.delete(stdCode);
+        console.log(`[Evaluation Cache] Cleared for student: ${stdCode}`);
+    }
+}
+
 export async function GET() {
     try {
         const cookieStore = await cookies();

@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import axios from 'axios';
 import https from 'https';
 import { encryptForReg } from '@/lib/regCipherUtils';
+import { clearEvalCache } from '../route';
 
 const BASE_URL = 'https://reg3.kmutnb.ac.th/regapiweb1/api/th';
 
@@ -20,6 +21,7 @@ export async function POST(request) {
 
         const cookieStore = await cookies();
         const token = cookieStore.get('reg_token')?.value;
+        const stdCode = cookieStore.get('std_code')?.value;
 
         if (!token) {
             return NextResponse.json({ success: false, message: 'Unauthorized (No reg_token)' }, { status: 401 });
@@ -99,6 +101,11 @@ export async function POST(request) {
 
         if (commitRes.status !== 200) {
             console.warn(`[Submit Proxy] Commit returned ${commitRes.status}`);
+        }
+
+        // --- THE FIX: Clear the cache so the frontend knows this instructor is done ---
+        if (stdCode) {
+            clearEvalCache(stdCode);
         }
 
         return NextResponse.json({
