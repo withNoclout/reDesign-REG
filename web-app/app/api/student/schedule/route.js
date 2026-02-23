@@ -138,19 +138,25 @@ export async function GET() {
     if (process.env.MOCK_AUTH === 'true' || !token) {
         const reason = !token ? 'no token in cookie' : 'MOCK_AUTH enabled';
         serverLog('WARN', `Serving Mock Data. Reason: ${reason}`);
+
+        const mockData = [{
+            weekday: 2,
+            timefrom: '09:00',
+            timeto: '12:00',
+            subject_id: '010123102',
+            subject_name_th: 'การเขียนโปรแกรมคอมพิวเตอร์',
+            subject_name_en: 'Computer Programming',
+            section: '1',
+            roomcode: 'TB-402',
+            teach_name: 'Dr. Somchai'
+        }];
+
         return NextResponse.json({
             success: true,
-            data: [{
-                weekday: 2,
-                timefrom: '09:00',
-                timeto: '12:00',
-                subject_id: '010123102',
-                subject_name_th: 'การเขียนโปรแกรมคอมพิวเตอร์',
-                subject_name_en: 'Computer Programming',
-                section: '1',
-                roomcode: 'TB-402',
-                teach_name: 'Dr. Somchai'
-            }],
+            data: mockData,
+            scheduled: mockData,
+            unscheduled: [],
+            stats: { total: 1, withSchedule: 1, withoutSchedule: 0 },
             semester: '2/2568'
         });
     }

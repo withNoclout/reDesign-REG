@@ -232,27 +232,11 @@ export async function POST(request) {
                 }
 
                 // Build user data for frontend (no raw JWTs exposed)
-                let persistedProfileImage = '';
-                if (userProfile.usercode) {
-                    try {
-                        const supabase = getServiceSupabase();
-                        const { data: profileImageRow } = await supabase
-                            .from('user_verifications')
-                            .select('profile_image_url')
-                            .eq('user_code', String(userProfile.usercode))
-                            .single();
-                        // Strip version query string (e.g. ?v=1234567890) to get clean URL
-                        const rawUrl = profileImageRow?.profile_image_url || '';
-                        persistedProfileImage = rawUrl.split('?')[0];
-                    } catch (imgErr) {
-                        console.warn('[API] profile image fetch failed (non-blocking):', imgErr.message);
-                    }
-                }
-
                 const fallbackImg = apiData.img || apiData.navimg || '';
                 const userData = {
                     ...userProfile,
-                    img: persistedProfileImage || fallbackImg,
+                    // If userProfile.img is somehow empty, fall back to what the API returned directly
+                    img: userProfile.img || fallbackImg,
                     originalImg: fallbackImg,
                     navimg: apiData.navimg || '',
                 };
