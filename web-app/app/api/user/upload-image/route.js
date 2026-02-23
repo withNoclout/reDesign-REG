@@ -7,12 +7,15 @@ const STORAGE_BUCKET = 'profile-images';
 export async function POST(request) {
     try {
         const { image, reset } = await request.json();
-        const usercode = await getAuthUser();
+        let usercodeRaw = await getAuthUser();
         const supabase = getServiceSupabase();
 
-        if (!usercode) {
+        if (!usercodeRaw) {
             return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
         }
+
+        // Normalize student code (remove 's' prefix)
+        const usercode = usercodeRaw.startsWith('s') ? usercodeRaw.substring(1) : usercodeRaw;
 
         if (reset) {
             const now = new Date().toISOString();

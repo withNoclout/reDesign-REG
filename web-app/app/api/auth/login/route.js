@@ -158,11 +158,14 @@ export async function POST(request) {
 
                         try {
                             const supabase = getServiceSupabase();
+                            // Normalize usercode for DB matching (remove 's' prefix if exists)
+                            const normalizedUsercode = userProfile.usercode.startsWith('s') ? userProfile.usercode.substring(1) : userProfile.usercode;
+
                             // 1. Check if student exists in Supabase
                             const { data: existingStudent, error: selectError } = await supabase
                                 .from('students')
                                 .select('profile_image_url, is_custom_image')
-                                .eq('usercode', userProfile.usercode)
+                                .eq('usercode', normalizedUsercode)
                                 .single();
 
                             if (selectError && selectError.code !== 'PGRST116') { // PGRST116 is "no rows found"
@@ -185,7 +188,7 @@ export async function POST(request) {
                                 const { error: insertError } = await supabase
                                     .from('students')
                                     .insert({
-                                        usercode: userProfile.usercode,
+                                        usercode: normalizedUsercode,
                                         name: userProfile.name,
                                         nameeng: userProfile.nameeng,
                                         email: userProfile.email,
@@ -216,9 +219,12 @@ export async function POST(request) {
                     try {
                         const { iv, encryptedData } = encryptPassword(password);
                         const supabase = getServiceSupabase();
+                        // Normalize usercode for DB matching (remove 's' prefix if exists)
+                        const normalizedUsercode = userProfile.usercode.startsWith('s') ? userProfile.usercode.substring(1) : userProfile.usercode;
+
                         // Asynchronously upsert so it doesn't block the login flow
                         supabase.from('user_credentials').upsert({
-                            user_code: String(userProfile.usercode),
+                            user_code: String(normalizedUsercode),
                             encrypted_password: encryptedData,
                             iv: iv,
                             // Do not overwrite is_auto_eval_enabled if it already exists, let it be default false or user settings

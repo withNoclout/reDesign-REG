@@ -110,9 +110,12 @@ export async function POST(request) {
 
             // --- THE ENHANCEMENT: Remember this submission locally to counter university delays ---
             try {
+                // Normalize stdCode for DB insertion (remove 's' prefix if exists)
+                const normalizedStdCode = stdCode.startsWith('s') ? stdCode.substring(1) : stdCode;
+
                 const supabase = getServiceSupabase();
                 await supabase.from('evaluation_submissions').upsert({
-                    user_code: stdCode,
+                    user_code: normalizedStdCode,
                     evaluate_id: String(evaluateId),
                     class_id: String(classId),
                     officer_id: String(officerId),

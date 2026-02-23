@@ -57,12 +57,15 @@ export async function GET() {
             // Fetch local cached evaluations from Supabase to counter University API delays
             let localCacheRecords = [];
             if (stdCode) {
+                // Normalize stdCode for DB checking (remove 's' prefix if exists)
+                const normalizedStdCode = stdCode.startsWith('s') ? stdCode.substring(1) : stdCode;
+
                 try {
                     const supabase = getServiceSupabase();
                     const { data } = await supabase
                         .from('evaluation_submissions')
                         .select('evaluate_id, officer_id, class_id')
-                        .eq('user_code', stdCode);
+                        .eq('user_code', normalizedStdCode);
                     if (data) localCacheRecords = data;
                 } catch (dbErr) {
                     console.warn('[Evaluation API] Failed to fetch local cache:', dbErr.message);
