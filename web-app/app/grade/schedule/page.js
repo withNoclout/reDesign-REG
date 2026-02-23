@@ -350,8 +350,8 @@ export default function SchedulePage() {
                                     <div key={i} className="flex gap-3 items-center">
                                         <div className="w-16 h-8 bg-white/10 rounded-lg animate-pulse"></div>
                                         <div className="flex-1 flex gap-2">
-                                            {[...Array(3 + Math.floor(Math.random() * 3))].map((_, j) => (
-                                                <div key={j} className="h-8 bg-white/10 rounded-lg animate-pulse" style={{ width: `${60 + Math.random() * 100}px` }}></div>
+                                            {[...Array(3 + (i % 3))].map((_, j) => (
+                                                <div key={j} className="h-8 bg-white/10 rounded-lg animate-pulse" style={{ width: `${60 + ((i + j) * 15 % 100)}px` }}></div>
                                             ))}
                                         </div>
                                     </div>
