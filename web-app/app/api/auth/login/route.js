@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
 import axios from 'axios';
-import crypto from 'crypto';
-import { createRateLimiter, getClientIp } from '@/lib/rateLimit';
 import { getServiceSupabase } from '@/lib/supabase';
-import { encryptPassword } from '@/lib/cryptoUtils';
+import { createRateLimiter, getClientIp } from '@/lib/rateLimit';
 import { encryptForReg } from '@/lib/regCipherUtils';
+import crypto from 'crypto';
 
 // Shared rate limiter instance for login (5 attempts per 15 minutes)
 const loginLimiter = createRateLimiter({
@@ -15,6 +14,7 @@ const loginLimiter = createRateLimiter({
 
 // Skipping external IP fetch for performance optimization (saving ~300ms)
 const getServerIp = () => '';
+
 
 function generateSecureToken() {
     const array = new Uint8Array(32);
@@ -148,7 +148,64 @@ export async function POST(request) {
                             statusdeseng: decoded.statusdeseng || '',
                             role: decoded.role || [],
                             reportdate: decoded.reportdate || '',
+                            img: apiData.img || apiData.navimg || '', // Initial image from API
                         };
+
+                        // ----------------------------------------------------------------
+                        // REGISTRATION / PROFILE IMAGE DATABASE LOGIC
+                        // ----------------------------------------------------------------
+                        let finalImageUrl = userProfile.img; // Default from university
+
+                        try {
+                            const supabase = getServiceSupabase();
+                            // 1. Check if student exists in Supabase
+                            const { data: existingStudent, error: selectError } = await supabase
+                                .from('students')
+                                .select('profile_image_url, is_custom_image')
+                                .eq('usercode', userProfile.usercode)
+                                .single();
+
+                            if (selectError && selectError.code !== 'PGRST116') { // PGRST116 is "no rows found"
+                                console.error('[API] Supabase Select Error:', selectError);
+                            }
+
+                            if (existingStudent) {
+                                // 2. If student exists, use their DB state
+                                if (existingStudent.is_custom_image === 1) {
+                                    // Use their custom uploaded image
+                                    finalImageUrl = existingStudent.profile_image_url;
+                                } else {
+                                    // Update the DB with the latest university image (in case it changed)
+                                    await supabase.from('students')
+                                        .update({ profile_image_url: userProfile.img })
+                                        .eq('usercode', userProfile.usercode);
+                                }
+                            } else {
+                                // 3. New student, insert into DB with university default image (is_custom_image = 0)
+                                const { error: insertError } = await supabase
+                                    .from('students')
+                                    .insert({
+                                        usercode: userProfile.usercode,
+                                        name: userProfile.name,
+                                        nameeng: userProfile.nameeng,
+                                        email: userProfile.email,
+                                        profile_image_url: userProfile.img,
+                                        is_custom_image: 0
+                                    });
+
+                                if (insertError) console.error('[API] Supabase Insert Error:', insertError);
+                            }
+
+                            // Override the university image with the finalized database image
+                            userProfile.img = finalImageUrl;
+
+                        } catch (dbError) {
+                            console.error('[API] Database operation failed during login:', dbError);
+                            // Fallback to university image if DB fails
+                        }
+
+                    } else {
+                        throw new Error('No tokenuser in response');
                     }
                 } catch (decodeErr) {
                     console.warn('[API] Failed to decode tokenuser JWT:', decodeErr.message);

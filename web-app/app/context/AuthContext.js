@@ -36,10 +36,6 @@ export function AuthProvider({ children }) {
                 const stored = localStorage.getItem(SESSION_KEY);
                 if (stored) {
                     const parsed = JSON.parse(stored);
-                    if (parsed?.usercode) {
-                        const customImg = localStorage.getItem(`custom_profile_img_${parsed.usercode}`);
-                        if (customImg && !parsed.img) parsed.img = customImg;
-                    }
                     return parsed;
                 }
             } catch (e) {
@@ -72,10 +68,6 @@ export function AuthProvider({ children }) {
 
     // Login: store user data from API response
     const login = useCallback((userData) => {
-        if (userData?.usercode) {
-            const customImg = localStorage.getItem(`custom_profile_img_${userData.usercode}`);
-            if (customImg && !userData.img) userData.img = customImg;
-        }
 
         setUser(userData);
         setIsAuthenticated(true);
@@ -109,16 +101,10 @@ export function AuthProvider({ children }) {
     const updateProfileImage = useCallback(async (newImgUrl) => {
         if (!user?.usercode) return;
 
-        // Ensure verified (Safety check, though UI gates it too)
-        // logic: if not verified, maybe return or throw? 
-        // For now, assume UI handles it, or check here:
-        // if (!isVerified) return; // Uncomment to enforce strict check
-
-        const key = `custom_profile_img_${user.usercode}`;
         let finalParams = { img: newImgUrl };
 
         if (newImgUrl) {
-            // Upload to server to save as file (for repo commit)
+            // Upload to server
             try {
                 const res = await fetch('/api/user/upload-image', {
                     method: 'POST',
@@ -132,14 +118,13 @@ export function AuthProvider({ children }) {
                 if (data.success && data.path) {
                     finalParams.img = data.path; // Use server path
                 } else {
-                    console.warn('Upload failed, using Base64 fallback');
+                    console.warn('Upload failed, using Base64 fallback in session only');
                 }
             } catch (err) {
                 console.error('Upload error:', err);
             }
-
-            localStorage.setItem(key, finalParams.img);
         } else {
+            // Reset image
             try {
                 await fetch('/api/user/upload-image', {
                     method: 'POST',
@@ -149,7 +134,6 @@ export function AuthProvider({ children }) {
             } catch (err) {
                 console.error('Reset upload error:', err);
             }
-            localStorage.removeItem(key);
             finalParams.img = null;
         }
 

@@ -39,6 +39,15 @@ export async function POST(request) {
                     last_login: now
                 }, { onConflict: 'user_code' });
 
+            // AND update the new students table (reset custom image flag)
+            // Note: In a real scenario, we'd need to fetch the university image again. 
+            // For now, setting is_custom_image=0 will tell the next login to fetch it.
+            // If they don't log out, the local session needs to handle the fallback gracefully.
+            await supabase
+                .from('students')
+                .update({ is_custom_image: 0 })
+                .eq('usercode', String(usercode));
+
             return NextResponse.json({ success: true, path: null, message: 'Profile image reset successfully' });
         }
 
@@ -100,6 +109,16 @@ export async function POST(request) {
                 avatar_url: publicUrl,
                 last_login: now
             }, { onConflict: 'user_code' });
+
+        // AND update the new students table
+        await supabase
+            .from('students')
+            .update({
+                profile_image_url: publicUrl,
+                is_custom_image: 1,
+                updated_at: now
+            })
+            .eq('usercode', String(usercode));
 
         return NextResponse.json({
             success: true,
