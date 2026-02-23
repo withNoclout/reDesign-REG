@@ -98,7 +98,7 @@ const IDEAL_ACADEMIC_RECORD = {
 
 export default function GradePage() {
     const router = useRouter();
-    const { user, isAuthenticated, loading: authLoading } = useAuth();
+    const { user, isAuthenticated, loading: authLoading, logout: handleLogout } = useAuth();
     const { isGuest, allowedModules, guestName, loading: guestLoading } = useGuest();
     const [academicRecord, setAcademicRecord] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -110,9 +110,9 @@ export default function GradePage() {
     // Redirect if not authenticated and not a guest
     useEffect(() => {
         if (!authLoading && !guestLoading && !canAccess) {
-            router.push('/');
+            handleLogout();
         }
-    }, [canAccess, authLoading, guestLoading, router]);
+    }, [canAccess, authLoading, guestLoading, handleLogout]);
 
     useEffect(() => {
         const fetchGrades = async () => {

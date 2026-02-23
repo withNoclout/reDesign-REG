@@ -41,9 +41,9 @@ export default function Main() {
     // Redirect if not authenticated/authorized
     useEffect(() => {
         if (!authLoading && !guestLoading && !canAccess) {
-            router.push('/');
+            handleLogout();
         }
-    }, [canAccess, authLoading, guestLoading, router]);
+    }, [canAccess, authLoading, guestLoading, handleLogout]);
 
     // Fetch Student Profile (Consolidated)
     const fetchStudentInfo = useCallback(async () => {

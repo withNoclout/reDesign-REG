@@ -16,38 +16,44 @@ const GuestContext = createContext(null);
  * - loading: boolean - true while verifying token
  */
 export function GuestProvider({ children }) {
-    const [isGuest, setIsGuest] = useState(false);
-    const [allowedModules, setAllowedModules] = useState([]);
-    const [guestName, setGuestName] = useState('');
-    const [loading, setLoading] = useState(true);
     const router = useRouter();
 
-    useEffect(() => {
-        // Check if share token in URL
-        if (typeof window === 'undefined') return;
-
+    const initialGuestState = useMemo(() => {
+        if (typeof window === 'undefined') {
+            return { isGuest: false, allowedModules: [], guestName: '' };
+        }
         const params = new URLSearchParams(window.location.search);
         const token = params.get('t');
-
         if (token) {
-            // Verify token
             const decoded = verifyShareToken(token);
-
             if (decoded) {
-                // Valid token - activate guest mode
-                setIsGuest(true);
-                setAllowedModules(decoded.permissions || []);
-                setGuestName(decoded.guestName || 'Guest');
                 console.log('Guest mode activated:', decoded.guestName);
-            } else {
-                // Invalid or expired token - redirect to login
+                return {
+                    isGuest: true,
+                    allowedModules: decoded.permissions || [],
+                    guestName: decoded.guestName || 'Guest'
+                };
+            }
+        }
+        return { isGuest: false, allowedModules: [], guestName: '' };
+    }, []);
+
+    const [isGuest, setIsGuest] = useState(initialGuestState.isGuest);
+    const [allowedModules, setAllowedModules] = useState(initialGuestState.allowedModules);
+    const [guestName, setGuestName] = useState(initialGuestState.guestName);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        // Just handle invalid token redirect here if needed
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const token = params.get('t');
+            if (token && !isGuest) {
                 console.error('Invalid or expired share token');
                 router.push('/');
             }
         }
-
-        setLoading(false);
-    }, [router]);
+    }, [router, isGuest]);
 
     const value = useMemo(() => ({
         isGuest,

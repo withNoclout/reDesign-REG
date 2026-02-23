@@ -92,7 +92,7 @@ function stripTitles(name) {
 
 export default function SchedulePage() {
     const router = useRouter();
-    const { user, isAuthenticated, loading: authLoading } = useAuth();
+    const { user, isAuthenticated, loading: authLoading, logout: handleLogout } = useAuth();
     const { isGuest, allowedModules, guestName, loading: guestLoading } = useGuest();
     const [scheduleData, setScheduleData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -104,9 +104,9 @@ export default function SchedulePage() {
 
     useEffect(() => {
         if (!authLoading && !guestLoading && !canAccess) {
-            router.push('/');
+            handleLogout();
         }
-    }, [canAccess, authLoading, guestLoading, router]);
+    }, [canAccess, authLoading, guestLoading, handleLogout]);
 
     useEffect(() => {
         const fetchSchedule = async () => {

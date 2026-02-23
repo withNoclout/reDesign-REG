@@ -30,31 +30,45 @@ const SESSION_KEY = 'reg_user_session';
 
 export function AuthProvider({ children }) {
     const router = useRouter();
-    const [user, setUser] = useState(null);
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                const stored = localStorage.getItem(SESSION_KEY);
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    if (parsed?.usercode) {
+                        const customImg = localStorage.getItem(`custom_profile_img_${parsed.usercode}`);
+                        if (customImg && !parsed.img) parsed.img = customImg;
+                    }
+                    return parsed;
+                }
+            } catch (e) {
+                console.warn('[Auth] Failed to restore session:', e.message);
+                localStorage.removeItem(SESSION_KEY);
+            }
+        }
+        return null;
+    });
+
+    const [isAuthenticated, setIsAuthenticated] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return !!localStorage.getItem(SESSION_KEY);
+        }
+        return false;
+    });
+
+    const [loading, setLoading] = useState(false);
     const [isVerified, setIsVerified] = useState(false); // Drive connected status
 
-    // Restore session on mount
+    // Ensure state sync after hydration if needed, but primary state is ready immediately.
     useEffect(() => {
-        try {
-            const stored = localStorage.getItem(SESSION_KEY);
-            if (stored) {
-                const parsed = JSON.parse(stored);
-                if (parsed?.usercode) {
-                    const customImg = localStorage.getItem(`custom_profile_img_${parsed.usercode}`);
-                    if (customImg && !parsed.img) parsed.img = customImg;
-                }
-                setUser(parsed);
-                setIsAuthenticated(true);
-            }
-        } catch (e) {
-            console.warn('[Auth] Failed to restore session:', e.message);
-            localStorage.removeItem(SESSION_KEY);
-        } finally {
-            setLoading(false);
+        // Just a safety check in case `localStorage` mutated outside React tree.
+        const stored = localStorage.getItem(SESSION_KEY);
+        if (!stored && isAuthenticated) {
+            setIsAuthenticated(false);
+            setUser(null);
         }
-    }, []);
+    }, [isAuthenticated]);
 
     // Login: store user data from API response
     const login = useCallback((userData) => {

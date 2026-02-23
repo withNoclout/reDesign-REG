@@ -17,7 +17,7 @@ import '../globals.css';
 
 export default function EvaluationPage() {
     const router = useRouter();
-    const { user, isAuthenticated, loading: authLoading } = useAuth();
+    const { user, isAuthenticated, loading: authLoading, logout: handleLogout } = useAuth();
     const { isGuest, allowedModules, guestName, loading: guestLoading } = useGuest();
     const { requestCredential } = useCredential();
     const [evalList, setEvalList] = useState([]);
@@ -30,9 +30,9 @@ export default function EvaluationPage() {
     // Redirect if not authenticated and not a guest
     useEffect(() => {
         if (!authLoading && !guestLoading && !canAccess) {
-            router.push('/');
+            handleLogout();
         }
-    }, [canAccess, authLoading, guestLoading, router]);
+    }, [canAccess, authLoading, guestLoading, handleLogout]);
 
     useEffect(() => {
         const fetchEvaluations = async () => {
