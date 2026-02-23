@@ -96,7 +96,12 @@ export default function Navbar({ activePage = 'profile' }) {
     const { isGuest, allowedModules, guestName } = useGuest();
     const [menuOpen, setMenuOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+    const [mounted, setMounted] = useState(false);
     const router = useRouter();
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const toggleMenu = () => setMenuOpen(!menuOpen);
 
@@ -269,7 +274,7 @@ export default function Navbar({ activePage = 'profile' }) {
                     >
                         {/* Profile Image in Navbar */}
                         <div className="h-10 w-10 rounded-full overflow-hidden border border-white/20 bg-white/10 relative">
-                            {user?.img ? (
+                            {mounted && user?.img ? (
                                 <img
                                     src={user.img}
                                     alt="Profile"
@@ -278,13 +283,13 @@ export default function Navbar({ activePage = 'profile' }) {
                                 />
                             ) : (
                                 <div className="h-full w-full flex items-center justify-center text-white/50 text-sm font-bold">
-                                    {(user?.username || 'U').charAt(0).toUpperCase()}
+                                    {(mounted && user ? (user.username || 'U') : 'U').charAt(0).toUpperCase()}
                                 </div>
                             )}
                         </div>
 
                         <span className="text-white text-sm font-medium hidden md:block font-prompt">
-                            {user?.name || user?.username || 'User'}
+                            {mounted && user ? (user.name || user.username || 'User') : 'User'}
                         </span>
                     </motion.div>
                     <motion.button
