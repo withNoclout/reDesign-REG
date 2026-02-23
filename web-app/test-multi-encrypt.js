@@ -1,3 +1,5 @@
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '.env.local') });
 /**
  * Test MULTIPLE encryption approaches against LoginAD
  */
@@ -70,6 +72,6 @@ async function test(username, password) {
     }
 }
 
-const user = process.argv[2] || 's6701091611290';
-const pass = process.argv[3] || '035037603za';
+const user = process.argv[2] || process.env.REG_USERNAME || 's6701091611290';
+const pass = process.argv[3] || process.env.REG_PASSWORD || '035037603za';
 test(user, pass);

@@ -3,7 +3,7 @@ const { createClient } = require('@supabase/supabase-js');
 
 // Configuration
 const MOCK_USER_ID = '00000000-0000-0000-0000-000000000067';
-const REAL_USER_ID = 's6701091611290'; // From .env.local REG_USERNAME
+const REAL_USER_ID = process.env.REG_USERNAME || 's6701091611290'; // From .env.local REG_USERNAME
 
 async function migrateData() {
     console.log('🔄 Starting Data Migration: Mock -> Real');

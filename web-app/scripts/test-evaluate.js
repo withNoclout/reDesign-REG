@@ -1,3 +1,5 @@
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
 const axios = require('axios');
 const zlib = require('zlib');
 const { promisify } = require('util');
@@ -10,8 +12,8 @@ async function testEvalAPI() {
     try {
         console.log('1. Logging in...');
         const loginRes = await axios.post(`${BASE_URL}/auth/login`, {
-            username: 's6701091611290',
-            password: '035037603za'
+            username: process.env.REG_USERNAME || 's6701091611290',
+            password: process.env.REG_PASSWORD || '035037603za'
         });
 
         const cookies = loginRes.headers['set-cookie'];

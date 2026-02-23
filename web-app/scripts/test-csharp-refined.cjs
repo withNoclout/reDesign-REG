@@ -57,9 +57,9 @@ async function test() {
     const testUrl = 'https://reg2.kmutnb.ac.th/regapiweb2/api/th/Account/LoginAD';
     // Fix payload to match what Angular actually sends for login
     const payloads = [
-        JSON.stringify({ user_id: 's6701091611290', password: '035037603za' }),
-        JSON.stringify({ userid: 's6701091611290', password: '035037603za' }),
-        JSON.stringify({ username: 's6701091611290', password: '035037603za' }),
+        JSON.stringify({ user_id: process.env.REG_USERNAME || 's6701091611290', password: process.env.REG_PASSWORD || '035037603za' }),
+        JSON.stringify({ userid: process.env.REG_USERNAME || 's6701091611290', password: process.env.REG_PASSWORD || '035037603za' }),
+        JSON.stringify({ username: process.env.REG_USERNAME || 's6701091611290', password: process.env.REG_PASSWORD || '035037603za' }),
     ];
 
     const methods = [

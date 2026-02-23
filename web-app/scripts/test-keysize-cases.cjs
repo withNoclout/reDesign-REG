@@ -73,7 +73,7 @@ async function testKeySizes() {
     const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
 
     const testUrl = 'https://reg2.kmutnb.ac.th/regapiweb2/api/th/Account/LoginAD';
-    const loginPayload = JSON.stringify({ user_id: 's6701091611290', password: '035037603za' });
+    const loginPayload = JSON.stringify({ user_id: process.env.REG_USERNAME || 's6701091611290', password: process.env.REG_PASSWORD || '035037603za' });
 
     const cases = [
         { name: 'SHA256 32B key', fn: () => encrypt(loginPayload, 32, 'sha256') },

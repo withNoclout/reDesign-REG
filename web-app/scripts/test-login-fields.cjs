@@ -28,9 +28,9 @@ async function testLogin() {
 
     // Try different field names
     const payloads = [
-        { username: 's6701091611290', password: '035037603za' },
-        { UserName: 's6701091611290', Password: '035037603za' },
-        { userName: 's6701091611290', passWord: '035037603za' },
+        { username: process.env.REG_USERNAME || 's6701091611290', password: process.env.REG_PASSWORD || '035037603za' },
+        { UserName: process.env.REG_USERNAME || 's6701091611290', Password: process.env.REG_PASSWORD || '035037603za' },
+        { userName: process.env.REG_USERNAME || 's6701091611290', passWord: process.env.REG_PASSWORD || '035037603za' },
     ];
 
     for (const payload of payloads) {

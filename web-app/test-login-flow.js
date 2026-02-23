@@ -1,8 +1,10 @@
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '.env.local') });
 const axios = require('axios');
 
 const BASE_URL = 'http://localhost:3000';
-const USERNAME = 's6701091611290';
-const PASSWORD = '035037603za';
+const USERNAME = process.env.REG_USERNAME || 's6701091611290';
+const PASSWORD = process.env.REG_PASSWORD || '035037603za';
 
 async function runTest() {
     console.log('=== Starting Login Flow Test ===');

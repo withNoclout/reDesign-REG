@@ -1,3 +1,5 @@
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
 const axios = require('axios');
 const https = require('https');
 const crypto = require('crypto');
@@ -36,8 +38,8 @@ async function testReg3APIs() {
         
         console.log('\n=== Step 3: Login ===');
         const credentialsJson = JSON.stringify({ 
-            username: 's6701091611290', 
-            password: '035037603za', 
+            username: process.env.REG_USERNAME || 's6701091611290', 
+            password: process.env.REG_PASSWORD || '035037603za', 
             ip: clientIp 
         });
         const encryptedParam = encryptData(credentialsJson);

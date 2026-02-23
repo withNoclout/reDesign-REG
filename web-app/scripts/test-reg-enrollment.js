@@ -1,3 +1,5 @@
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
 const https = require('https');
 const axios = require('axios');
 const crypto = require('crypto');
@@ -7,8 +9,8 @@ const { promisify } = require('util');
 const gunzip = promisify(zlib.gunzip);
 
 // Credentials
-const username = "s6701091611290";
-const password = "035037603za";
+const username = process.env.REG_USERNAME || 's6701091611290';
+const password = process.env.REG_PASSWORD || '035037603za';
 
 // Setup Encryption Helper
 function encryptData(plaintext) {

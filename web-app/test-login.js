@@ -1,3 +1,5 @@
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '.env.local') });
 const axios = require('axios');
 
 async function testLogin(username, password) {
@@ -170,7 +172,7 @@ async function testLogin(username, password) {
 }
 
 // Get args from command line or default
-const user = process.argv[2] || 's6701091611290';
-const pass = process.argv[3] || '035037603za'; // User provided this earlier
+const user = process.argv[2] || process.env.REG_USERNAME || 's6701091611290';
+const pass = process.argv[3] || process.env.REG_PASSWORD || '035037603za'; // User provided this earlier
 
 testLogin(user, pass);
