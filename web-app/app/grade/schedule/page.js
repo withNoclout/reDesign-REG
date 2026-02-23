@@ -394,7 +394,7 @@ export default function SchedulePage() {
                         {/* Desktop: full grid */}
                         <motion.div
                             variants={staggerItem}
-                            className="hidden md:block bg-[rgba(255,255,255,0.06)] backdrop-blur-xl border border-[rgba(255,255,255,0.1)] rounded-3xl overflow-hidden shadow-2xl"
+                            className="hidden md:block w-full bg-[rgba(255,255,255,0.06)] backdrop-blur-xl border border-[rgba(255,255,255,0.1)] rounded-3xl overflow-hidden shadow-2xl"
                         >
                             <div>
                                 <table className="w-full border-collapse table-fixed">
@@ -568,7 +568,7 @@ export default function SchedulePage() {
                         animate="animate"
                     >
                         {/* Desktop Table */}
-                        <div className="hidden md:block bg-[rgba(255,255,255,0.06)] backdrop-blur-xl border border-[rgba(255,255,255,0.1)] rounded-3xl overflow-hidden shadow-2xl">
+                        <div className="hidden md:block w-full bg-[rgba(255,255,255,0.06)] backdrop-blur-xl border border-[rgba(255,255,255,0.1)] rounded-3xl overflow-hidden shadow-2xl">
                             <div className="p-5 border-b border-[rgba(255,255,255,0.06)] flex items-center gap-3">
                                 <BookOpenIcon size={18} className="text-white/50" />
                                 <div>
@@ -686,7 +686,7 @@ export default function SchedulePage() {
                         variants={fadeInUp}
                         initial="initial"
                         animate="animate"
-                        className="bg-[rgba(255,255,255,0.06)] backdrop-blur-xl border border-[rgba(255,255,255,0.1)] rounded-3xl overflow-hidden shadow-2xl"
+                        className="w-full bg-[rgba(255,255,255,0.06)] backdrop-blur-xl border border-[rgba(255,255,255,0.1)] rounded-3xl overflow-hidden shadow-2xl"
                     >
                         <div className="p-5 border-b border-[rgba(255,255,255,0.06)] flex items-center gap-3">
                             <BookOpenIcon size={18} className="text-white/50" />

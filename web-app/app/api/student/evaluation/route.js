@@ -58,7 +58,7 @@ export async function GET() {
             let localCacheRecords = [];
             if (stdCode) {
                 // Normalize stdCode for DB checking (remove 's' prefix if exists)
-                const normalizedStdCode = stdCode.startsWith('s') ? stdCode.substring(1) : stdCode;
+                const normalizedStdCode = stdCode.startsWith('s') ? stdCode.substring(1).trim() : stdCode.trim();
 
                 try {
                     const supabase = getServiceSupabase();
@@ -66,7 +66,13 @@ export async function GET() {
                         .from('evaluation_submissions')
                         .select('evaluate_id, officer_id, class_id')
                         .eq('user_code', normalizedStdCode);
-                    if (data) localCacheRecords = data;
+                    if (data) {
+                        localCacheRecords = data.map(row => ({
+                            evaluate_id: String(row.evaluate_id).trim(),
+                            officer_id: String(row.officer_id).trim(),
+                            class_id: String(row.class_id).trim()
+                        }));
+                    }
                 } catch (dbErr) {
                     console.warn('[Evaluation API] Failed to fetch local cache:', dbErr.message);
                 }
@@ -82,12 +88,20 @@ export async function GET() {
 
                         // Check if we have a robust local cache saying it's evaluated (to counter university delay)
                         if (!isEvaluated && localCacheRecords.length > 0) {
+                            const currentEvalId = String(inst.evaluateid).trim();
+                            const currentOfficerId = String(inst.officerid).trim();
+                            const currentClassId = String(course.classid).trim();
+
                             const foundInDB = localCacheRecords.some(row =>
-                                row.evaluate_id === String(inst.evaluateid) &&
-                                row.officer_id === String(inst.officerid) &&
-                                row.class_id === String(course.classid)
+                                row.evaluate_id === currentEvalId &&
+                                row.officer_id === currentOfficerId &&
+                                row.class_id === currentClassId
                             );
-                            if (foundInDB) isEvaluated = true;
+
+                            if (foundInDB) {
+                                console.log(`[Evaluation API] Match found in DB for: ${inst.officername} (${currentOfficerId})`);
+                                isEvaluated = true;
+                            }
                         }
 
                         allEvaluations.push({
@@ -110,7 +124,14 @@ export async function GET() {
                 evalCache.set(stdCode, { timestamp: Date.now(), data: allEvaluations });
             }
 
-            return NextResponse.json({ success: true, data: allEvaluations });
+            const response = NextResponse.json({ success: true, data: allEvaluations });
+
+            // Prevent Browser and Proxy caching
+            response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+            response.headers.set('Pragma', 'no-cache');
+            response.headers.set('Expires', '0');
+
+            return response;
         }
 
         return NextResponse.json({ success: false, message: 'Failed to fetch evaluation list' }, { status: res.status });

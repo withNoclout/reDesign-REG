@@ -110,17 +110,19 @@ export async function POST(request) {
 
             // --- THE ENHANCEMENT: Remember this submission locally to counter university delays ---
             try {
-                // Normalize stdCode for DB insertion (remove 's' prefix if exists)
-                const normalizedStdCode = stdCode.startsWith('s') ? stdCode.substring(1) : stdCode;
+                // Normalize stdCode for DB insertion (remove 's' prefix if exists and trim)
+                const normalizedStdCode = stdCode.startsWith('s') ? stdCode.substring(1).trim() : stdCode.trim();
 
                 const supabase = getServiceSupabase();
                 await supabase.from('evaluation_submissions').upsert({
                     user_code: normalizedStdCode,
-                    evaluate_id: String(evaluateId),
-                    class_id: String(classId),
-                    officer_id: String(officerId),
+                    evaluate_id: String(evaluateId).trim(),
+                    class_id: String(classId).trim(),
+                    officer_id: String(officerId).trim(),
                     submitted_at: new Date().toISOString()
                 }, { onConflict: 'user_code, evaluate_id, officer_id, class_id' });
+
+                console.log(`[Submit Proxy] Cached submission for ${normalizedStdCode}: Officer ${officerId}`);
             } catch (dbErr) {
                 console.warn('[Submit Proxy] Failed to cache submission locally (non-blocking):', dbErr.message);
             }
