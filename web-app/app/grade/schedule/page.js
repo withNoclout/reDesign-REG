@@ -99,6 +99,11 @@ export default function SchedulePage() {
     const [error, setError] = useState(null);
     const [sortField, setSortField] = useState('subject_id');
     const [sortDirection, setSortDirection] = useState('asc');
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const canAccess = isGuest ? allowedModules.includes('grade') : isAuthenticated;
 
@@ -283,7 +288,7 @@ export default function SchedulePage() {
     }
 
     // Check access
-    if (!canAccess) {
+    if (mounted && !canAccess) {
         return null;
     }
 

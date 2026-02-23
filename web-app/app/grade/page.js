@@ -103,6 +103,11 @@ export default function GradePage() {
     const [academicRecord, setAcademicRecord] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // Check if this page is accessible
     const canAccess = isGuest ? allowedModules.includes('grade') : isAuthenticated;
@@ -249,7 +254,7 @@ export default function GradePage() {
     }
 
     // Handle access denied
-    if (!canAccess) {
+    if (mounted && !canAccess) {
         return null;
     }
 

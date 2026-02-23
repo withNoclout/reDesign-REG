@@ -32,6 +32,11 @@ export default function Main() {
     const [loadingInfo, setLoadingInfo] = useState(true);
     const [error, setError] = useState(null);
     const [studentInfo, setStudentInfo] = useState(null);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
 
     // Check permissions
@@ -100,7 +105,7 @@ export default function Main() {
     }
 
     // Access Denied State (Redirecting...)
-    if (!canAccess) {
+    if (mounted && !canAccess) {
         return null;
     }
 

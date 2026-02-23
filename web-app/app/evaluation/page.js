@@ -23,6 +23,11 @@ export default function EvaluationPage() {
     const [evalList, setEvalList] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // Check if this page is accessible
     const canAccess = isGuest ? allowedModules.includes('grade') : isAuthenticated;
@@ -107,7 +112,7 @@ export default function EvaluationPage() {
     }
 
     // Handle access denied
-    if (!canAccess) {
+    if (mounted && !canAccess) {
         return null;
     }
 
