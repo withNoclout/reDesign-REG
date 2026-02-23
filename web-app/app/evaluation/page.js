@@ -145,9 +145,9 @@ export default function EvaluationPage() {
                     {/* Summary Card - Only show when we have data */}
                     {!loading && !error && evalList.length > 0 && (
                         <div className="flex gap-4 p-4 rounded-2xl bg-[rgba(255,255,255,0.1)] backdrop-blur-md border border-[rgba(255,255,255,0.15)] shadow-lg items-center">
-                            <div className="pr-4 border-r border-white/10">
-                                <p className="text-xs text-white/70 uppercase tracking-wider mb-1">Pending</p>
-                                <p className="text-2xl font-bold text-[#ff5722] font-montserrat text-center">{evalList.length}</p>
+                            <div className="flex-1">
+                                <h3 className="text-white/80 font-medium font-prompt text-sm md:text-base mb-1">ต้องประเมินภาคเรียนนี้</h3>
+                                <p className="text-2xl font-bold text-[#ff5722] font-montserrat text-center">{evalList.filter(e => !e.is_evaluated).length}</p>
                             </div>
                             <div className="flex items-center gap-3">
                                 <button className="px-4 py-2 bg-[rgba(255,87,34,0.15)] border border-[rgba(255,87,34,0.4)] text-[#ff5722] rounded-xl text-sm font-bold hover:bg-[#ff5722] hover:text-white transition-colors flex items-center gap-2 group">
@@ -186,50 +186,93 @@ export default function EvaluationPage() {
                     </div>
                 )}
 
-                {/* Empty State / Completed State */}
-                {!loading && !error && evalList.length === 0 && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="text-center py-20 bg-[rgba(255,255,255,0.05)] backdrop-blur-md border border-[rgba(255,255,255,0.1)] rounded-3xl mt-4"
-                    >
-                        <div className="w-20 h-20 bg-[#4ade80]/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <CheckIcon className="w-10 h-10 text-[#4ade80]" />
-                        </div>
-                        <div className="text-white text-2xl font-bold mb-2 font-prompt">
-                            ประเมินครบแล้ว!
-                        </div>
-                        <div className="text-white/60 text-sm max-w-sm mx-auto">
-                            คุณได้ทำการประเมินอาจารย์ครบทุกท่านในภาคการศึกษานี้เรียบร้อยแล้ว ยอดเยี่ยมมาก 🎉
-                        </div>
-                    </motion.div>
-                )}
+                {/* Evaluation Split Logic */}
+                {(() => {
+                    const pendingEvals = evalList.filter(item => !item.is_evaluated);
+                    const completedEvals = evalList.filter(item => item.is_evaluated);
 
-                {/* Evaluation List */}
-                {!loading && !error && evalList.length > 0 && (
-                    <motion.div
-                        variants={staggerContainer}
-                        initial="hidden"
-                        animate="show"
-                        className="grid grid-cols-1 gap-4 w-full"
-                    >
-                        <AnimatePresence>
-                            {evalList.map((item) => (
-                                <motion.div key={`${item.class_id}-${item.officer_id}`} variants={staggerItem}>
-                                    <EvaluationCard
-                                        item={item}
-                                        onEvaluate={(teacher) => {
-                                            router.push(`/evaluation/form/${teacher.evaluate_id || teacher.evaluateid}?classId=${teacher.class_id || teacher.classid}&officerId=${teacher.officer_id || teacher.officerid}`);
-                                        }}
-                                        onAutoEvaluate={(teacher) => {
-                                            alert(`[DEMO] กำลังพัฒนาระบบ Auto Submit สำหรับ: ${teacher.officer_name}`);
-                                        }}
-                                    />
+                    return (
+                        <>
+                            {/* Empty State / Completed State */}
+                            {!loading && !error && pendingEvals.length === 0 && (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="text-center py-20 bg-[rgba(255,255,255,0.05)] backdrop-blur-md border border-[rgba(255,255,255,0.1)] rounded-3xl mt-4"
+                                >
+                                    <div className="w-20 h-20 bg-[#4ade80]/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                                        <CheckIcon className="w-10 h-10 text-[#4ade80]" />
+                                    </div>
+                                    <div className="text-white text-2xl font-bold mb-2 font-prompt">
+                                        ประเมินครบแล้ว!
+                                    </div>
+                                    <div className="text-white/60 text-sm max-w-sm mx-auto">
+                                        คุณได้ทำการประเมินอาจารย์ครบทุกท่านในภาคการศึกษานี้เรียบร้อยแล้ว ยอดเยี่ยมมาก 🎉
+                                    </div>
                                 </motion.div>
-                            ))}
-                        </AnimatePresence>
-                    </motion.div>
-                )}
+                            )}
+
+                            {/* Pending Evaluation List */}
+                            {!loading && !error && pendingEvals.length > 0 && (
+                                <motion.div
+                                    variants={staggerContainer}
+                                    initial="hidden"
+                                    animate="show"
+                                    className="grid grid-cols-1 gap-4 w-full"
+                                >
+                                    <AnimatePresence>
+                                        {pendingEvals.map((item) => (
+                                            <motion.div key={`${item.class_id}-${item.officer_id}`} variants={staggerItem}>
+                                                <EvaluationCard
+                                                    item={item}
+                                                    onEvaluate={(teacher) => {
+                                                        router.push(`/evaluation/form/${teacher.evaluate_id || teacher.evaluateid}?classId=${teacher.class_id || teacher.classid}&officerId=${teacher.officer_id || teacher.officerid}`);
+                                                    }}
+                                                    onAutoEvaluate={(teacher) => {
+                                                        alert(`[DEMO] กำลังพัฒนาระบบ Auto Submit สำหรับ: ${teacher.officer_name}`);
+                                                    }}
+                                                />
+                                            </motion.div>
+                                        ))}
+                                    </AnimatePresence>
+                                </motion.div>
+                            )}
+
+                            {/* Completed Evaluation List */}
+                            {!loading && !error && completedEvals.length > 0 && (
+                                <motion.div
+                                    variants={staggerContainer}
+                                    initial="hidden"
+                                    animate="show"
+                                    className="grid grid-cols-1 gap-4 w-full mt-10"
+                                >
+                                    <div className="flex items-center gap-4 mb-2">
+                                        <div className="h-px bg-white/20 flex-1"></div>
+                                        <span className="text-white/50 font-prompt text-sm font-bold">✓ ประเมินอาจารย์เรียบร้อยแล้ว ({completedEvals.length})</span>
+                                        <div className="h-px bg-white/20 flex-1"></div>
+                                    </div>
+
+                                    <AnimatePresence>
+                                        {completedEvals.map((item) => (
+                                            <motion.div
+                                                key={`${item.class_id}-${item.officer_id}`}
+                                                variants={staggerItem}
+                                                className="opacity-60 grayscale-[0.3] pointer-events-none"
+                                            >
+                                                <EvaluationCard
+                                                    item={item}
+                                                    isCompleted={true}
+                                                    onEvaluate={() => { }}
+                                                    onAutoEvaluate={() => { }}
+                                                />
+                                            </motion.div>
+                                        ))}
+                                    </AnimatePresence>
+                                </motion.div>
+                            )}
+                        </>
+                    );
+                })()}
 
                 {/* Information Hint */}
                 {!loading && !error && evalList.length > 0 && (

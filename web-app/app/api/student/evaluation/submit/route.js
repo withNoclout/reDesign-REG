@@ -4,6 +4,7 @@ import axios from 'axios';
 import https from 'https';
 import { encryptForReg } from '@/lib/regCipherUtils';
 import { clearEvalCache } from '../route';
+import { getServiceSupabase } from '@/lib/supabase';
 
 const BASE_URL = 'https://reg3.kmutnb.ac.th/regapiweb1/api/th';
 
@@ -106,6 +107,20 @@ export async function POST(request) {
         // --- THE FIX: Clear the cache so the frontend knows this instructor is done ---
         if (stdCode) {
             clearEvalCache(stdCode);
+
+            // --- THE ENHANCEMENT: Remember this submission locally to counter university delays ---
+            try {
+                const supabase = getServiceSupabase();
+                await supabase.from('evaluation_submissions').upsert({
+                    user_code: stdCode,
+                    evaluate_id: String(evaluateId),
+                    class_id: String(classId),
+                    officer_id: String(officerId),
+                    submitted_at: new Date().toISOString()
+                }, { onConflict: 'user_code, evaluate_id, officer_id, class_id' });
+            } catch (dbErr) {
+                console.warn('[Submit Proxy] Failed to cache submission locally (non-blocking):', dbErr.message);
+            }
         }
 
         return NextResponse.json({

@@ -4,6 +4,7 @@ import axios from 'axios';
 import https from 'https';
 import zlib from 'zlib';
 import { promisify } from 'util';
+import { getServiceSupabase } from '@/lib/supabase';
 
 const gunzip = promisify(zlib.gunzip);
 const BASE_URL = 'https://reg3.kmutnb.ac.th/regapiweb1/api/th';
@@ -53,33 +54,60 @@ export async function GET() {
             const decompressed = await gunzip(compressedBuffer);
             const courses = JSON.parse(decompressed.toString('utf-8'));
 
-            // Filter for unevaluated instructors across all courses
-            const unevaluated = [];
+            // Fetch local cached evaluations from Supabase to counter University API delays
+            let localCacheRecords = [];
+            if (stdCode) {
+                try {
+                    const supabase = getServiceSupabase();
+                    const { data } = await supabase
+                        .from('evaluation_submissions')
+                        .select('evaluate_id, officer_id, class_id')
+                        .eq('user_code', stdCode);
+                    if (data) localCacheRecords = data;
+                } catch (dbErr) {
+                    console.warn('[Evaluation API] Failed to fetch local cache:', dbErr.message);
+                }
+            }
+
+            // Map all instructors and determine their true evaluation status
+            const allEvaluations = [];
             courses.forEach(course => {
                 if (course.instructor && Array.isArray(course.instructor)) {
                     course.instructor.forEach(inst => {
-                        if (inst.evaluatestatus === 0) {
-                            unevaluated.push({
-                                course_id: course.courseid,
-                                course_code: course.coursecode,
-                                course_name: course.coursename,
-                                section: course.sectioncode,
-                                class_id: course.classid,
-                                evaluate_id: inst.evaluateid,
-                                officer_id: inst.officerid,
-                                officer_name: `${inst.prefixname}${inst.officername} ${inst.officersurname}`,
-                                eva_date: course.evadate
-                            });
+                        // Check if university already knows it's evaluated
+                        let isEvaluated = inst.evaluatestatus === 1;
+
+                        // Check if we have a robust local cache saying it's evaluated (to counter university delay)
+                        if (!isEvaluated && localCacheRecords.length > 0) {
+                            const foundInDB = localCacheRecords.some(row =>
+                                row.evaluate_id === String(inst.evaluateid) &&
+                                row.officer_id === String(inst.officerid) &&
+                                row.class_id === String(course.classid)
+                            );
+                            if (foundInDB) isEvaluated = true;
                         }
+
+                        allEvaluations.push({
+                            course_id: course.courseid,
+                            course_code: course.coursecode,
+                            course_name: course.coursename,
+                            section: course.sectioncode,
+                            class_id: course.classid,
+                            evaluate_id: inst.evaluateid,
+                            officer_id: inst.officerid,
+                            officer_name: `${inst.prefixname}${inst.officername} ${inst.officersurname}`,
+                            eva_date: course.evadate,
+                            is_evaluated: isEvaluated // New property for the frontend
+                        });
                     });
                 }
             });
 
             if (stdCode) {
-                evalCache.set(stdCode, { timestamp: Date.now(), data: unevaluated });
+                evalCache.set(stdCode, { timestamp: Date.now(), data: allEvaluations });
             }
 
-            return NextResponse.json({ success: true, data: unevaluated });
+            return NextResponse.json({ success: true, data: allEvaluations });
         }
 
         return NextResponse.json({ success: false, message: 'Failed to fetch evaluation list' }, { status: res.status });
