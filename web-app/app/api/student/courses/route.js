@@ -33,24 +33,13 @@ export async function GET() {
     const cookieStore = await cookies();
     const token = cookieStore.get('reg_token')?.value;
 
-    // Mock data fallback
-    if (process.env.MOCK_AUTH === 'true' || !token) {
-        return NextResponse.json({
-            success: true,
-            data: [{
-                coursecode: '010123102',
-                coursename: 'การเขียนโปรแกรมคอมพิวเตอร์',
-                creditattempt: 3,
-                sectioncode: '1',
-                acadyear: 2568,
-                semester: 2
-            }],
-            semester: '2/2568'
-        });
+    // Token validation
+    if (!token) {
+        return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
     const apiConfig = {
-        headers: { 
+        headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
         },
@@ -101,11 +90,11 @@ export async function GET() {
                 // กรอง summary rows (coursecode ว่าง หรือ coursename มี "TOTAL")
                 if (!course.coursecode || course.coursecode.trim() === '') return false;
                 if (course.coursename && course.coursename.includes('TOTAL')) return false;
-                
+
                 // ถ้ารู้เทอมปัจจุบัน ให้กรองตามเทอม
                 if (currentSemester && currentAcadYear) {
-                    return course.semester === currentSemester && 
-                           course.acadyear === currentAcadYear;
+                    return course.semester === currentSemester &&
+                        course.acadyear === currentAcadYear;
                 }
                 // ถ้าไม่รู้ ให้เอาวิชาที่ยังไม่มีเกรดล่าสุด
                 return !course.grade || course.grade === '';

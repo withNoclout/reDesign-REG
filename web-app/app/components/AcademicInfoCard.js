@@ -9,6 +9,15 @@ export default function AcademicInfoCard({ data, loading }) {
 
     if (!data) return null;
 
+    // Boundary Rule: Accept either camelCase (from API) or snake_case (from legacy adapters).
+    // Prefer camelCase — this is the standard for all new code.
+    const currentYear = data.currentYear ?? data.currentacadyear ?? null;
+    const currentSem = data.currentSemester ?? data.currentsemester ?? null;
+    const enrollYear = data.enrollYear ?? data.enrollacadyear ?? null;
+    const enrollSem = data.enrollSemester ?? data.enrollsemester ?? null;
+    const admitYear = data.admitYear ?? data.admitacadyear ?? null;
+    const admitSem = data.admitSemester ?? data.admitsemester ?? null;
+
     return (
         <div style={{
             background: 'rgba(255, 255, 255, 0.08)',
@@ -37,23 +46,23 @@ export default function AcademicInfoCard({ data, loading }) {
             }}>
                 <AcadItem
                     label="ปีการศึกษาปัจจุบัน"
-                    value={`${data.currentacadyear || '—'}`}
-                    sub={data.currentsemester ? `ภาคเรียนที่ ${data.currentsemester}` : null}
+                    value={`${currentYear || '—'}`}
+                    sub={currentSem ? `ภาคเรียนที่ ${currentSem}` : null}
                     highlight
                 />
                 <AcadItem
                     label="ช่วงลงทะเบียน"
-                    value={`${data.enrollacadyear || '—'}`}
-                    sub={data.enrollsemester ? `ภาคเรียนที่ ${data.enrollsemester}` : null}
+                    value={`${enrollYear || '—'}`}
+                    sub={enrollSem ? `ภาคเรียนที่ ${enrollSem}` : null}
                 />
                 <AcadItem
                     label="ปีที่เข้าศึกษา"
-                    value={`${data.admitacadyear || '—'}`}
-                    sub={data.admitsemester ? `ภาคเรียนที่ ${data.admitsemester}` : null}
+                    value={`${admitYear || '—'}`}
+                    sub={admitSem ? `ภาคเรียนที่ ${admitSem}` : null}
                 />
                 <AcadItem
                     label="สถานะลงทะเบียน"
-                    value={data.enrollacadyear === data.currentacadyear
+                    value={enrollYear === currentYear
                         ? <span className="inline-flex items-center gap-1"><CheckIcon size={14} /> เปิดลงทะเบียน</span>
                         : <span className="inline-flex items-center gap-1"><ClockIcon size={14} /> รอเปิด</span>}
                     isStatus

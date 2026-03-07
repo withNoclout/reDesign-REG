@@ -34,14 +34,7 @@ function _setCachedAuth(token, result) {
  * @returns {Promise<string|null>} The user ID if authenticated, or null.
  */
 export async function getAuthUser() {
-    // 1. Check for Mock Mode (Dev Only)
-    if (process.env.MOCK_AUTH === 'true') {
-        console.warn('[Auth] ⚠️ Using MOCK_AUTH mode. Bypassing external API.');
-        const mockId = '00000000-0000-0000-0000-000000000067';
-        return mockId;
-    }
-
-    // 2. Real Auth Check
+    // 1. Real Auth Check
     const cookieStore = await cookies();
     const token = cookieStore.get('reg_token')?.value;
 

@@ -19,6 +19,7 @@ import UserProfileCard from '../components/UserProfileCard';
 import AcademicInfoCard from '../components/AcademicInfoCard';
 import ErrorAlert from '../components/ErrorAlert';
 import PortfolioGrid from '../components/PortfolioGrid';
+import NextExamWidget from '../components/NextExamWidget';
 import '../globals.css';
 
 const ADMIN_USER_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID || 's6701091611290';
@@ -134,22 +135,15 @@ export default function Main() {
                         <UserProfileCard user={user} loading={loadingInfo} profileData={studentInfo} />
                         {studentInfo && (
                             <AcademicInfoCard
-                                data={{
-                                    currentacadyear: studentInfo.currentYear,
-                                    currentsemester: studentInfo.currentSemester,
-                                    enrollacadyear: studentInfo.enrollYear,
-                                    enrollsemester: studentInfo.enrollSemester,
-                                    admitacadyear: studentInfo.admitYear,
-                                    admitsemester: studentInfo.admitSemester
-                                }}
+                                data={studentInfo}
                                 loading={loadingInfo}
                             />
                         )}
                     </div>
 
-                    {/* Right Column: News */}
-                    {/* Right Column: Portfolio (Replaces News) */}
+                    {/* Right Column: Portfolio & Exams */}
                     <div className="dashboard-right">
+                        <NextExamWidget />
                         <PortfolioGrid />
                     </div>
                 </div>

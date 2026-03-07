@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { UserCheckIcon, ClockIcon, AlertTriangleIcon, ZapIcon } from './Icons';
 
-export default function EvaluationCard({ item, onEvaluate, onAutoEvaluate }) {
+export default function EvaluationCard({ item, isCompleted, onEvaluate, onAutoEvaluate }) {
     return (
         <motion.div
             layout
@@ -41,30 +41,38 @@ export default function EvaluationCard({ item, onEvaluate, onAutoEvaluate }) {
                 <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto mt-4 md:mt-0 pt-4 md:pt-0 border-t border-white/10 md:border-0">
                     <div className="flex-1 md:flex-none flex justify-between md:justify-end items-center w-full md:w-auto md:mr-4">
                         <div className="flex flex-col md:items-end">
-                            <span className="text-orange-400 text-xs font-bold uppercase tracking-wider mb-0.5 flex items-center gap-1 font-montserrat">
-                                <AlertTriangleIcon size={12} /> Pending
-                            </span>
+                            {isCompleted ? (
+                                <span className="text-[#4ade80] text-xs font-bold uppercase tracking-wider mb-0.5 flex items-center gap-1 font-montserrat">
+                                    <UserCheckIcon size={12} /> Completed
+                                </span>
+                            ) : (
+                                <span className="text-orange-400 text-xs font-bold uppercase tracking-wider mb-0.5 flex items-center gap-1 font-montserrat">
+                                    <AlertTriangleIcon size={12} /> Pending
+                                </span>
+                            )}
                             <span className="text-white/40 text-[10px] font-montserrat">{item.eva_date}</span>
                         </div>
                     </div>
 
-                    <div className="flex gap-2 w-full md:w-auto">
-                        <button
-                            onClick={() => onAutoEvaluate && onAutoEvaluate(item)}
-                            className="flex-1 md:flex-none py-2.5 px-4 rounded-xl bg-[rgba(255,87,34,0.15)] border border-[rgba(255,87,34,0.3)] text-[#ff5722] font-bold hover:bg-[#ff5722] hover:text-white transition-all duration-300 flex items-center justify-center gap-2 group/auto"
-                            title="Auto Evaluate"
-                        >
-                            <ZapIcon size={16} className="group-hover/auto:animate-pulse" />
-                            <span className="md:hidden">Auto</span>
-                        </button>
+                    {!isCompleted && (
+                        <div className="flex gap-2 w-full md:w-auto">
+                            <button
+                                onClick={() => onAutoEvaluate && onAutoEvaluate(item)}
+                                className="flex-1 md:flex-none py-2.5 px-4 rounded-xl bg-[rgba(255,87,34,0.15)] border border-[rgba(255,87,34,0.3)] text-[#ff5722] font-bold hover:bg-[#ff5722] hover:text-white transition-all duration-300 flex items-center justify-center gap-2 group/auto"
+                                title="Auto Evaluate"
+                            >
+                                <ZapIcon size={16} className="group-hover/auto:animate-pulse" />
+                                <span className="md:hidden">Auto</span>
+                            </button>
 
-                        <button
-                            onClick={() => onEvaluate(item)}
-                            className="flex-[2] md:flex-none py-2.5 px-6 rounded-xl bg-white text-gray-900 font-bold hover:bg-gray-200 transition-all duration-300 flex items-center justify-center font-prompt"
-                        >
-                            ประเมินผล
-                        </button>
-                    </div>
+                            <button
+                                onClick={() => onEvaluate(item)}
+                                className="flex-[2] md:flex-none py-2.5 px-6 rounded-xl bg-white text-gray-900 font-bold hover:bg-gray-200 transition-all duration-300 flex items-center justify-center font-prompt"
+                            >
+                                ประเมินผล
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 

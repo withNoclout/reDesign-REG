@@ -387,3 +387,11 @@ export function SendIcon({ size, className, ...props }) {
         </Icon>
     );
 }
+
+export function ChevronRightIcon({ size, className, ...props }) {
+    return (
+        <Icon size={size} className={className} {...props}>
+            <polyline points="9 18 15 12 9 6" />
+        </Icon>
+    );
+}

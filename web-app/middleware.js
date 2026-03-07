@@ -46,9 +46,9 @@ export function middleware(request) {
         default-src 'self';
         script-src 'self' 'unsafe-eval' 'unsafe-inline';
         style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-        img-src 'self' blob: data: https://tqbzejjswyexfyvtluup.supabase.co;
+        img-src 'self' blob: data: https://reg.kmutnb.ac.th https://reg3.kmutnb.ac.th https://reg4.kmutnb.ac.th https://tqbzejjswyexfyvtluup.supabase.co;
         font-src 'self' https://fonts.gstatic.com;
-        connect-src 'self' https://tqbzejjswyexfyvtluup.supabase.co;
+        connect-src 'self' https://tqbzejjswyexfyvtluup.supabase.co https://reg.kmutnb.ac.th https://reg3.kmutnb.ac.th https://reg4.kmutnb.ac.th;
         object-src 'none';
         base-uri 'self';
         form-action 'self';

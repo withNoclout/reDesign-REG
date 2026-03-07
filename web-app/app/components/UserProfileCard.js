@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { GraduationCapIcon, CalendarIcon, BuildingIcon, CogIcon, IdCardIcon, MailIcon, BookOpenIcon, BookIcon, UserCheckIcon } from './Icons';
 import OtpVerifyModal from './OtpVerifyModal';
+import ProfileUploadModal from './ProfileUploadModal';
 
 
 export default function UserProfileCard({ user, loading, profileData }) {
@@ -11,10 +12,33 @@ export default function UserProfileCard({ user, loading, profileData }) {
 
     // State declarations
     const [isHovered, setIsHovered] = useState(false);
-    const [uploading, setUploading] = useState(false);
     const [extraInfo, setExtraInfo] = useState(profileData || null);
     const [showOtpModal, setShowOtpModal] = useState(false);
-    const fileInputRef = useRef(null);
+    const [showUploadModal, setShowUploadModal] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
+
+    const handleSyncProfile = async (e) => {
+        if (e) e.stopPropagation();
+        setIsSyncing(true);
+        try {
+            const res = await fetch('/api/student/profile/sync', { method: 'POST' });
+            if (res.status === 401) {
+                if (logout) logout();
+                return;
+            }
+            const data = await res.json();
+            if (data && data.success) {
+                setExtraInfo(data.data);
+            } else {
+                alert(data.message || 'ซิงค์ข้อมูลไม่สำเร็จ');
+            }
+        } catch (err) {
+            console.error('Failed to sync profile', err);
+            alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+        } finally {
+            setIsSyncing(false);
+        }
+    };
 
     const handleOtpVerified = () => {
         setShowOtpModal(false);
@@ -35,22 +59,15 @@ export default function UserProfileCard({ user, loading, profileData }) {
             fetch('/api/student/profile')
                 .then(async res => {
                     if (res.status === 401) {
-                        console.warn('[UserProfileCard] Session Expired from Profile API. Logging out...');
                         if (logout) logout();
-                        // Note: useAuth provides 'logout' (was handleLogout in page.js, check context)
-                        // In page.js it destructured: { logout: handleLogout }.
-                        // In UserProfileCard it destructured: { ... }. 
-                        // Let's check Context.
                         return null;
                     }
                     return res.json();
                 })
                 .then(data => {
-                    if (data && data.success) {
-                        setExtraInfo(data.data);
-                    }
+                    if (data?.success) setExtraInfo(data.data);
                 })
-                .catch(err => console.error('Failed to fetch student profile:', err));
+                .catch(err => console.error('[UserProfileCard] Failed to fetch profile:', err));
         }
     }, [user, logout, loading]);
 
@@ -69,45 +86,6 @@ export default function UserProfileCard({ user, loading, profileData }) {
     // Display image: custom Supabase image > university original > null (shows letter avatar)
     const displayImg = user.img || user.originalImg || null;
 
-    const handleFileChange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        if (file.size > 5 * 1024 * 1024) {
-            alert('File too large (max 5MB)');
-            return;
-        }
-
-        setUploading(true);
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                let width = img.width;
-                let height = img.height;
-                const MAX_SIZE = 500;
-
-                if (width > height) {
-                    if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
-                } else {
-                    if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
-                }
-
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-                updateProfileImage(dataUrl);
-                setUploading(false);
-            };
-            img.src = event.target.result;
-        };
-        reader.readAsDataURL(file);
-    };
-
     const handleReset = (e) => {
         e.stopPropagation();
         if (confirm('Revert to original student photo?')) {
@@ -115,9 +93,13 @@ export default function UserProfileCard({ user, loading, profileData }) {
         }
     };
 
-    // No verification gate — anyone logged in can change their profile picture
     const handleProfileClick = () => {
-        fileInputRef.current?.click();
+        setShowUploadModal(true);
+    };
+
+    const handleCropSave = (dataUrl) => {
+        updateProfileImage(dataUrl);
+        setShowUploadModal(false);
     };
 
     return (
@@ -176,27 +158,22 @@ export default function UserProfileCard({ user, loading, profileData }) {
                     </div>
 
                     {/* Hover Overlay */}
-                    {(isHovered || uploading) && (
+                    {isHovered && (
                         <div style={{
                             position: 'absolute', inset: 0,
                             borderRadius: '50%',
                             background: 'rgba(0,0,0,0.5)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            color: 'white', fontSize: '10px', flexDirection: 'column',
+                            color: 'white', flexDirection: 'column', gap: '4px',
                             backdropFilter: 'blur(2px)',
                         }}>
-                            {uploading ? '...' : 'แก้ไข'}
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                                <circle cx="12" cy="13" r="4" />
+                            </svg>
+                            <span style={{ fontSize: '10px', fontWeight: 600 }}>แก้ไข</span>
                         </div>
                     )}
-
-                    {/* Hidden Input */}
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        style={{ display: 'none' }}
-                        accept="image/*"
-                        onChange={handleFileChange}
-                    />
                 </div>
 
                 {/* Name & Code */}
@@ -274,12 +251,41 @@ export default function UserProfileCard({ user, loading, profileData }) {
                 flexDirection: 'column',
                 gap: '16px'
             }}>
-                <h3 style={{
-                    color: 'white', fontSize: '0.95rem', fontWeight: 600, margin: 0,
-                    display: 'flex', alignItems: 'center', gap: '8px'
-                }}>
-                    <span style={{ opacity: 0.7 }}><BookOpenIcon size={16} /></span> ข้อมูลทางวิชาการ
-                </h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <h3 style={{
+                        color: 'white', fontSize: '0.95rem', fontWeight: 600, margin: 0,
+                        display: 'flex', alignItems: 'center', gap: '8px'
+                    }}>
+                        <span style={{ opacity: 0.7 }}><BookOpenIcon size={16} /></span> ข้อมูลทางวิชาการ
+                    </h3>
+
+                    <button
+                        onClick={handleSyncProfile}
+                        disabled={isSyncing}
+                        aria-label="Refresh Profile Data"
+                        style={{
+                            background: isSyncing ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.1)',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            borderRadius: '6px',
+                            color: 'rgba(255,255,255,0.9)',
+                            fontSize: '0.7rem',
+                            padding: '3px 8px',
+                            cursor: isSyncing ? 'wait' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            transition: 'all 0.2s',
+                        }}
+                    >
+                        <span style={{
+                            display: 'inline-block',
+                            transform: isSyncing ? 'rotate(360deg)' : 'none',
+                            transition: isSyncing ? 'transform 1s linear infinite' : 'none',
+                            fontSize: '0.85rem'
+                        }}>↻</span>
+                        {isSyncing ? 'กำลังซิงค์...' : 'อัปเดตข้อมูล'}
+                    </button>
+                </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
                     <InfoItem icon={<BuildingIcon size={14} />} label="คณะ" value={extraInfo?.faculty} />
@@ -321,6 +327,13 @@ export default function UserProfileCard({ user, loading, profileData }) {
                 userName={user.name || user.username}
                 onVerified={handleOtpVerified}
                 onClose={() => setShowOtpModal(false)}
+            />
+
+            {/* Profile Upload & Crop Modal */}
+            <ProfileUploadModal
+                isOpen={showUploadModal}
+                onClose={() => setShowUploadModal(false)}
+                onSave={handleCropSave}
             />
         </div>
     );

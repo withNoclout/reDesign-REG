@@ -111,15 +111,9 @@ export async function POST(request) {
     try {
         let userId;
 
-        if (process.env.MOCK_AUTH === 'true') {
-            const mockId = '00000000-0000-0000-0000-000000000067';
-            console.log('[Portfolio API] Mock Auth Enabled. User ID:', mockId);
-            userId = mockId;
-        } else {
-            // 1. Check Auth
-            console.log('[Portfolio API] Checking Auth...');
-            userId = await getAuthUser();
-        }
+        // 1. Check Auth
+        console.log('[Portfolio API] Checking Auth...');
+        userId = await getAuthUser();
 
         console.log('[Portfolio API] Auth Result:', userId);
 

@@ -1,18 +1,14 @@
-import jwt from 'jsonwebtoken';
-
-// Get JWT secret from environment — must be set in .env.local
 const SECRET = process.env.JWT_SECRET;
-if (!SECRET) {
-    console.warn('[JWT] WARNING: JWT_SECRET is not set in environment. Share token features will not work.');
-}
 
 /**
- * Generate a share token with JWT
- * @param {Object} payload - Token payload (userId, permissions, guestName)
- * @param {string} expiresIn - Expiration time (e.g., '1h', '24h', '7d', '30d', '365d')
- * @returns {string} JWT token
+ * Generate a share token with JWT (Server-side only)
  */
 export function generateShareToken(payload, expiresIn) {
+    if (typeof window !== 'undefined') {
+        throw new Error('generateShareToken can only be called on the server');
+    }
+    // Dynamically import jsonwebtoken to prevent it from being bundled in the client
+    const jwt = require('jsonwebtoken');
     try {
         return jwt.sign(payload, SECRET, { expiresIn });
     } catch (error) {
@@ -22,15 +18,17 @@ export function generateShareToken(payload, expiresIn) {
 }
 
 /**
- * Verify a share token
- * @param {string} token - JWT token to verify
- * @returns {Object|null} Decoded payload if valid, null if invalid
+ * Verify a share token (Server-side preferred)
  */
 export function verifyShareToken(token) {
+    if (typeof window !== 'undefined') {
+        // On the client, we just decode it without verification (signature check is impossible without SECRET)
+        return decodeShareToken(token);
+    }
+    const jwt = require('jsonwebtoken');
     try {
         return jwt.verify(token, SECRET);
     } catch (error) {
-        // Token is invalid or expired
         console.error('Error verifying share token:', error.message);
         return null;
     }
@@ -42,8 +40,13 @@ export function verifyShareToken(token) {
  * @returns {Object|null} Decoded payload or null if invalid
  */
 export function decodeShareToken(token) {
+    if (!token) return null;
     try {
-        return jwt.decode(token);
+        // Simple base64 decode for the client to read permissions without jsonwebtoken
+        const parts = token.split('.');
+        if (parts.length !== 3) return null;
+        const payload = parts[1];
+        return JSON.parse(Buffer.from(payload, 'base64').toString());
     } catch (error) {
         console.error('Error decoding share token:', error);
         return null;

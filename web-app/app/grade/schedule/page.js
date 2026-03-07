@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { LockIcon, AlertTriangleIcon, ClockIcon, CalendarIcon, BookOpenIcon, ArrowUpIcon, ArrowDownIcon, UserIcon } from '../../components/Icons';
 import { useAuth } from '../../context/AuthContext';
 import { useGuest } from '../../context/GuestContext';
 import Navbar from '../../components/Navbar';
 import GuestBanner from '../../components/GuestBanner';
 import GradeSubNav from '../../components/GradeSubNav';
+import ExamSeatMap from '../../components/schedule/ExamSeatMap';
 import { fadeInUp, staggerContainer, staggerItem } from '@/lib/animations';
 import '../../globals.css';
 
@@ -95,11 +96,14 @@ export default function SchedulePage() {
     const { user, isAuthenticated, loading: authLoading, logout: handleLogout } = useAuth();
     const { isGuest, allowedModules, guestName, loading: guestLoading } = useGuest();
     const [scheduleData, setScheduleData] = useState(null);
+    const [availableSeats, setAvailableSeats] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [sortField, setSortField] = useState('subject_id');
     const [sortDirection, setSortDirection] = useState('asc');
     const [mounted, setMounted] = useState(false);
+    const [activeTab, setActiveTab] = useState('study'); // 'study' | 'exam'
+    const [selectedExam, setSelectedExam] = useState(null);
 
     useEffect(() => {
         setMounted(true);
@@ -136,7 +140,23 @@ export default function SchedulePage() {
             }
         };
 
+        const fetchAvailableSeats = async () => {
+            if (!isAuthenticated && !isGuest) return;
+            try {
+                const response = await fetch('/api/student/exam-seat');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && Array.isArray(data.exams)) {
+                        setAvailableSeats(data.exams.map(item => item.courseCode));
+                    }
+                }
+            } catch (err) {
+                console.warn('Failed to fetch available seats:', err);
+            }
+        };
+
         fetchSchedule();
+        fetchAvailableSeats();
     }, [isAuthenticated, isGuest]);
 
     // Build timetable grid data
@@ -223,8 +243,8 @@ export default function SchedulePage() {
                     valA = a.subject_id || ''; valB = b.subject_id || '';
                     break;
                 case 'subject_name':
-                    valA = a.subject_name_th || a.subject_name_en || '';
-                    valB = b.subject_name_th || b.subject_name_en || '';
+                    valA = a.subject_name_en || a.subject_name_th || '';
+                    valB = b.subject_name_en || b.subject_name_th || '';
                     break;
                 case 'teach_name':
                     valA = a.teach_name || ''; valB = b.teach_name || '';
@@ -252,6 +272,15 @@ export default function SchedulePage() {
         });
         return courses;
     }, [scheduleData, sortField, sortDirection]);
+
+    // Exam Lists
+    const { midterms, finals } = useMemo(() => {
+        if (!scheduleData?.data?.length) return { midterms: [], finals: [] };
+        const courses = scheduleData.data;
+        const m = courses.filter(c => c.exam_midterm).map(c => ({ ...c, dateFormatted: formatExamDate(c.exam_midterm) }));
+        const f = courses.filter(c => c.exam_final).map(c => ({ ...c, dateFormatted: formatExamDate(c.exam_final) }));
+        return { midterms: m, finals: f };
+    }, [scheduleData]);
 
     // Sort indicator component
     const SortHeader = ({ field, children, className = '' }) => (
@@ -340,6 +369,26 @@ export default function SchedulePage() {
 
                 <GradeSubNav />
 
+                {/* Tab Switcher */}
+                {!loading && !error && scheduleData && (
+                    <div className="flex bg-[rgba(255,255,255,0.06)] p-1 rounded-xl w-full max-w-sm mx-auto md:mx-0 border border-[rgba(255,255,255,0.1)]">
+                        <button
+                            onClick={() => setActiveTab('study')}
+                            className={`flex-1 py-2 text-sm font-medium font-prompt rounded-lg transition-all duration-300 ${activeTab === 'study' ? 'bg-[#ff5722] text-white shadow-lg' : 'text-white/50 hover:text-white/80'}`}
+                        >
+                            <CalendarIcon size={16} className="inline mr-2 -mt-0.5" />
+                            ตารางเรียน
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('exam')}
+                            className={`flex-1 py-2 text-sm font-medium font-prompt rounded-lg transition-all duration-300 ${activeTab === 'exam' ? 'bg-[#ff5722] text-white shadow-lg' : 'text-white/50 hover:text-white/80'}`}
+                        >
+                            <AlertTriangleIcon size={16} className="inline mr-2 -mt-0.5" />
+                            ตารางสอบ
+                        </button>
+                    </div>
+                )}
+
                 {/* Loading */}
                 {loading && (
                     <div className="text-center text-white/70 py-10" role="status" aria-live="polite">
@@ -385,7 +434,7 @@ export default function SchedulePage() {
                 )}
 
                 {/* ===== Desktop Timetable Grid ===== */}
-                {!loading && !error && activeDays.length > 0 && (
+                {!loading && !error && activeTab === 'study' && activeDays.length > 0 && (
                     <motion.div
                         variants={staggerContainer}
                         initial="hidden"
@@ -451,7 +500,7 @@ export default function SchedulePage() {
                                                                     {entry.course.subject_id}
                                                                 </p>
                                                                 <p className="text-xs text-white/90 font-prompt mt-0.5 line-clamp-2 leading-tight">
-                                                                    {entry.course.subject_name_th || entry.course.subject_name_en}
+                                                                    {entry.course.subject_name_en || entry.course.subject_name_th}
                                                                 </p>
                                                                 <div className="mt-1.5 flex items-center gap-2 text-[10px] text-white/50">
                                                                     <span>Sec {entry.course.section}</span>
@@ -532,7 +581,7 @@ export default function SchedulePage() {
                                                                         {entry.course.subject_id}
                                                                     </p>
                                                                     <p className="text-sm text-white/90 font-prompt mt-0.5 truncate">
-                                                                        {entry.course.subject_name_th || entry.course.subject_name_en}
+                                                                        {entry.course.subject_name_en || entry.course.subject_name_th}
                                                                     </p>
                                                                 </div>
                                                                 <span className="text-xs text-white/60 font-montserrat whitespace-nowrap ml-2">
@@ -562,7 +611,7 @@ export default function SchedulePage() {
                 )}
 
                 {/* ===== Course Detail Table (always visible below grid) ===== */}
-                {!loading && !error && sortedCourses.length > 0 && (
+                {!loading && !error && activeTab === 'study' && sortedCourses.length > 0 && (
                     <motion.div
                         variants={fadeInUp}
                         initial="initial"
@@ -601,7 +650,7 @@ export default function SchedulePage() {
                                                         {course.subject_id}
                                                     </td>
                                                     <td className="p-3 text-sm text-white/90 font-prompt max-w-[220px]">
-                                                        {course.subject_name_th || course.subject_name_en}
+                                                        {course.subject_name_en || course.subject_name_th}
                                                     </td>
                                                     <td className="p-3 text-sm text-white/70 font-prompt">
                                                         {stripTitles(course.teach_name) || '—'}
@@ -652,7 +701,7 @@ export default function SchedulePage() {
                                                     {course.subject_id}
                                                 </p>
                                                 <p className="text-sm text-white/90 font-prompt mt-0.5">
-                                                    {course.subject_name_th || course.subject_name_en}
+                                                    {course.subject_name_en || course.subject_name_th}
                                                 </p>
                                             </div>
                                             <span className="text-xs text-white/50 font-montserrat ml-2 shrink-0">
@@ -683,7 +732,7 @@ export default function SchedulePage() {
                         </div>
                     </motion.div>
                 )}
-                {!loading && !error && scheduleData?.unscheduled?.length > 0 && (
+                {!loading && !error && activeTab === 'study' && scheduleData?.unscheduled?.length > 0 && (
                     <motion.div
                         variants={fadeInUp}
                         initial="initial"
@@ -703,7 +752,7 @@ export default function SchedulePage() {
                                     <div className="flex items-center gap-3 min-w-0">
                                         <span className="text-xs text-white/50 font-montserrat w-24 shrink-0">{course.subject_id}</span>
                                         <span className="text-sm text-white/80 font-prompt truncate">
-                                            {course.subject_name_th || course.subject_name_en}
+                                            {course.subject_name_en || course.subject_name_th}
                                         </span>
                                     </div>
                                     <span className="text-xs text-white/40 font-montserrat ml-3 shrink-0">
@@ -714,7 +763,159 @@ export default function SchedulePage() {
                         </div>
                     </motion.div>
                 )}
+
+                {/* ===== Exam View ===== */}
+                {!loading && !error && activeTab === 'exam' && (
+                    <motion.div
+                        variants={staggerContainer}
+                        initial="hidden"
+                        animate="show"
+                        className="w-full space-y-8"
+                    >
+                        {midterms.length === 0 && finals.length === 0 && (
+                            <div className="text-center py-20 bg-[rgba(255,255,255,0.02)] rounded-3xl border border-[rgba(255,255,255,0.05)]">
+                                <AlertTriangleIcon size={48} className="mx-auto text-white/30 mb-4" />
+                                <div className="text-white/70 text-lg mb-2">ไม่พบข้อมูลตารางสอบ</div>
+                                <div className="text-white/50 text-sm">อาจารย์อาจนัดหมายสอบนอกตาราง หรือยังไม่มีการประกาศตารางสอบ</div>
+                            </div>
+                        )}
+
+                        {midterms.length > 0 && (
+                            <motion.div variants={staggerItem}>
+                                <div className="flex items-center gap-3 mb-4 px-2">
+                                    <div className="h-8 w-1 bg-[#ffb74d] rounded-full"></div>
+                                    <h2 className="text-xl font-bold text-white font-prompt">สอบกลางภาค (Midterm)</h2>
+                                    <span className="text-sm text-white/50 font-montserrat ml-2">{midterms.length} วิชา</span>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {midterms.map((course, idx) => {
+                                        const color = colorMap[course.subject_id] || { bg: 'rgba(255,255,255,0.1)', text: '#fff', border: 'rgba(255,255,255,0.2)' };
+
+                                        return (
+                                            <motion.div
+                                                layoutId={`exam-midterm-${course.subject_id}`}
+                                                onClick={() => availableSeats.includes(course.subject_id) && setSelectedExam({ course, type: 'midterm', color })}
+                                                key={`mid-${idx}`}
+                                                className={`bg-[rgba(255,255,255,0.06)] backdrop-blur-xl border border-[rgba(255,255,255,0.1)] rounded-2xl p-5 transition-all overflow-hidden z-10 ${availableSeats.includes(course.subject_id) ? 'hover:bg-[rgba(255,255,255,0.08)] cursor-pointer' : 'opacity-60'}`}
+                                            >
+                                                <div className="flex justify-between items-start mb-3">
+                                                    <span className="text-xs font-bold font-montserrat px-2 py-1 rounded-md" style={{ backgroundColor: color.bg, color: color.text }}>{course.subject_id}</span>
+                                                    <span className="text-xs text-white/50 font-montserrat">Sec {course.section}</span>
+                                                </div>
+                                                <h3 className="text-base text-white font-prompt mb-4 line-clamp-2 min-h-[48px]">{course.subject_name_en || course.subject_name_th}</h3>
+                                                <div className="flex items-center gap-3 bg-[rgba(0,0,0,0.2)] rounded-xl p-3 border border-white/5">
+                                                    <CalendarIcon size={20} className="text-[#ffb74d] shrink-0" />
+                                                    <span className="text-sm font-semibold text-white/90 font-montserrat">{course.dateFormatted}</span>
+                                                </div>
+                                            </motion.div>
+                                        );
+                                    })}
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {finals.length > 0 && (
+                            <motion.div variants={staggerItem}>
+                                <div className="flex items-center gap-3 mb-4 px-2 mt-8">
+                                    <div className="h-8 w-1 bg-[#f06292] rounded-full"></div>
+                                    <h2 className="text-xl font-bold text-white font-prompt">สอบปลายภาค (Final)</h2>
+                                    <span className="text-sm text-white/50 font-montserrat ml-2">{finals.length} วิชา</span>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {finals.map((course, idx) => {
+                                        const color = colorMap[course.subject_id] || { bg: 'rgba(255,255,255,0.1)', text: '#fff', border: 'rgba(255,255,255,0.2)' };
+
+                                        return (
+                                            <motion.div
+                                                layoutId={`exam-final-${course.subject_id}`}
+                                                onClick={() => availableSeats.includes(course.subject_id) && setSelectedExam({ course, type: 'final', color })}
+                                                key={`fin-${idx}`}
+                                                className={`bg-[rgba(255,255,255,0.06)] backdrop-blur-xl border border-[rgba(255,255,255,0.1)] rounded-2xl p-5 transition-all overflow-hidden z-10 ${availableSeats.includes(course.subject_id) ? 'hover:bg-[rgba(255,255,255,0.08)] cursor-pointer' : 'opacity-60'}`}
+                                            >
+                                                <div className="flex justify-between items-start mb-3">
+                                                    <span className="text-xs font-bold font-montserrat px-2 py-1 rounded-md" style={{ backgroundColor: color.bg, color: color.text }}>{course.subject_id}</span>
+                                                    <span className="text-xs text-white/50 font-montserrat">Sec {course.section}</span>
+                                                </div>
+                                                <h3 className="text-base text-white font-prompt mb-4 line-clamp-2 min-h-[48px]">{course.subject_name_en || course.subject_name_th}</h3>
+                                                <div className="flex items-center gap-3 bg-[rgba(0,0,0,0.2)] rounded-xl p-3 border border-white/5">
+                                                    <CalendarIcon size={20} className="text-[#f06292] shrink-0" />
+                                                    <span className="text-sm font-semibold text-white/90 font-montserrat">{course.dateFormatted}</span>
+                                                </div>
+                                            </motion.div>
+                                        );
+                                    })}
+                                </div>
+                            </motion.div>
+                        )}
+                    </motion.div>
+                )}
             </div>
+
+            {/* Shared Layout Overlay: Exam Seat Map Modal */}
+            <AnimatePresence>
+                {selectedExam && (
+                    <div className="fixed inset-0 z-[100] flex items-start justify-center p-4 md:p-8 pt-28 md:pt-32 overflow-hidden">
+                        {/* Backdrop */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setSelectedExam(null)}
+                            className="absolute inset-0 bg-black/70 backdrop-blur-md cursor-pointer"
+                        />
+
+                        {/* Modal Content */}
+                        <motion.div
+                            layoutId={`exam-${selectedExam.type}-${selectedExam.course.subject_id}`}
+                            className="relative w-full max-w-4xl bg-[#111] border border-white/10 rounded-2xl flex flex-col shadow-2xl z-10"
+                            style={{ maxHeight: 'calc(100vh - 140px)' }}
+                        >
+                            {/* Header */}
+                            <div className="p-6 border-b border-white/10 bg-[rgba(255,255,255,0.03)] rounded-t-2xl shrink-0">
+                                <div className="flex justify-between items-start mb-4">
+                                    <span className="text-sm font-bold font-montserrat px-3 py-1.5 rounded-md" style={{ backgroundColor: selectedExam.color.bg, color: selectedExam.color.text }}>
+                                        {selectedExam.course.subject_id}
+                                    </span>
+                                    <button
+                                        onClick={() => setSelectedExam(null)}
+                                        className="text-white/50 hover:text-white bg-black/40 hover:bg-black/60 p-2 rounded-full transition-colors"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                    </button>
+                                </div>
+                                <h3 className="text-xl md:text-2xl text-white font-prompt mb-4 pr-12 leading-snug">{selectedExam.course.subject_name_en || selectedExam.course.subject_name_th}</h3>
+                                <div className="flex flex-wrap gap-4">
+                                    <div className="flex items-center gap-3 bg-[rgba(0,0,0,0.3)] rounded-xl p-3 border border-white/5">
+                                        <CalendarIcon size={20} className={selectedExam.type === 'midterm' ? "text-[#ffb74d]" : "text-[#f06292]"} />
+                                        <span className="text-sm font-semibold text-white/90 font-montserrat">{selectedExam.course.dateFormatted}</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 bg-[rgba(0,0,0,0.3)] rounded-xl p-3 border border-white/5">
+                                        <div className="text-sm font-montserrat text-white/70">Sec <span className="text-white font-bold ml-1">{selectedExam.course.section}</span></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Scrollable Body (Seat Map) */}
+                            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-gradient-to-b from-[#111] to-[#0a0a0a] rounded-b-2xl">
+                                {selectedExam.type === 'midterm' ? (
+                                    <div className="text-center text-sm text-gray-400 py-20 bg-black/20 rounded-xl border border-white/5 flex flex-col items-center justify-center">
+                                        <ClockIcon size={48} className="text-white/20 mb-4" />
+                                        ข้อมูลที่นั่งสอบกลางภาคกำลังอยู่ในการอัปเดตและยังไม่พร้อมใช้งาน
+                                    </div>
+                                ) : (
+                                    (!isGuest && user?.usercode) ? (
+                                        <ExamSeatMap courseCode={selectedExam.course.subject_id} myStudentId={user.usercode} />
+                                    ) : (
+                                        <div className="text-center text-sm text-gray-400 py-20">
+                                            กรุณาเข้าสู่ระบบด้วยบัญชีผู้ใช้จริงเพื่อดูผังที่นั่ง
+                                        </div>
+                                    )
+                                )}
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </main>
     );
 }

@@ -23,6 +23,8 @@ export const metadata = {
     description: 'KMUTNB Registration System Redesign',
 }
 
+import { LazyMotion, domAnimation } from 'framer-motion';
+
 export default function RootLayout({ children }) {
     return (
         <html lang="th" className={`${prompt.variable} ${montserrat.variable}`} suppressHydrationWarning>
@@ -33,13 +35,15 @@ export default function RootLayout({ children }) {
                     ข้ามไปยังเนื้อหาหลัก (Skip to content)
                 </a>
                 <GlobalErrorListener />
-                <AuthProvider>
-                    <GuestProvider>
-                        <CredentialProvider>
-                            {children}
-                        </CredentialProvider>
-                    </GuestProvider>
-                </AuthProvider>
+                <LazyMotion features={domAnimation}>
+                    <AuthProvider>
+                        <GuestProvider>
+                            <CredentialProvider>
+                                {children}
+                            </CredentialProvider>
+                        </GuestProvider>
+                    </AuthProvider>
+                </LazyMotion>
             </body>
         </html>
     )

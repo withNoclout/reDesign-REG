@@ -5,6 +5,7 @@
 - `regapiweb2`: `https://reg4.kmutnb.ac.th/regapiweb2/api/th` (Primary for Student Info & Search)
 
 ## Authentication & Session
+**CRITICAL RULE: MOCK_AUTH is deprecated and forbidden.** All API routes and testing scripts must use real authentication via `.env.local` credentials. Do not use hardcoded test accounts (like 6301011610279).
 | Endpoint | Method | Base | Purpose | Notes |
 |----------|--------|------|---------|-------|
 | `/Validate/tokenservice` | GET | V2 | Token Service | Must be called first to get service token |

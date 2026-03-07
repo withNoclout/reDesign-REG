@@ -134,35 +134,14 @@ export async function GET() {
 
     serverLog('INFO', `=== Request Start === Has token: ${!!token}, Token length: ${token?.length || 0}`);
 
-    // Mock data fallback when no token
-    if (process.env.MOCK_AUTH === 'true' || !token) {
-        const reason = !token ? 'no token in cookie' : 'MOCK_AUTH enabled';
-        serverLog('WARN', `Serving Mock Data. Reason: ${reason}`);
-
-        const mockData = [{
-            weekday: 2,
-            timefrom: '09:00',
-            timeto: '12:00',
-            subject_id: '010123102',
-            subject_name_th: 'การเขียนโปรแกรมคอมพิวเตอร์',
-            subject_name_en: 'Computer Programming',
-            section: '1',
-            roomcode: 'TB-402',
-            teach_name: 'Dr. Somchai'
-        }];
-
-        return NextResponse.json({
-            success: true,
-            data: mockData,
-            scheduled: mockData,
-            unscheduled: [],
-            stats: { total: 1, withSchedule: 1, withoutSchedule: 0 },
-            semester: '2/2568'
-        });
+    // Token validation
+    if (!token) {
+        serverLog('WARN', 'Unauthorized request: No token in cookie');
+        return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
     // 🚀 FAST PATH: Check Active Memory Cache first
-    if (stdCode && process.env.MOCK_AUTH !== 'true') {
+    if (stdCode) {
         const cached = scheduleCache.get(stdCode);
         if (cached && (Date.now() - cached.timestamp < SCHEDULE_CACHE_TTL_MS)) {
             serverLog('INFO', `Fast Memory Cache hit (latency ~0ms) for schedule: ${stdCode}`);
@@ -282,8 +261,7 @@ export async function GET() {
             }
         };
 
-        // Update Memory Cache
-        if (stdCode && process.env.MOCK_AUTH !== 'true') {
+        if (stdCode) {
             scheduleCache.set(stdCode, { timestamp: Date.now(), data: { ...responseData, cached: true } });
         }
 

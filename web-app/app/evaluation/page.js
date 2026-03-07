@@ -24,6 +24,7 @@ export default function EvaluationPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [mounted, setMounted] = useState(false);
+    const [massEvalProgress, setMassEvalProgress] = useState({ active: false, current: 0, total: 0, teacherName: '' });
 
     useEffect(() => {
         setMounted(true);
@@ -39,61 +40,111 @@ export default function EvaluationPage() {
         }
     }, [canAccess, authLoading, guestLoading, handleLogout]);
 
-    useEffect(() => {
-        const fetchEvaluations = async () => {
-            if (isGuest) {
-                // Mock data for guests to showcase the feature
-                setTimeout(() => {
-                    setEvalList([
-                        {
-                            course_code: "040433001",
-                            course_name: "INTRO TO FOOD ENTREPRENEURSHIP",
-                            section: "S.1",
-                            class_id: 305594,
-                            officer_id: 2795,
-                            evaluate_id: 125,
-                            officer_name: "ดร. สุทิน แก่นนาคำ",
-                            eva_date: "10 มี.ค. 2569"
-                        },
-                        {
-                            course_code: "010913121",
-                            course_name: "MAINTENANCE ENGINEERING",
-                            section: "S.2",
-                            class_id: 305595,
-                            officer_id: 1234,
-                            evaluate_id: 126,
-                            officer_name: "รองศาสตราจารย์สมเกียรติ จงประสิทธิ์พร",
-                            eva_date: "15 มี.ค. 2569"
-                        }
-                    ]);
-                    setLoading(false);
-                }, 800);
-                return;
-            }
-
-            if (!isAuthenticated) return;
-
-            try {
-                setLoading(true);
-                const res = await fetch('/api/student/evaluation');
-                const result = await res.json();
-
-                if (result.success) {
-                    setEvalList(result.data || []);
-                    setError(null);
-                } else {
-                    setError(result.message || 'ไม่สามารถดึงข้อมูลการประเมินได้');
-                }
-            } catch (err) {
-                console.error('Fetch error:', err);
-                setError('เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่');
-            } finally {
+    const fetchEvaluations = async () => {
+        if (isGuest) {
+            setTimeout(() => {
+                setEvalList([
+                    {
+                        course_code: "040433001",
+                        course_name: "INTRO TO FOOD ENTREPRENEURSHIP",
+                        section: "S.1",
+                        class_id: 305594,
+                        officer_id: 2795,
+                        evaluate_id: 125,
+                        officer_name: "ดร. สุทิน แก่นนาคำ",
+                        eva_date: "10 มี.ค. 2569"
+                    },
+                    {
+                        course_code: "010913121",
+                        course_name: "MAINTENANCE ENGINEERING",
+                        section: "S.2",
+                        class_id: 305595,
+                        officer_id: 1234,
+                        evaluate_id: 126,
+                        officer_name: "รองศาสตราจารย์สมเกียรติ จงประสิทธิ์พร",
+                        eva_date: "15 มี.ค. 2569"
+                    }
+                ]);
                 setLoading(false);
-            }
-        };
+            }, 800);
+            return;
+        }
 
+        if (!isAuthenticated) return;
+
+        try {
+            setLoading(true);
+            const res = await fetch('/api/student/evaluation');
+            const result = await res.json();
+
+            if (result.success) {
+                setEvalList(result.data || []);
+                setError(null);
+            } else {
+                setError(result.message || 'ไม่สามารถดึงข้อมูลการประเมินได้');
+            }
+        } catch (err) {
+            console.error('Fetch error:', err);
+            setError('เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchEvaluations();
     }, [isAuthenticated, isGuest]);
+
+    const handleMassEvaluate = async () => {
+        const pendingEvals = evalList.filter(item => !item.is_evaluated);
+        if (pendingEvals.length === 0) return;
+
+        setMassEvalProgress({ active: true, current: 0, total: pendingEvals.length, teacherName: 'กำลังเตรียมการ...' });
+
+        let successCount = 0;
+        let index = 0;
+
+        for (const teacher of pendingEvals) {
+            index++;
+            const teacherName = teacher.officer_name || teacher.officername || 'อาจารย์';
+            setMassEvalProgress(prev => ({ ...prev, current: index, teacherName }));
+
+            try {
+                // Empty formData will cause backend /submit proxy to default all answers to '5'
+                const payload = {
+                    evaluateId: teacher.evaluate_id || teacher.evaluateid,
+                    classId: teacher.class_id || teacher.classid,
+                    officerId: teacher.officer_id || teacher.officerid,
+                    formData: {}
+                };
+
+                const res = await fetch('/api/student/evaluation/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    successCount++;
+                }
+            } catch (err) {
+                console.error('Mass Evaluate Error for', teacherName, err);
+            }
+
+            // Sleep 800ms between requests to prevent Rate Limiting
+            if (index < pendingEvals.length) {
+                await new Promise(resolve => setTimeout(resolve, 800));
+            }
+        }
+
+        // Finish
+        setMassEvalProgress({ active: false, current: 0, total: 0, teacherName: '' });
+        alert(`ประเมินเสร็จสิ้น! สำเร็จ ${successCount} จาก ${pendingEvals.length} รายการ`);
+
+        // Refresh the list to move them to completed
+        fetchEvaluations();
+    };
 
     // Handle loading state
     if (authLoading || guestLoading) {
@@ -150,9 +201,17 @@ export default function EvaluationPage() {
                                 <p className="text-2xl font-bold text-[#ff5722] font-montserrat text-center">{evalList.filter(e => !e.is_evaluated).length}</p>
                             </div>
                             <div className="flex items-center gap-3">
-                                <button className="px-4 py-2 bg-[rgba(255,87,34,0.15)] border border-[rgba(255,87,34,0.4)] text-[#ff5722] rounded-xl text-sm font-bold hover:bg-[#ff5722] hover:text-white transition-colors flex items-center gap-2 group">
-                                    <SparklesIcon size={14} className="group-hover:animate-pulse" />
-                                    <span>ประเมินทั้งหมด (Auto)</span>
+                                <button
+                                    onClick={handleMassEvaluate}
+                                    disabled={massEvalProgress.active}
+                                    className={`px-4 py-2 ${massEvalProgress.active ? 'bg-gray-500/20 text-gray-400 border-gray-500/40' : 'bg-[rgba(255,87,34,0.15)] text-[#ff5722] border-[rgba(255,87,34,0.4)] hover:bg-[#ff5722] hover:text-white'} border rounded-xl text-sm font-bold transition-colors flex items-center gap-2 group`}
+                                >
+                                    {massEvalProgress.active ? (
+                                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-gray-400"></div>
+                                    ) : (
+                                        <SparklesIcon size={14} className="group-hover:animate-pulse" />
+                                    )}
+                                    <span>{massEvalProgress.active ? 'กำลังประเมิน...' : 'Evaluate All (5 Stars)'}</span>
                                 </button>
                             </div>
                         </div>
@@ -229,7 +288,8 @@ export default function EvaluationPage() {
                                                         router.push(`/evaluation/form/${teacher.evaluate_id || teacher.evaluateid}?classId=${teacher.class_id || teacher.classid}&officerId=${teacher.officer_id || teacher.officerid}`);
                                                     }}
                                                     onAutoEvaluate={(teacher) => {
-                                                        alert(`[DEMO] กำลังพัฒนาระบบ Auto Submit สำหรับ: ${teacher.officer_name}`);
+                                                        // Placeholder button on Individual Card. Does nothing but show an alert.
+                                                        alert(`ฟังก์ชันนี้สงวนไว้สำหรับปุ่ม "Evaluate All (5 Stars)" ด้านบนครับ (เพื่อประเมินทีเดียวทุกคน)`);
                                                     }}
                                                 />
                                             </motion.div>
@@ -293,6 +353,50 @@ export default function EvaluationPage() {
                     </motion.div>
                 )}
             </div>
+
+            {/* Mass Evaluation Progress Overlay (Non-blocking bottom snackbar) */}
+            <AnimatePresence>
+                {massEvalProgress.active && (
+                    <motion.div
+                        initial={{ y: 100, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: 100, opacity: 0 }}
+                        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4"
+                    >
+                        <div className="bg-[#1a1c23]/90 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl p-5 overflow-hidden relative">
+                            {/* Background Progress Fill */}
+                            <div
+                                className="absolute top-0 left-0 h-full bg-[#ff5722]/10 transition-all duration-500 ease-out z-0"
+                                style={{ width: `${(massEvalProgress.current / massEvalProgress.total) * 100}%` }}
+                            ></div>
+
+                            <div className="relative z-10 flex flex-col gap-2">
+                                <div className="flex justify-between items-center">
+                                    <div className="flex items-center gap-2 text-white font-prompt font-medium">
+                                        <SparklesIcon size={16} className="text-[#ff5722] animate-pulse" />
+                                        <span>กำลังประเมินอัติโนมัติ</span>
+                                    </div>
+                                    <div className="text-white/60 text-sm font-montserrat">
+                                        {massEvalProgress.current} / {massEvalProgress.total}
+                                    </div>
+                                </div>
+
+                                <p className="text-white/80 text-sm font-prompt truncate">
+                                    กำลังดำเนินการ: <span className="text-white font-medium">{massEvalProgress.teacherName}</span>
+                                </p>
+
+                                {/* Slim Progress Bar */}
+                                <div className="w-full h-1.5 bg-white/10 rounded-full mt-1 overflow-hidden">
+                                    <div
+                                        className="h-full bg-gradient-to-r from-[#ff5722] to-[#ffcc80] transition-all duration-500 ease-out"
+                                        style={{ width: `${(massEvalProgress.current / massEvalProgress.total) * 100}%` }}
+                                    ></div>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </main>
     );
 }
