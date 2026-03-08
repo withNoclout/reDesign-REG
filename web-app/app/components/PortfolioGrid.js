@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { useGuest } from '../context/GuestContext';
 import { usePortfolioSettings } from '../hooks/usePortfolioSettings';
+import { useIsMobile } from '../hooks/useIsMobile';
 import AddContentCard from './AddContentCard';
 import PortfolioEditorModal from './PortfolioEditorModal';
 import CustomPortfolioGrid from './CustomPortfolioGrid';
@@ -188,9 +190,11 @@ function getPaginationGroup(currentPage, totalPages) {
     return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
 }
 
-export default function PortfolioGrid() {
-    const { user, logout } = useAuth();
+export default function PortfolioGrid({ leftPanelHeight = 800 }) {
+    const { user } = useAuth();
     const { isGuest } = useGuest();
+    const isMobile = useIsMobile();
+    const router = useRouter();
 
     // Portfolio Settings Hook
     const {
@@ -212,6 +216,7 @@ export default function PortfolioGrid() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
+    const [hasInitializedCustomLayout, setHasInitializedCustomLayout] = useState(false);
 
     // Helper Classes
     const columnClass = `columns-${settings.fixedConfig?.columnCount || 3}`;
@@ -308,7 +313,7 @@ export default function PortfolioGrid() {
         updateSetting('customLayout', newLayout);
     };
 
-    const isCustomMode = settings.mode === 'custom';
+    const isCustomMode = settings.mode === 'custom' && !isMobile;
 
     // Sorted items for rendering (Filter out hidden if Guest)
     const sortedItems = useMemo(() => {
@@ -316,21 +321,87 @@ export default function PortfolioGrid() {
         return sortItems(activeItems, collaborations, settings.sortMode, settings.customItemOrder);
     }, [items, collaborations, settings.sortMode, settings.customItemOrder, isGuest]);
 
-    // --- Pagination Logic ---
-    const ITEMS_PER_PAGE = 9; // Hardcoded to 9 as requested
+    // --- Micro-Grid Dynamics & Height Clamping ---
+    const gridContainerRef = useRef(null);
+    const [gridWidth, setGridWidth] = useState(800);
 
-    // Page 1 has Add Content Card (1 slot) for owners, so it fits ITEMS_PER_PAGE - 1 items. Guests get all 9.
-    const firstPageItemCount = isGuest ? ITEMS_PER_PAGE : ITEMS_PER_PAGE - 1;
+    useEffect(() => {
+        if (!gridContainerRef.current) return;
+        const observer = new ResizeObserver((entries) => {
+            if (entries[0]) {
+                setGridWidth(entries[0].contentRect.width);
+            }
+        });
+        observer.observe(gridContainerRef.current);
+        return () => observer.disconnect();
+    }, []);
+
+    const COLS = 100;
+    const MARGIN = 2; // 2px micro gap
+    const cellWidth = (gridWidth - ((COLS - 1) * MARGIN)) / COLS;
+    const rowHeight = Math.max(4, cellWidth); // 1:1 Square locked
+    const maxRows = Math.floor(leftPanelHeight / (rowHeight + MARGIN));
+
+    // Migrate Legacy Layouts (12-cols > 100-cols)
+    const migratedLayout = useMemo(() => {
+        const layout = settings.customLayout || [];
+        if (layout.length === 0) return layout;
+
+        // Detect old 12-col grids. If everything is w <= 12, it's legacy.
+        const isLegacy = layout.every(l => l.w <= 12);
+        if (!isLegacy) return layout.slice(0, 10);
+
+        const H_SCALE = 100 / 12;
+        const V_SCALE = 15; // 1 legacy row height (150px) roughly equals 15 new micro rows (10px)
+
+        return layout.map(l => ({
+            ...l,
+            x: Math.round(l.x * H_SCALE),
+            y: Math.round(l.y * V_SCALE),
+            w: Math.max(4, Math.round(l.w * H_SCALE)),
+            h: Math.max(4, Math.round(l.h * V_SCALE))
+        })).slice(0, 10);
+    }, [settings.customLayout]);
+
+
+    // --- Advanced Bento Auto-Pagination Logic ---
+    const ITEMS_PER_PAGE = 9;
+
+    const { bentoItems, gridItems } = useMemo(() => {
+        if (!isCustomMode) {
+            return { bentoItems: [], gridItems: sortedItems };
+        }
+
+        const layoutMap = new Map(migratedLayout.map(l => [l.i, l]));
+
+        const bento = [];
+        const grid = [];
+
+        sortedItems.forEach((item) => {
+            const layoutItem = layoutMap.get(item.id.toString());
+            // Strictly check if it's placed and fits within bounding box height constraints
+            if (layoutItem && (layoutItem.y + layoutItem.h <= maxRows)) {
+                bento.push(item);
+            } else {
+                grid.push(item);
+            }
+        });
+
+        return { bentoItems: bento, gridItems: grid };
+    }, [sortedItems, migratedLayout, isCustomMode, maxRows]);
 
     const totalPages = useMemo(() => {
-        if (sortedItems.length === 0) return 1;
-        // If items can fit on page 1
-        if (sortedItems.length <= firstPageItemCount) return 1;
-
-        // Remaining items after page 1
-        const remainingItems = sortedItems.length - firstPageItemCount;
-        return 1 + Math.ceil(remainingItems / ITEMS_PER_PAGE);
-    }, [sortedItems.length, firstPageItemCount, ITEMS_PER_PAGE]);
+        if (isCustomMode) {
+            if (gridItems.length === 0) return 1;
+            return 1 + Math.ceil(gridItems.length / ITEMS_PER_PAGE);
+        } else {
+            if (sortedItems.length === 0) return 1;
+            const firstPageItemCount = isGuest ? ITEMS_PER_PAGE : ITEMS_PER_PAGE - 1;
+            if (sortedItems.length <= firstPageItemCount) return 1;
+            const remainingItems = sortedItems.length - firstPageItemCount;
+            return 1 + Math.ceil(remainingItems / ITEMS_PER_PAGE);
+        }
+    }, [isCustomMode, gridItems.length, sortedItems.length, isGuest, ITEMS_PER_PAGE]);
 
     // Ensure currentPage is valid if items are deleted
     useEffect(() => {
@@ -339,21 +410,56 @@ export default function PortfolioGrid() {
         }
     }, [totalPages, currentPage]);
 
+    // Auto-initialize 3 default custom grid items on first entry if empty
+    useEffect(() => {
+        if (isCustomMode && sortedItems.length > 0 && !hasInitializedCustomLayout) {
+            const layout = settings.customLayout || [];
+            if (layout.length === 0) {
+                const fixedCols = settings.fixedConfig?.columnCount || 3;
+                const defaultItems = sortedItems.slice(0, Math.min(3, fixedCols));
+
+                let currentX = 0;
+                const w = Math.floor(100 / fixedCols);
+
+                const newLayout = defaultItems.map((item) => {
+                    const l = {
+                        i: item.id.toString(),
+                        x: currentX,
+                        y: 0,
+                        w: Math.max(4, w),
+                        h: 15, // standard starting block layout
+                        minW: 1, minH: 1
+                    };
+                    currentX += w;
+                    return l;
+                });
+                updateSetting('customLayout', newLayout);
+            }
+            setHasInitializedCustomLayout(true);
+        }
+    }, [isCustomMode, sortedItems, settings.customLayout, hasInitializedCustomLayout, updateSetting, settings.fixedConfig]);
+
     const paginatedItems = useMemo(() => {
         if (isCustomMode) {
-            // In custom mode, pagination might ruin absolute positioning layouts unless strictly handled.
-            // For now, let's just return all items up to the max safe limit or simply all items.
-            return sortedItems;
-        }
-
-        if (currentPage === 1) {
-            return sortedItems.slice(0, firstPageItemCount);
+            if (currentPage === 1) {
+                // Return bentoItems exclusively so Custom Grid doesn't randomly suck in unplaced items.
+                return bentoItems;
+            } else {
+                const startIndex = (currentPage - 2) * ITEMS_PER_PAGE;
+                const endIndex = startIndex + ITEMS_PER_PAGE;
+                return gridItems.slice(startIndex, endIndex);
+            }
         } else {
-            const startIndex = firstPageItemCount + (currentPage - 2) * ITEMS_PER_PAGE;
-            const endIndex = startIndex + ITEMS_PER_PAGE;
-            return sortedItems.slice(startIndex, endIndex);
+            const firstPageItemCount = isGuest ? ITEMS_PER_PAGE : ITEMS_PER_PAGE - 1;
+            if (currentPage === 1) {
+                return sortedItems.slice(0, firstPageItemCount);
+            } else {
+                const startIndex = firstPageItemCount + (currentPage - 2) * ITEMS_PER_PAGE;
+                const endIndex = startIndex + ITEMS_PER_PAGE;
+                return sortedItems.slice(startIndex, endIndex);
+            }
         }
-    }, [sortedItems, currentPage, isCustomMode, firstPageItemCount, ITEMS_PER_PAGE]);
+    }, [sortedItems, currentPage, isCustomMode, gridItems, bentoItems, isManageMode, isGuest, ITEMS_PER_PAGE]);
 
     // Save manual order (for drag-to-reorder in Fixed mode)
     const handleManualReorder = useCallback((newOrder) => {
@@ -361,368 +467,383 @@ export default function PortfolioGrid() {
         updateSetting('sortMode', 'manual');
     }, [updateSetting]);
 
+    // Layout Rendering
     return (
-        <section className="relative pt-0 flex flex-col min-h-[750px]">
+        <section
+            className="relative pt-0 flex flex-col h-full w-full"
+            style={{ minHeight: leftPanelHeight > 0 ? `${leftPanelHeight}px` : '100%' }}
+        >
             {/* Pending Collaboration Tags Banner */}
             {pendingCount > 0 && (
-                <PendingTagsBanner count={pendingCount} userId={user?.usercode} onRespond={fetchContent} />
-            )}
-
-            {/* View Controls (Absolute Top Right) */}
-            <div className="absolute -top-12 right-4 z-20 flex items-center gap-2">
-                <AnimatePresence>
-                    {showControls && (
-                        <motion.div
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 20 }}
-                            className="bg-black/80 backdrop-blur-md border border-white/10 rounded-full p-2 flex items-center gap-4 pr-6"
-                        >
-                            {/* Manage Mode Toggle */}
-                            <button
-                                onClick={() => setIsManageMode(!isManageMode)}
-                                className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold transition-all ${isManageMode ? 'bg-orange-500 text-white' : 'bg-white/10 text-white/60 hover:text-white'}`}
-                            >
-                                {isManageMode ? 'Done' : 'Manage'}
-                            </button>
-                            <div className="w-px h-4 bg-white/20"></div>
-
-                            {/* Mode Toggle: Fixed / Custom */}
-                            <div className="flex bg-white/10 rounded-lg p-0.5">
-                                <button
-                                    onClick={() => updateSetting('mode', 'fixed')}
-                                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${!isCustomMode ? 'bg-white text-black shadow-sm' : 'text-white/60 hover:text-white'}`}
-                                >
-                                    Fixed
-                                </button>
-                                <button
-                                    onClick={() => updateSetting('mode', 'custom')}
-                                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${isCustomMode ? 'bg-white text-black shadow-sm' : 'text-white/60 hover:text-white'}`}
-                                >
-                                    Custom
-                                </button>
-                            </div>
-
-                            <div className="w-px h-4 bg-white/20"></div>
-
-                            {/* Column Slider (Only for Fixed Mode) - Hidden on Mobile */}
-                            {!isCustomMode && (
-                                <div className="hidden md:flex items-center gap-2 pl-2 border-l border-white/20 ml-2">
-                                    <span className="text-xs text-white/70">Cols</span>
-                                    <input
-                                        type="range"
-                                        min="2"
-                                        max="5"
-                                        step="1"
-                                        value={settings.fixedConfig?.columnCount || 3}
-                                        onChange={(e) => updateFixedConfig('columnCount', parseInt(e.target.value))}
-                                        className="w-20 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer accent-[#ff5722]"
-                                    />
-                                    <span className="text-xs text-white font-bold w-3">{settings.fixedConfig?.columnCount || 3}</span>
-                                </div>
-                            )}
-
-                            {/* Gap Toggle (Only for Fixed Mode) */}
-                            {!isCustomMode && (
-                                <>
-                                    <div className="w-px h-4 bg-white/20"></div>
-                                    <button
-                                        onClick={() => updateFixedConfig('gapSize', (settings.fixedConfig?.gapSize || 'normal') === 'normal' ? 'compact' : 'normal')}
-                                        className={`text-xs font-medium transition-colors ${(settings.fixedConfig?.gapSize || 'normal') === 'compact' ? 'text-[#ff5722]' : 'text-white/60 hover:text-white'}`}
-                                    >
-                                        {(settings.fixedConfig?.gapSize || 'normal') === 'compact' ? 'Compact' : 'Comfy'}
-                                    </button>
-                                </>
-                            )}
-
-
-                            <div className="w-px h-4 bg-white/20"></div>
-
-                            {/* Sort Mode */}
-                            <div className="flex items-center gap-1.5">
-                                <span className="text-xs text-white/70">Sort</span>
-                                <select
-                                    value={settings.sortMode || 'auto'}
-                                    onChange={(e) => updateSetting('sortMode', e.target.value)}
-                                    className="bg-white/10 text-white text-xs rounded-md px-2 py-1 border border-white/10 focus:outline-none focus:border-[#ff5722]/50 cursor-pointer appearance-none"
-                                    aria-label="Sort order"
-                                >
-                                    <option value="auto" className="bg-black">Auto</option>
-                                    <option value="newest" className="bg-black">Newest</option>
-                                    <option value="oldest" className="bg-black">Oldest</option>
-                                    <option value="manual" className="bg-black">Manual</option>
-                                </select>
-                            </div>
-
-                            <div className="w-px h-4 bg-white/20"></div>
-
-                            {/* Save Button */}
-                            <button
-                                onClick={handleSaveSettings}
-                                disabled={isSaving}
-                                className="text-xs font-bold text-white/80 hover:text-white transition-colors"
-                            >
-                                {isSaving ? 'Saving...' : 'Save'}
-                            </button>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                {!isGuest && (
-                    <button
-                        onClick={() => setShowControls(!showControls)}
-                        aria-label={showControls ? 'ปิดการตั้งค่า Portfolio' : 'เปิดการตั้งค่า Portfolio'}
-                        aria-expanded={showControls}
-                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${showControls ? 'bg-[#ff5722] text-white' : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'}`}
-                    >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
-                            <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                    </button>
-                )}
-            </div>
-
-            {/* Layout Rendering */}
-            {isCustomMode ? (
-                <CustomPortfolioGrid
-                    items={sortedItems.slice(0, settings.maxItemsPerPage || 12)}
-                    savedLayout={settings.customLayout}
-                    onLayoutChange={handleCustomLayoutChange}
-                    isManageMode={isManageMode}
-                    onAddNew={() => { setEditingItem(null); setIsModalOpen(true); }}
-                    maxRows={4}
-                />
-            ) : (
-                /* CSS Grid Layout for ProMax Split-Header */
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 px-4 content-start min-h-[800px] md:min-h-[1100px]">
-
-                    {/* Add Trigger (Always First, 33% Width on Desktop) - ONLY ON PAGE 1 */}
-                    {currentPage === 1 && !isGuest && (
-                        <div className="md:col-span-4 flex">
-                            <AddContentCard onClick={() => { setEditingItem(null); setIsModalOpen(true); }} className="w-full shadow-xl hover:shadow-[#ff5722]/10" />
-                        </div>
-                    )}
-
-                    {/* Content Items */}
-                    <AnimatePresence mode='popLayout'>
-                        {paginatedItems.map((item, index) => {
-                            // First item is 33% width to match Add Button ONLY ON PAGE 1
-                            const isFirstItem = currentPage === 1 && index === 0;
-                            // Dynamic Column Span Calculation based on Slider
-                            const columns = settings.fixedConfig?.columnCount || 3;
-                            const otherSpan = 12 / columns;
-                            const colSpanClass = isFirstItem ? 'md:col-span-4' : `md:col-span-${otherSpan}`;
-
-                            return (
-                                <motion.div
-                                    key={item.id}
-                                    layout
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: item.is_visible === false && !isManageMode ? 0.3 : 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.9 }}
-                                    transition={{ delay: index * 0.05 }}
-                                    className={`${colSpanClass} flex flex-col p-4 rounded-3xl group relative bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-[box-shadow,background-color,border-color] duration-300 hover:shadow-2xl ${item.is_visible === false && !isManageMode ? 'grayscale opacity-50' : ''}`}
-                                >
-                                    {/* Management Overlays */}
-                                    {isManageMode && (
-                                        <div className="absolute top-2 right-2 z-30 flex items-center gap-2">
-                                            {/* Edit Button (own items only) */}
-                                            {!item.is_collaboration && (
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setEditingItem(item);
-                                                        setIsModalOpen(true);
-                                                    }}
-                                                    className="p-2 rounded-full bg-white/20 text-white hover:bg-[#ff5722] backdrop-blur-md shadow-lg transition-all"
-                                                    title="Edit"
-                                                >
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
-                                                </button>
-                                            )}
-
-                                            {/* Visibility Toggle */}
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleToggleVisibility(item.id, item.is_visible);
-                                                }}
-                                                className={`p-2 rounded-full backdrop-blur-md shadow-lg transition-all ${item.is_visible !== false ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'}`}
-                                                title={item.is_visible !== false ? "Visible" : "Hidden"}
-                                            >
-                                                {item.is_visible !== false ? (
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                                                ) : (
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
-                                                )}
-                                            </button>
-
-                                            {/* Delete Button */}
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleDelete(item.id);
-                                                }}
-                                                className="p-2 rounded-full bg-red-500/20 text-red-500 hover:bg-red-500 hover:text-white backdrop-blur-md shadow-lg transition-all"
-                                                title="Delete"
-                                            >
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                                            </button>
-                                        </div>
-                                    )}
-
-                                    {/* Image Container with Natural Aspect Ratio */}
-                                    <div className={`relative overflow-hidden rounded-2xl mb-4 bg-black/20 h-48`}>
-                                        {item.is_visible === false && (
-                                            <div className="absolute inset-0 z-10 bg-black/50 flex items-center justify-center pointer-events-none">
-                                                <span className="bg-black/50 backdrop-blur px-2 py-1 rounded text-xs text-white/70 font-bold border border-white/10">Hidden</span>
-                                            </div>
-                                        )}
-                                        {item.image_url && item.uploaded_to_supabase ? (
-                                            <img
-                                                src={item.image_url}
-                                                alt={item.description}
-                                                className="w-full h-full object-cover"
-                                                loading="lazy"
-                                            />
-                                        ) : (
-                                            <div className="w-full aspect-[4/3] flex flex-col items-center justify-center text-white/20">
-                                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mb-2">
-                                                    <circle cx="12" cy="12" r="10" />
-                                                    <line x1="12" y1="8" x2="12" y2="12" />
-                                                    <line x1="12" y1="16" x2="12.01" y2="16" />
-                                                </svg>
-                                                <span className="text-sm">Not Uploaded</span>
-                                            </div>
-                                        )}
-
-                                        {/* Status Badges */}
-                                        {!item.uploaded_to_supabase && !item.is_collaboration && (
-                                            <div className="absolute top-3 right-3 bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg z-10 backdrop-blur-md bg-opacity-90">
-                                                Upload Pending
-                                            </div>
-                                        )}
-
-                                        {/* Collaboration Badge */}
-                                        {item.is_collaboration && (
-                                            <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white/90 px-3 py-1 rounded-full text-xs font-medium shadow-lg z-10 border border-white/10 flex items-center gap-1.5">
-                                                <LinkIcon size={14} className="inline" /> Shared with you
-                                            </div>
-                                        )}
-
-                                        {/* Collaborator Count Badge (own items) */}
-                                        {!item.is_collaboration && item.collaborator_count > 0 && (
-                                            <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white/90 px-2.5 py-1 rounded-full text-xs font-medium shadow-lg z-10 border border-white/10 flex items-center gap-1">
-                                                <UsersIcon size={14} className="inline" /> {item.collaborator_count}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Content Below Image (Flex Grow to push footer to bottom) */}
-                                    <div className='flex flex-col flex-grow space-y-3'>
-
-                                        {/* Topic (New Field) */}
-                                        {item.topic && (
-                                            <h3 className='font-prompt font-bold text-white leading-tight text-lg'>
-                                                {item.topic}
-                                            </h3>
-                                        )}
-
-                                        {/* Description */}
-                                        <p className='text-white font-prompt font-light text-white/80 text-sm leading-relaxed line-clamp-2'>
-                                            {item.description}
-                                        </p>
-
-                                        {/* Metadata & Actions (Pushed to bottom using mt-auto) */}
-                                        <div className='flex items-center justify-between border-t border-white/5 pt-3 mt-auto'>
-                                            <div className="flex flex-col gap-0.5">
-                                                <span className="text-white/70 text-xs font-light">
-                                                    {new Date(item.created_at).toLocaleDateString('th-TH', {
-                                                        year: 'numeric',
-                                                        month: 'short',
-                                                        day: 'numeric'
-                                                    })}
-                                                </span>
-                                                {item.is_collaboration && item.added_by && (
-                                                    <span className="text-white/40 text-[10px]">
-                                                        Added by: {item.added_by}
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            {/* Retry Button */}
-                                            {!item.uploaded_to_supabase && item.temp_path && (
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleRetryItem(item.id);
-                                                    }}
-                                                    disabled={retryingItem === item.id}
-                                                    className="px-3 py-1.5 bg-orange-500/10 hover:bg-orange-500 text-orange-400 hover:text-white border border-orange-500/20 hover:border-orange-500 rounded-lg text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-                                                >
-                                                    {retryingItem === item.id ? (
-                                                        <>
-                                                            <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                                                            <span>Uploading...</span>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                                <path d="M23 4v6h-6" />
-                                                                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-                                                            </svg>
-                                                            <span>Retry</span>
-                                                        </>
-                                                    )}
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            );
-                        })}
-                    </AnimatePresence>
+                <div className="mb-6">
+                    <PendingTagsBanner count={pendingCount} userId={user?.usercode} onRespond={fetchContent} />
                 </div>
             )}
 
-            {/* Pagination Controls (Only for Fixed Mode) */}
-            {!isCustomMode && totalPages > 1 && (
-                <div className="flex justify-center items-center mt-auto pt-12 pb-12 gap-2 w-full">
+            {/* View Controls (Floating Absolute) */}
+            <div className="absolute -top-[3.5rem] right-0 xl:-right-4 z-40 flex items-center justify-end pointer-events-none">
+                <div className="flex flex-wrap items-center gap-2 justify-end pointer-events-auto">
+                    <AnimatePresence>
+                        {showControls && (
+                            <motion.div
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 20 }}
+                                className="bg-black/80 backdrop-blur-md border border-white/10 rounded-full p-2 flex items-center gap-4 pr-6"
+                            >
+                                {/* Manage Mode Toggle */}
+                                <button
+                                    onClick={() => setIsManageMode(!isManageMode)}
+                                    className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold transition-all ${isManageMode ? 'bg-orange-500 text-white' : 'bg-white/10 text-white/60 hover:text-white'}`}
+                                >
+                                    {isManageMode ? 'Done' : 'Manage'}
+                                </button>
+                                <div className="w-px h-4 bg-white/20"></div>
+
+                                {/* Mode Toggle: Fixed / Custom */}
+                                <div className="flex bg-white/10 rounded-lg p-0.5">
+                                    <button
+                                        onClick={() => updateSetting('mode', 'fixed')}
+                                        className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${!isCustomMode ? 'bg-white text-black shadow-sm' : 'text-white/60 hover:text-white'}`}
+                                    >
+                                        Fixed
+                                    </button>
+                                    <button
+                                        onClick={() => updateSetting('mode', 'custom')}
+                                        className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${isCustomMode ? 'bg-white text-black shadow-sm' : 'text-white/60 hover:text-white'}`}
+                                    >
+                                        Custom
+                                    </button>
+                                </div>
+
+                                <div className="w-px h-4 bg-white/20"></div>
+
+                                {/* Column Slider (Only for Fixed Mode) - Hidden on Mobile */}
+                                {!isCustomMode && (
+                                    <div className="hidden md:flex items-center gap-2 pl-2 border-l border-white/20 ml-2">
+                                        <span className="text-xs text-white/70">Cols</span>
+                                        <input
+                                            type="range"
+                                            min="2"
+                                            max="5"
+                                            step="1"
+                                            value={settings.fixedConfig?.columnCount || 3}
+                                            onChange={(e) => updateFixedConfig('columnCount', parseInt(e.target.value))}
+                                            className="w-20 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer accent-[#ff5722]"
+                                        />
+                                        <span className="text-xs text-white font-bold w-3">{settings.fixedConfig?.columnCount || 3}</span>
+                                    </div>
+                                )}
+
+                                {/* Gap Toggle (Only for Fixed Mode) */}
+                                {!isCustomMode && (
+                                    <>
+                                        <div className="w-px h-4 bg-white/20"></div>
+                                        <button
+                                            onClick={() => updateFixedConfig('gapSize', (settings.fixedConfig?.gapSize || 'normal') === 'normal' ? 'compact' : 'normal')}
+                                            className={`text-xs font-medium transition-colors ${(settings.fixedConfig?.gapSize || 'normal') === 'compact' ? 'text-[#ff5722]' : 'text-white/60 hover:text-white'}`}
+                                        >
+                                            {(settings.fixedConfig?.gapSize || 'normal') === 'compact' ? 'Compact' : 'Comfy'}
+                                        </button>
+                                    </>
+                                )}
+
+
+                                <div className="w-px h-4 bg-white/20"></div>
+
+                                {/* Sort Mode */}
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-xs text-white/70">Sort</span>
+                                    <select
+                                        value={settings.sortMode || 'auto'}
+                                        onChange={(e) => updateSetting('sortMode', e.target.value)}
+                                        className="bg-white/10 text-white text-xs rounded-md px-2 py-1 border border-white/10 focus:outline-none focus:border-[#ff5722]/50 cursor-pointer appearance-none"
+                                        aria-label="Sort order"
+                                    >
+                                        <option value="auto" className="bg-black">Auto</option>
+                                        <option value="newest" className="bg-black">Newest</option>
+                                        <option value="oldest" className="bg-black">Oldest</option>
+                                        <option value="manual" className="bg-black">Manual</option>
+                                    </select>
+                                </div>
+
+                                <div className="w-px h-4 bg-white/20"></div>
+
+                                {/* Save Button */}
+                                <button
+                                    onClick={handleSaveSettings}
+                                    disabled={isSaving}
+                                    className="text-xs font-bold text-white/80 hover:text-white transition-colors"
+                                >
+                                    {isSaving ? 'Saving...' : 'Save'}
+                                </button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {!isGuest && isCustomMode && (
+                        <button
+                            onClick={() => { setEditingItem(null); setIsModalOpen(true); }}
+                            className="flex items-center gap-2 px-4 py-1.5 mr-2 rounded-full text-sm font-bold transition-all bg-[#ff5722] text-white hover:bg-[#e64a19] shadow-lg shadow-[#ff5722]/40 border border-[#ff5722]/50 hover:scale-105 active:scale-95"
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            Add New
+                        </button>
+                    )}
+
+                    {!isGuest && (
+                        <button
+                            onClick={() => setShowControls(!showControls)}
+                            aria-label={showControls ? 'ปิดการตั้งค่า Portfolio' : 'เปิดการตั้งค่า Portfolio'}
+                            aria-expanded={showControls}
+                            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${showControls ? 'bg-[#ff5722] text-white' : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'}`}
+                        >
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* Layout Rendering Container */}
+            <div ref={gridContainerRef} className="w-full">
+                {isCustomMode && currentPage === 1 ? (
+                    <CustomPortfolioGrid
+                        items={paginatedItems.slice(0, settings.maxItemsPerPage || 100)}
+                        savedLayout={migratedLayout}
+                        onLayoutChange={handleCustomLayoutChange}
+                        isManageMode={isManageMode}
+                        maxRows={maxRows}
+                        dynamicRowHeight={rowHeight}
+                        dynamicCols={COLS}
+                        dynamicMargin={MARGIN}
+                        dynamicWidth={gridWidth}
+                        unplacedPool={gridItems}
+                    />
+                ) : (
+                    /* CSS Grid Layout for ProMax Split-Header */
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-6 px-4 content-start">
+
+                        {/* Add Trigger (Always First, 33% Width on Desktop) - ONLY ON PAGE 1 */}
+                        {currentPage === 1 && !isGuest && (
+                            <div className="md:col-span-4 flex">
+                                <AddContentCard onClick={() => { setEditingItem(null); setIsModalOpen(true); }} className="w-full shadow-xl hover:shadow-[#ff5722]/10" />
+                            </div>
+                        )}
+
+                        {/* Content Items */}
+                        <AnimatePresence mode='popLayout'>
+                            {paginatedItems.map((item, index) => {
+                                // First item is 33% width to match Add Button ONLY ON PAGE 1
+                                const isFirstItem = currentPage === 1 && index === 0;
+                                // Dynamic Column Span Calculation based on Slider
+                                const columns = settings.fixedConfig?.columnCount || 3;
+                                const otherSpan = 12 / columns;
+                                const colSpanClass = isFirstItem ? 'md:col-span-4' : `md:col-span-${otherSpan}`;
+
+                                return (
+                                    <motion.div
+                                        key={item.id}
+                                        layout
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: item.is_visible === false && !isManageMode ? 0.3 : 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 0.9 }}
+                                        transition={{ delay: index * 0.05 }}
+                                        className={`${colSpanClass} flex flex-col p-4 rounded-3xl group relative bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-[box-shadow,background-color,border-color] duration-300 hover:shadow-2xl ${item.is_visible === false && !isManageMode ? 'grayscale opacity-50' : ''}`}
+                                    >
+                                        {/* Management Overlays */}
+                                        {isManageMode && (
+                                            <div className="absolute top-2 right-2 z-30 flex items-center gap-2">
+                                                {/* Edit Button (own items only) */}
+                                                {!item.is_collaboration && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setEditingItem(item);
+                                                            setIsModalOpen(true);
+                                                        }}
+                                                        className="p-2 rounded-full bg-white/20 text-white hover:bg-[#ff5722] backdrop-blur-md shadow-lg transition-all"
+                                                        title="Edit"
+                                                    >
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                                                    </button>
+                                                )}
+
+                                                {/* Visibility Toggle */}
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleToggleVisibility(item.id, item.is_visible);
+                                                    }}
+                                                    className={`p-2 rounded-full backdrop-blur-md shadow-lg transition-all ${item.is_visible !== false ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'}`}
+                                                    title={item.is_visible !== false ? "Visible" : "Hidden"}
+                                                >
+                                                    {item.is_visible !== false ? (
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                                                    ) : (
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                                    )}
+                                                </button>
+
+                                                {/* Delete Button */}
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDelete(item.id);
+                                                    }}
+                                                    className="p-2 rounded-full bg-red-500/20 text-red-500 hover:bg-red-500 hover:text-white backdrop-blur-md shadow-lg transition-all"
+                                                    title="Delete"
+                                                >
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {/* Image Container with Natural Aspect Ratio */}
+                                        <div className={`relative overflow-hidden rounded-2xl mb-4 bg-black/20 h-48`}>
+                                            {item.is_visible === false && (
+                                                <div className="absolute inset-0 z-10 bg-black/50 flex items-center justify-center pointer-events-none">
+                                                    <span className="bg-black/50 backdrop-blur px-2 py-1 rounded text-xs text-white/70 font-bold border border-white/10">Hidden</span>
+                                                </div>
+                                            )}
+                                            {item.image_url && item.uploaded_to_supabase ? (
+                                                <img
+                                                    src={item.image_url}
+                                                    alt={item.description}
+                                                    className="w-full h-full object-cover"
+                                                    loading="lazy"
+                                                />
+                                            ) : (
+                                                <div className="w-full aspect-[4/3] flex flex-col items-center justify-center text-white/20">
+                                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mb-2">
+                                                        <circle cx="12" cy="12" r="10" />
+                                                        <line x1="12" y1="8" x2="12" y2="12" />
+                                                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                                                    </svg>
+                                                    <span className="text-sm">Not Uploaded</span>
+                                                </div>
+                                            )}
+
+                                            {/* Status Badges */}
+                                            {!item.uploaded_to_supabase && !item.is_collaboration && (
+                                                <div className="absolute top-3 right-3 bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg z-10 backdrop-blur-md bg-opacity-90">
+                                                    Upload Pending
+                                                </div>
+                                            )}
+
+                                            {/* Collaboration Badge */}
+                                            {item.is_collaboration && (
+                                                <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white/90 px-3 py-1 rounded-full text-xs font-medium shadow-lg z-10 border border-white/10 flex items-center gap-1.5">
+                                                    <LinkIcon size={14} className="inline" /> Shared with you
+                                                </div>
+                                            )}
+
+                                            {/* Collaborator Count Badge (own items) */}
+                                            {!item.is_collaboration && item.collaborator_count > 0 && (
+                                                <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white/90 px-2.5 py-1 rounded-full text-xs font-medium shadow-lg z-10 border border-white/10 flex items-center gap-1">
+                                                    <UsersIcon size={14} className="inline" /> {item.collaborator_count}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Content Below Image (Flex Grow to push footer to bottom) */}
+                                        <div className='flex flex-col flex-grow space-y-3'>
+
+                                            {/* Topic (New Field) */}
+                                            {item.topic && (
+                                                <h3 className='font-prompt font-bold text-white leading-tight text-lg'>
+                                                    {item.topic}
+                                                </h3>
+                                            )}
+
+                                            {/* Description */}
+                                            <p className='text-white font-prompt font-light text-white/80 text-sm leading-relaxed line-clamp-2'>
+                                                {item.description}
+                                            </p>
+
+                                            {/* Metadata & Actions (Pushed to bottom using mt-auto) */}
+                                            <div className='flex items-center justify-between border-t border-white/5 pt-3 mt-auto'>
+                                                <div className="flex flex-col gap-0.5">
+                                                    <span className="text-white/70 text-xs font-light">
+                                                        {new Date(item.created_at).toLocaleDateString('th-TH', {
+                                                            year: 'numeric',
+                                                            month: 'short',
+                                                            day: 'numeric'
+                                                        })}
+                                                    </span>
+                                                    {item.is_collaboration && item.added_by && (
+                                                        <span className="text-white/40 text-[10px]">
+                                                            Added by: {item.added_by}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {/* Retry Button */}
+                                                {!item.uploaded_to_supabase && item.temp_path && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleRetryItem(item.id);
+                                                        }}
+                                                        disabled={retryingItem === item.id}
+                                                        className="px-3 py-1.5 bg-orange-500/10 hover:bg-orange-500 text-orange-400 hover:text-white border border-orange-500/20 hover:border-orange-500 rounded-lg text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                                                    >
+                                                        {retryingItem === item.id ? (
+                                                            <>
+                                                                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                                                                <span>Uploading...</span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                    <path d="M23 4v6h-6" />
+                                                                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                                                                </svg>
+                                                                <span>Retry</span>
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                );
+                            })}
+                        </AnimatePresence>
+                    </div>
+                )}
+            </div>
+
+            {/* Standard Chevron Pagination UX */}
+            {totalPages > 1 && (
+                <div className="flex justify-center items-center mt-auto pt-12 pb-12 w-full gap-4">
+                    {/* Previous Button */}
                     <button
                         onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                         disabled={currentPage === 1}
-                        className="p-2 rounded-xl bg-white/5 text-white/50 hover:bg-white/10 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                        className="p-2 md:p-3 rounded-full bg-black/60 backdrop-blur-xl border border-white/20 text-white shadow-xl hover:bg-white/10 hover:border-white/40 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                         aria-label="Previous Page"
                     >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
                     </button>
 
-                    <div className="flex items-center gap-1 bg-black/40 backdrop-blur-md p-1 rounded-xl border border-white/5">
-                        {getPaginationGroup(currentPage, totalPages).map((page, idx) => (
-                            page === '...' ? (
-                                <span key={`ellipsis-${idx}`} className="w-10 h-10 flex items-center justify-center text-white/40 font-bold select-none text-sm">
-                                    ...
-                                </span>
-                            ) : (
-                                <button
-                                    key={page}
-                                    onClick={() => setCurrentPage(page)}
-                                    className={`w-10 h-10 rounded-lg text-sm font-bold transition-all ${currentPage === page ? 'bg-[#ff5722] text-white shadow-lg shadow-[#ff5722]/20' : 'text-white/50 hover:bg-white/10 hover:text-white'}`}
-                                >
-                                    {page}
-                                </button>
-                            )
-                        ))}
+                    {/* Page Indicator */}
+                    <div className="px-6 py-2.5 bg-black/60 backdrop-blur-xl rounded-full border border-white/20 shadow-xl flex items-center justify-center min-w-[120px]">
+                        <span className="text-sm font-bold text-white tracking-wide">
+                            <span className="text-[#ff5722]">{currentPage}</span> / {totalPages}
+                        </span>
                     </div>
 
+                    {/* Next Button */}
                     <button
                         onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                         disabled={currentPage === totalPages}
-                        className="p-2 rounded-xl bg-white/5 text-white/50 hover:bg-white/10 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                        className="p-2 md:p-3 rounded-full bg-black/60 backdrop-blur-xl border border-white/20 text-white shadow-xl hover:bg-white/10 hover:border-white/40 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                         aria-label="Next Page"
                     >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
                     </button>
                 </div>
             )}

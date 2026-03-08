@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LockIcon } from '../components/Icons';
@@ -19,7 +19,6 @@ import UserProfileCard from '../components/UserProfileCard';
 import AcademicInfoCard from '../components/AcademicInfoCard';
 import ErrorAlert from '../components/ErrorAlert';
 import PortfolioGrid from '../components/PortfolioGrid';
-import NextExamWidget from '../components/NextExamWidget';
 import '../globals.css';
 
 const ADMIN_USER_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID || 's6701091611290';
@@ -34,12 +33,26 @@ export default function Main() {
     const [error, setError] = useState(null);
     const [studentInfo, setStudentInfo] = useState(null);
     const [mounted, setMounted] = useState(false);
+    const [leftPanelHeight, setLeftPanelHeight] = useState(800);
+    const leftPanelRef = useRef(null);
 
     useEffect(() => {
         setMounted(true);
     }, []);
 
+    useEffect(() => {
+        if (!leftPanelRef.current) return;
 
+        const observer = new ResizeObserver((entries) => {
+            if (entries[0]) {
+                // Add a small buffer to ensure the grid doesn't clip too tightly against padding
+                setLeftPanelHeight(entries[0].contentRect.height);
+            }
+        });
+
+        observer.observe(leftPanelRef.current);
+        return () => observer.disconnect();
+    }, []);
     // Check permissions
     const canAccess = isGuest ? allowedModules.includes('profile') : isAuthenticated;
     const isAdmin = isAuthenticated && user?.usercode === ADMIN_USER_ID;
@@ -131,7 +144,7 @@ export default function Main() {
 
                 <div className="dashboard-grid">
                     {/* Left Column: Profile Card */}
-                    <div className="dashboard-left">
+                    <div className="dashboard-left" ref={leftPanelRef}>
                         <UserProfileCard user={user} loading={loadingInfo} profileData={studentInfo} />
                         {studentInfo && (
                             <AcademicInfoCard
@@ -143,8 +156,7 @@ export default function Main() {
 
                     {/* Right Column: Portfolio & Exams */}
                     <div className="dashboard-right">
-                        <NextExamWidget />
-                        <PortfolioGrid />
+                        <PortfolioGrid leftPanelHeight={leftPanelHeight} />
                     </div>
                 </div>
             </div>
