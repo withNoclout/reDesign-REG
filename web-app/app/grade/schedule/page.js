@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LockIcon, AlertTriangleIcon, ClockIcon, CalendarIcon, BookOpenIcon, ArrowUpIcon, ArrowDownIcon, UserIcon } from '../../components/Icons';
 import { useAuth } from '../../context/AuthContext';
@@ -104,10 +104,16 @@ export default function SchedulePage() {
     const [mounted, setMounted] = useState(false);
     const [activeTab, setActiveTab] = useState('study'); // 'study' | 'exam'
     const [selectedExam, setSelectedExam] = useState(null);
+    const searchParams = useSearchParams();
 
     useEffect(() => {
         setMounted(true);
-    }, []);
+        // Process query parameters for direct tab navigation
+        const tabParam = searchParams.get('tab');
+        if (tabParam === 'exam' || tabParam === 'study') {
+            setActiveTab(tabParam);
+        }
+    }, [searchParams]);
 
     const canAccess = isGuest ? allowedModules.includes('grade') : isAuthenticated;
 

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useGuest } from '../context/GuestContext';
 import { useRouter } from 'next/navigation';
+import NotificationBell from './NotificationBell';
 import {
     navbarSlideDown,
     logoAppear,
@@ -272,6 +273,9 @@ export default function Navbar({ activePage = 'profile' }) {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: TIMING.normal }}
                     >
+                        {/* Notification Bell */}
+                        <NotificationBell />
+
                         {/* Profile Image in Navbar */}
                         <div className="h-10 w-10 rounded-full overflow-hidden border border-white/20 bg-white/10 relative">
                             {mounted && user?.img ? (
