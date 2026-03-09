@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Responsive as ResponsiveGridLayout } from 'react-grid-layout/legacy';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -30,14 +30,15 @@ export default function CustomPortfolioGrid({
     dynamicMargin = 2,
     dynamicWidth = 800,
     isGuest,
-    unplacedPool
+    unplacedPool,
+    leftPanelHeight = 800
 }) {
     const [currentLayout, setCurrentLayout] = useState([]);
     const isMounted = useRef(false);
     const isInternalUpdate = useRef(false);
 
-    // Popup Modal State
     const [isSelectorModalOpen, setIsSelectorModalOpen] = useState(false);
+    const [selectedItems, setSelectedItems] = useState([]); // State for bulk selection
 
     const cols = { lg: dynamicCols, md: dynamicCols, sm: dynamicCols, xs: dynamicCols, xxs: dynamicCols };
     const breakpoints = { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 };
@@ -84,9 +85,9 @@ export default function CustomPortfolioGrid({
                 : 0;
             const newLayoutItems = newItems.map((item, idx) => ({
                 i: item.id.toString(),
-                x: (idx % 3) * 12,
-                y: maxY + (Math.floor(idx / 3) * 12),
-                w: 12, h: 12, minW: 1, minH: 1
+                x: (idx % 3) * 5,
+                y: maxY + (Math.floor(idx / 3) * 5),
+                w: 5, h: 5, minW: 2, minH: 2
             }));
             updatedLayout = [...updatedLayout, ...newLayoutItems];
         }
@@ -123,25 +124,63 @@ export default function CustomPortfolioGrid({
         }
     }, [currentLayout, onLayoutChange]);
 
-    const handleAddFromDock = useCallback((item) => {
-        if (currentLayout.length >= 10) return; // Strict 10 item capacity limit
+    // --- Bulk Addition Logic ---
+    const handleAddSelected = useCallback(() => {
+        if (selectedItems.length === 0) return;
 
-        const maxY = currentLayout.length > 0
+        const remainingCapacity = 10 - currentLayout.length;
+        const validItems = selectedItems.slice(0, Math.max(0, remainingCapacity));
+
+        if (validItems.length === 0) {
+            alert("Board capacity reached (Maximum 10 items).");
+            return;
+        }
+
+        let currentMaxY = currentLayout.length > 0
             ? currentLayout.reduce((max, l) => Math.max(max, l.y + l.h), 0)
             : 0;
 
-        const newItemLayout = {
-            i: item.id.toString(),
-            x: 0,
-            y: maxY, // Append to bottom
-            w: 30, h: 15, minW: 1, minH: 1 // Default Size expanded to stop 100-Column Math crashing
-        };
+        const newItemsLayout = validItems.map((item, index) => {
+            const layoutItem = {
+                i: item.id.toString(),
+                x: (index * 5) % dynamicCols, // Flow across columns if possible
+                y: currentMaxY + Math.floor((index * 5) / dynamicCols) * 5, // Stack down
+                w: 5, h: 5, minW: 2, minH: 2
+            };
+            return layoutItem;
+        });
 
-        const updatedLayout = [...currentLayout, newItemLayout];
+        const updatedLayout = [...currentLayout, ...newItemsLayout];
         setCurrentLayout(updatedLayout);
         onLayoutChange(updatedLayout);
-        setIsSelectorModalOpen(false); // Close modal after adding
-    }, [currentLayout, onLayoutChange]);
+
+        // Reset and close
+        setSelectedItems([]);
+        setIsSelectorModalOpen(false);
+    }, [currentLayout, selectedItems, onLayoutChange, dynamicCols]);
+
+    const toggleItemSelection = useCallback((item) => {
+        setSelectedItems(prev => {
+            const isSelected = prev.some(si => si.id === item.id);
+            if (isSelected) {
+                return prev.filter(si => si.id !== item.id); // Deselect
+            } else {
+                // Check capacity before adding
+                const remainingCapacity = 10 - currentLayout.length;
+                if (prev.length >= remainingCapacity) {
+                    return prev; // Ignore click, limit reached
+                }
+                return [...prev, item]; // Select
+            }
+        });
+    }, [currentLayout.length]);
+
+    // Clear selection when modal closes
+    useEffect(() => {
+        if (!isSelectorModalOpen) {
+            setSelectedItems([]);
+        }
+    }, [isSelectorModalOpen]);
 
     const handleRemoveFromGrid = useCallback((id) => {
         const updatedLayout = currentLayout.filter(l => l.i !== id);
@@ -165,14 +204,15 @@ export default function CustomPortfolioGrid({
             <div
                 className={`w-full rounded-3xl ${!isManageMode ? "overflow-hidden relative" : ""}`}
                 style={{
+                    height: `${leftPanelHeight}px`,
+                    overflow: isManageMode ? 'visible' : 'hidden',
                     ...(isManageMode ? {
                         backgroundColor: 'rgba(0, 0, 0, 0.4)',
                         backgroundImage: 'linear-gradient(to right, rgba(255,255,255,0.12) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.12) 1px, transparent 1px)',
                         backgroundSize: `${dynamicWidth / dynamicCols}px ${dynamicRowHeight + dynamicMargin}px`,
                         backgroundPosition: '0 0',
                         border: '1px solid rgba(255,255,255,0.1)'
-                    } : {}),
-                    ...(!isManageMode ? { maxHeight: `${maxRows * dynamicRowHeight + (maxRows - 1) * dynamicMargin + 16}px` } : {})
+                    } : {})
                 }}
             >
                 <ResponsiveGridLayout
@@ -187,15 +227,10 @@ export default function CustomPortfolioGrid({
                     isResizable={isManageMode}
                     onLayoutChange={handleLayoutChange}
                     containerPadding={[0, 0]}
-                    compactType="vertical"
+                    compactType={null}
                     preventCollision={false}
                 >
-                    {items.filter(item => {
-                        const layoutInfo = currentLayout.find(l => l.i === item.id.toString());
-                        // STRICT GHOST KILLER: Prevent rendering any item that extends beyond maxRows
-                        if (!layoutInfo) return true; // Let new items render to be placed
-                        return (layoutInfo.y + layoutInfo.h) <= maxRows;
-                    }).map(item => {
+                    {items.map(item => {
                         const layoutInfo = currentLayout.find(l => l.i === item.id.toString());
                         return (
                             <div key={item.id} className={`group relative ${isManageMode ? 'cursor-move' : ''}`}>
@@ -241,7 +276,7 @@ export default function CustomPortfolioGrid({
                         className="flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-[#ff5722] border border-white/20 hover:border-[#ff5722] rounded-xl text-white font-bold transition-all shadow-lg hover:shadow-[#ff5722]/30"
                     >
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 0 0 1-2-2v-4"></path>
+                            <path d="M21 15v4a2 0 0 1-2 2H5a2 0 0 1-2-2v-4"></path>
                             <polyline points="17 8 12 3 7 8"></polyline>
                             <line x1="12" y1="3" x2="12" y2="15"></line>
                         </svg>
@@ -250,7 +285,7 @@ export default function CustomPortfolioGrid({
                 </div>
             )}
 
-            {/* The Image Selector Modal Overlay */}
+            {/* The Image Selector Modal Overlay - Bulk Selector Edition */}
             {isSelectorModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
                     <div className="bg-[#111] border border-white/10 w-full max-w-4xl rounded-2xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
@@ -259,7 +294,7 @@ export default function CustomPortfolioGrid({
                         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-black/50">
                             <h3 className="text-white font-bold text-lg flex items-center gap-2">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff5722" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                                Image Library
+                                Image Library <span className="text-white/40 text-sm font-normal ml-2">Click images to select</span>
                             </h3>
                             <button
                                 onClick={() => setIsSelectorModalOpen(false)}
@@ -267,6 +302,12 @@ export default function CustomPortfolioGrid({
                             >
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                             </button>
+                        </div>
+
+                        {/* Capacity Progress Bar */}
+                        <div className="bg-white/5 px-6 py-2 border-b border-white/5 flex items-center justify-between text-xs">
+                            <span className="text-white/60">Board Capacity:</span>
+                            <span className="text-white/90 font-bold">{currentLayout.length + selectedItems.length} / 10 limit</span>
                         </div>
 
                         {/* Modal Body - Grid Matrix */}
@@ -278,45 +319,69 @@ export default function CustomPortfolioGrid({
                                     </div>
                                     <p className="text-white/50">No remaining images in your library.<br />All images are currently placed on the board.</p>
                                 </div>
-                            ) : (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                    {unplacedPool.map(item => (
-                                        <button
-                                            key={item.id}
-                                            onClick={() => {
-                                                handleAddFromDock(item);
-                                                setIsSelectorModalOpen(false);
-                                            }}
-                                            disabled={currentLayout.length >= 10}
-                                            className={`relative group aspect-square rounded-xl overflow-hidden border-2 transition-all duration-300 ${currentLayout.length >= 10 ? 'border-transparent opacity-30 cursor-not-allowed' : 'border-transparent hover:border-[#ff5722] hover:-translate-y-1 hover:shadow-xl hover:shadow-[#ff5722]/20'}`}
-                                        >
-                                            {item.image_url ? (
-                                                <img src={item.image_url} alt={item.topic || 'Portfolio'} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <div className="w-full h-full bg-white/5 flex items-center justify-center text-white/50 text-xs">No Image</div>
-                                            )}
+                            ) : (() => {
+                                const remainingSlots = 10 - currentLayout.length;
+                                const isAtLimit = selectedItems.length >= remainingSlots;
 
-                                            {/* Hover Overlay */}
-                                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2 text-center pointer-events-none">
-                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="mb-2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                                <span className="text-white text-xs font-bold px-2 py-1 bg-[#ff5722] rounded-lg shadow-lg">Add to Board</span>
-                                            </div>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
+                                return (
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                        {unplacedPool.map(item => {
+                                            const isSelected = selectedItems.some(si => si.id === item.id);
+                                            const isDisabled = !isSelected && isAtLimit; // Only disable unselected ones if limit reached
+
+                                            return (
+                                                <button
+                                                    key={item.id}
+                                                    onClick={() => toggleItemSelection(item)}
+                                                    disabled={isDisabled}
+                                                    className={`relative group aspect-square rounded-xl overflow-hidden border-2 transition-all duration-300 
+                                                        ${isDisabled ? 'border-transparent opacity-30 cursor-not-allowed' :
+                                                            isSelected ? 'border-[#ff5722] shadow-[0_0_20px_rgba(255,87,34,0.3)]' :
+                                                                'border-transparent hover:border-white/30 hover:-translate-y-1'}`}
+                                                >
+                                                    {item.image_url ? (
+                                                        <img src={item.image_url} alt={item.topic || 'Portfolio'} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <div className="w-full h-full bg-white/5 flex items-center justify-center text-white/50 text-xs">No Image</div>
+                                                    )}
+
+                                                    {/* Selection Overlay / Checkmark Badge */}
+                                                    {isSelected && (
+                                                        <div className="absolute inset-0 bg-[#ff5722]/20 outline outline-4 outline-[#ff5722] -outline-offset-4 pointer-events-none">
+                                                            <div className="absolute top-2 right-2 bg-[#ff5722] text-white rounded-full p-1 shadow-lg">
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Hover Overlay Suggestion */}
+                                                    {!isSelected && !isDisabled && (
+                                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                                                            <div className="w-8 h-8 rounded-full bg-white/20 border-2 border-white flex items-center justify-center">
+                                                                <div className="w-3 h-3 bg-white rounded-full"></div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                );
+                            })()}
                         </div>
 
-                        {/* Modal Footer */}
-                        <div className="px-6 py-4 border-t border-white/10 bg-black/50 flex justify-between items-center">
-                            <span className="text-white/50 text-sm">
-                                {currentLayout.length} / 10 items placed on board
-                            </span>
+                        {/* Modal Footer - Action Button */}
+                        <div className="bg-black/80 border-t border-white/10 px-6 py-4 flex items-center justify-between">
+                            <p className="text-white/60 text-sm">
+                                Selected: <strong className="text-white">{selectedItems.length}</strong> items
+                            </p>
                             <button
-                                onClick={() => setIsSelectorModalOpen(false)}
-                                className="px-5 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium transition-colors"
+                                onClick={handleAddSelected}
+                                disabled={selectedItems.length === 0}
+                                className="px-6 py-2.5 bg-[#ff5722] hover:bg-orange-500 disabled:bg-white/10 disabled:text-white/30 text-white rounded-xl font-bold shadow-lg shadow-[#ff5722]/20 transition-all flex items-center gap-2"
                             >
-                                Cancel
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                Add {selectedItems.length > 0 ? `${selectedItems.length} items` : ''} to Board
                             </button>
                         </div>
                     </div>

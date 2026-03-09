@@ -155,7 +155,7 @@ export default function Main() {
                     </div>
 
                     {/* Right Column: Portfolio & Exams */}
-                    <div className="dashboard-right">
+                    <div className="dashboard-right flex-1 flex flex-col w-full h-full min-h-full">
                         <PortfolioGrid leftPanelHeight={leftPanelHeight} />
                     </div>
                 </div>

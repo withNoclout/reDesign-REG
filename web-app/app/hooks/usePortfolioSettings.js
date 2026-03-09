@@ -23,7 +23,16 @@ export function usePortfolioSettings() {
                 const res = await fetch('/api/user/settings');
                 const json = await res.json();
                 if (json.success) {
-                    setSettings(prev => ({ ...prev, ...json.config }));
+                    const loadedConfig = json.config || {};
+                    // Enforce Default Configuration to 3-Columns if missing
+                    if (!loadedConfig.fixedConfig || typeof loadedConfig.fixedConfig.columnCount !== 'number') {
+                        loadedConfig.fixedConfig = {
+                            ...(loadedConfig.fixedConfig || {}),
+                            columnCount: 3,
+                            gapSize: loadedConfig.fixedConfig?.gapSize || 'normal'
+                        };
+                    }
+                    setSettings(prev => ({ ...prev, ...loadedConfig }));
                 }
             } catch (error) {
                 console.error('Failed to load settings:', error);

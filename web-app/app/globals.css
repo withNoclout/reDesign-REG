@@ -1192,6 +1192,7 @@ select:focus-visible,
   gap: 24px;
   width: 100%;
   margin-top: 40px;
+  align-items: start;
 }
 
 .dashboard-left {
