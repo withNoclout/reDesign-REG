@@ -18,6 +18,7 @@ import GuestBanner from '../components/GuestBanner';
 import UserProfileCard from '../components/UserProfileCard';
 import AcademicInfoCard from '../components/AcademicInfoCard';
 import ErrorAlert from '../components/ErrorAlert';
+import GlowingBackground from '../components/GlowingBackground';
 import PortfolioGrid from '../components/PortfolioGrid';
 import '../globals.css';
 
@@ -125,6 +126,7 @@ export default function Main() {
 
     return (
         <main className="main-content" id="main-content">
+            <GlowingBackground />
             <div className="bg-image" aria-hidden="true"></div>
             <div className="bg-overlay" aria-hidden="true"></div>
 

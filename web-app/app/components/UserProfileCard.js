@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { GraduationCapIcon, CalendarIcon, BuildingIcon, CogIcon, IdCardIcon, MailIcon, BookOpenIcon, BookIcon, UserCheckIcon } from './Icons';
+import { GraduationCapIcon, CalendarIcon, BuildingIcon, CogIcon, MailIcon, BookOpenIcon, BookIcon, UserCheckIcon } from './Icons';
 import OtpVerifyModal from './OtpVerifyModal';
 import ProfileUploadModal from './ProfileUploadModal';
-
+import InteractiveCard from './InteractiveCard';
+import MagneticButton from './MagneticButton';
+import { motion } from 'framer-motion';
 
 export default function UserProfileCard({ user, loading, profileData }) {
     const { updateProfileImage, logout } = useAuth();
@@ -77,9 +79,6 @@ export default function UserProfileCard({ user, loading, profileData }) {
 
     if (!user) return null;
 
-    const statusColor = user.userstatus === 'Y' ? '#4ade80' : '#f87171';
-    const statusBg = user.userstatus === 'Y' ? 'rgba(74, 222, 128, 0.15)' : 'rgba(248, 113, 113, 0.15)';
-
     // Check if a custom profile image (Supabase URL or uploaded)
     const isCustomImage = user.img && (user.img.startsWith('https://') || user.img.startsWith('data:'));
 
@@ -103,7 +102,7 @@ export default function UserProfileCard({ user, loading, profileData }) {
     };
 
     return (
-        <div className="profile-card" style={{
+        <InteractiveCard containerStyle={{
             background: 'rgba(255, 255, 255, 0.08)',
             backdropFilter: 'blur(20px)',
             border: '1px solid rgba(255, 255, 255, 0.15)',
@@ -112,7 +111,7 @@ export default function UserProfileCard({ user, loading, profileData }) {
             display: 'flex',
             flexDirection: 'column',
             gap: '20px',
-        }}>
+        }} className="profile-card">
             {/* Header: Photo + Name */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
                 {/* Profile Image Container */}
@@ -197,7 +196,7 @@ export default function UserProfileCard({ user, loading, profileData }) {
 
                         {/* Reset Button (only if custom image) */}
                         {isCustomImage && (
-                            <button
+                            <MagneticButton
                                 onClick={handleReset}
                                 style={{
                                     background: 'rgba(255,255,255,0.1)',
@@ -209,23 +208,8 @@ export default function UserProfileCard({ user, loading, profileData }) {
                                 aria-label="Reset to original profile photo"
                             >
                                 Reset
-                            </button>
+                            </MagneticButton>
                         )}
-                    </div>
-
-                    {/* Status Row */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
-                        {/* Status Badge */}
-                        <div style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '6px',
-                            background: statusBg, borderRadius: '20px',
-                            padding: '3px 10px',
-                        }}>
-                            <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: statusColor }} />
-                            <span style={{ color: statusColor, fontSize: '0.75rem', fontWeight: 500 }}>
-                                {user.statusdes || user.userstatusdes || 'N/A'}
-                            </span>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -234,19 +218,19 @@ export default function UserProfileCard({ user, loading, profileData }) {
             <div style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr',
-                gap: '12px',
+                gap: '16px',
+                marginTop: '16px', // Creating wider separation from Profile Top
             }}>
-                <InfoItem icon={<IdCardIcon size={14} />} label="รหัสนักศึกษา" value={user.usercode} mono />
-                <InfoItem icon={<MailIcon size={14} />} label="อีเมล" value={user.email} />
+                <InfoItem icon={<MailIcon size={14} />} label="อีเมล" value={user.email} span={2} />
                 <InfoItem icon={<GraduationCapIcon size={14} />} label="บทบาท" value={formatRole(user.role)} />
                 <InfoItem icon={<CalendarIcon size={14} />} label="วันรายงานตัว" value={formatDate(user.reportdate)} />
             </div>
 
             {/* Extra Student Profile Data */}
             <div style={{
-                marginTop: '0px',
+                marginTop: '12px',
                 borderTop: '1px solid rgba(255,255,255,0.1)',
-                paddingTop: '20px',
+                paddingTop: '24px',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '16px'
@@ -259,7 +243,7 @@ export default function UserProfileCard({ user, loading, profileData }) {
                         <span style={{ opacity: 0.7 }}><BookOpenIcon size={16} /></span> ข้อมูลทางวิชาการ
                     </h3>
 
-                    <button
+                    <MagneticButton
                         onClick={handleSyncProfile}
                         disabled={isSyncing}
                         aria-label="Refresh Profile Data"
@@ -284,10 +268,10 @@ export default function UserProfileCard({ user, loading, profileData }) {
                             fontSize: '0.85rem'
                         }}>↻</span>
                         {isSyncing ? 'กำลังซิงค์...' : 'อัปเดตข้อมูล'}
-                    </button>
+                    </MagneticButton>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
                     <InfoItem icon={<BuildingIcon size={14} />} label="คณะ" value={extraInfo?.faculty} />
                     <InfoItem icon={<CogIcon size={14} />} label="ภาควิชา" value={extraInfo?.department} />
                     <InfoItem icon={<BookIcon size={14} />} label="หลักสูตร" value={extraInfo?.major} />
@@ -301,7 +285,7 @@ export default function UserProfileCard({ user, loading, profileData }) {
                     }}>
                         <span style={{ opacity: 0.7 }}><UserCheckIcon size={16} /></span> อาจารย์ที่ปรึกษา
                     </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {/* Always show Advisor 1 slot, even if empty */}
                         <AdvisorItem name={extraInfo?.advisor1 || '—'} index={1} />
 
@@ -335,7 +319,7 @@ export default function UserProfileCard({ user, loading, profileData }) {
                 onClose={() => setShowUploadModal(false)}
                 onSave={handleCropSave}
             />
-        </div>
+        </InteractiveCard>
     );
 }
 
@@ -366,29 +350,44 @@ function AdvisorItem({ name, index }) {
     );
 }
 
-function InfoItem({ icon, label, value, mono }) {
+function InfoItem({ icon, label, value, mono, span }) {
     return (
-        <div style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            borderRadius: '12px',
-            padding: '12px',
-        }}>
+        <div
+            className="relative overflow-hidden"
+            style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '12px',
+                padding: '1px',
+                gridColumn: span ? `span ${span}` : 'auto'
+            }}
+        >
+
+
             <div style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                marginBottom: '4px',
+                background: 'rgba(15, 20, 30, 0.8)',
+                borderRadius: '11px',
+                padding: '16px',
+                height: '100%',
+                position: 'relative',
+                zIndex: 1
             }}>
-                <span style={{ fontSize: '14px' }}>{icon}</span>
-                <span style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.72rem', fontWeight: 500 }}>
-                    {label}
-                </span>
-            </div>
-            <div style={{
-                color: 'white', fontSize: '0.85rem', fontWeight: 500,
-                fontFamily: mono ? 'Montserrat, monospace' : 'inherit',
-                wordBreak: 'break-word',
-                lineHeight: 1.4
-            }}>
-                {value || '—'}
+                <div style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    marginBottom: '4px',
+                }}>
+                    <span style={{ fontSize: '14px' }}>{icon}</span>
+                    <span style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.72rem', fontWeight: 500 }}>
+                        {label}
+                    </span>
+                </div>
+                <div style={{
+                    color: 'white', fontSize: '0.85rem', fontWeight: 500,
+                    fontFamily: mono ? 'Montserrat, monospace' : 'inherit',
+                    wordBreak: 'break-word',
+                    lineHeight: 1.4
+                }}>
+                    {value || '—'}
+                </div>
             </div>
         </div>
     );
