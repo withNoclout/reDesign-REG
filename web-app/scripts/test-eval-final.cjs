@@ -2,7 +2,7 @@ const axios = require('axios');
 const https = require('https');
 require('dotenv').config({ path: '.env.local' });
 
-const agent = new https.Agent({ rejectUnauthorized: false });
+const agent = new https.Agent({ rejectUnauthorized: true });
 
 async function testApiBody() {
     try {

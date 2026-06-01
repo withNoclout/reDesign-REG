@@ -16,7 +16,7 @@ const password = process.env.REG_PASSWORD;
 
 async function test() {
     console.log(`Logging in as ${username}...`);
-    const agent = new https.Agent({ rejectUnauthorized: false });
+    const agent = new https.Agent({ rejectUnauthorized: true });
 
     // 1. Get Token
     const loginRes = await axios.post('https://reg3.kmutnb.ac.th/regapiweb1/api/th/Authen/LoginAD', {

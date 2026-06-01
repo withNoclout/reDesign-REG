@@ -26,16 +26,46 @@ export async function POST(request) {
         }
 
         const body = await request.json();
-        const { itemId, tempPath } = body;
+        const { itemId } = body;
 
-        console.log('[Upload API] Received upload request:', { itemId, tempPath, userId });
-
-        if (!itemId || !tempPath) {
+        if (!itemId) {
             return NextResponse.json(
-                { success: false, message: 'Missing itemId or tempPath' },
+                { success: false, message: 'Missing itemId' },
                 { status: 400 }
             );
         }
+
+        const supabase = getServiceSupabase();
+        const { data: item, error: itemError } = await supabase
+            .from('news_items')
+            .select('id, temp_path, uploaded_to_supabase')
+            .eq('id', itemId)
+            .eq('created_by', String(userId))
+            .single();
+
+        if (itemError || !item) {
+            console.error('[Upload API] Item lookup failed:', itemError);
+            return NextResponse.json(
+                { success: false, message: 'Item not found' },
+                { status: 404 }
+            );
+        }
+
+        if (item.uploaded_to_supabase) {
+            return NextResponse.json(
+                { success: false, message: 'Item already uploaded' },
+                { status: 400 }
+            );
+        }
+
+        if (!item.temp_path) {
+            return NextResponse.json(
+                { success: false, message: 'No temp file found for this item' },
+                { status: 400 }
+            );
+        }
+
+        console.log('[Upload API] Received upload request:', { itemId: item.id, userId });
 
         // Verify script exists
         const scriptPath = path.join(process.cwd(), 'scripts', 'upload-temp-to-supabase.js');
@@ -52,7 +82,7 @@ export async function POST(request) {
 
         console.log('[Upload API] Spawning upload script...');
 
-        const args = [itemId, tempPath];
+        const args = [String(item.id)];
 
         return new Promise((resolve) => {
             uploadProcess = spawn('node', [scriptPath, ...args], {

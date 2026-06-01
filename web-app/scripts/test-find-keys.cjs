@@ -1,7 +1,7 @@
 const axios = require('axios');
 const https = require('https');
 
-const agent = new https.Agent({ rejectUnauthorized: false });
+const agent = new https.Agent({ rejectUnauthorized: true });
 
 async function findAllKeys() {
     const mainRes = await axios.get('https://reg2.kmutnb.ac.th/registrar/main.efd0e6ba14d8dbbf.js', { httpsAgent: agent });

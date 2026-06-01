@@ -5,8 +5,12 @@ import { spawn } from 'child_process';
 import { promises as fs } from 'fs';
 import path from 'path';
 
-// BASE_DIR: Root directory for web-app (consistent across all upload-related files)
 const BASE_DIR = process.cwd(); // = web-app/
+
+function resolveTempFilePath(tempPath) {
+    return path.isAbsolute(tempPath) ? path.normalize(tempPath) : path.resolve(BASE_DIR, tempPath);
+}
+
 console.log('[Batch Upload API] BASE_DIR:', BASE_DIR);
 
 export async function POST(request) {
@@ -118,7 +122,7 @@ async function uploadSingleItem(supabase, item) {
         };
 
         // Verify temp file exists using BASE_DIR
-        const fullPath = path.join(BASE_DIR, item.temp_path);
+        const fullPath = resolveTempFilePath(item.temp_path);
 
         fs.access(fullPath)
             .then(() => {
@@ -130,7 +134,7 @@ async function uploadSingleItem(supabase, item) {
             .then(() => {
                 // Spawn upload process
                 const scriptPath = path.join(process.cwd(), 'scripts', 'upload-temp-to-supabase.js');
-                const args = [item.id, item.temp_path];
+                const args = [String(item.id)];
 
                 uploadProcess = spawn('node', [scriptPath, ...args], {
                     cwd: process.cwd(),

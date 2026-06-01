@@ -5,7 +5,7 @@ const { promisify } = require('util');
 require('dotenv').config({ path: '.env.local' });
 
 const gunzip = promisify(zlib.gunzip);
-const agent = new https.Agent({ rejectUnauthorized: false });
+const agent = new https.Agent({ rejectUnauthorized: true });
 
 async function testCorrectPayload() {
     try {

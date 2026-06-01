@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import https from 'https';
 import axios from 'axios';
 import { z } from 'zod';
@@ -7,6 +6,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import zlib from 'zlib';
 import { promisify } from 'util';
+import { getAuthContext } from '@/lib/auth';
 
 /**
  * API Route: /api/student/schedule
@@ -76,7 +76,7 @@ let globalAcadInfo = null;
 let globalAcadInfoTimestamp = 0;
 const ACAD_INFO_TTL_MS = 60 * 60 * 1000; // 1 hour
 
-const agent = new https.Agent({ rejectUnauthorized: false });
+const agent = new https.Agent({ rejectUnauthorized: true });
 
 const gunzip = promisify(zlib.gunzip);
 
@@ -128,23 +128,21 @@ const ScheduleItemSchema = z.object({
 });
 
 export async function GET() {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('reg_token')?.value;
-    const stdCode = cookieStore.get('std_code')?.value;
+    const authContext = await getAuthContext();
+    const token = authContext?.token;
+    const userId = authContext?.userId;
 
     serverLog('INFO', `=== Request Start === Has token: ${!!token}, Token length: ${token?.length || 0}`);
 
-    // Token validation
-    if (!token) {
-        serverLog('WARN', 'Unauthorized request: No token in cookie');
+    if (!authContext) {
+        serverLog('WARN', 'Unauthorized request: Invalid or missing session');
         return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
-    // 🚀 FAST PATH: Check Active Memory Cache first
-    if (stdCode) {
-        const cached = scheduleCache.get(stdCode);
+    if (userId) {
+        const cached = scheduleCache.get(userId);
         if (cached && (Date.now() - cached.timestamp < SCHEDULE_CACHE_TTL_MS)) {
-            serverLog('INFO', `Fast Memory Cache hit (latency ~0ms) for schedule: ${stdCode}`);
+            serverLog('INFO', `Fast Memory Cache hit (latency ~0ms) for schedule: ${userId}`);
             return NextResponse.json(cached.data);
         }
     }
@@ -261,8 +259,8 @@ export async function GET() {
             }
         };
 
-        if (stdCode) {
-            scheduleCache.set(stdCode, { timestamp: Date.now(), data: { ...responseData, cached: true } });
+        if (userId) {
+            scheduleCache.set(userId, { timestamp: Date.now(), data: { ...responseData, cached: true } });
         }
 
         return NextResponse.json(responseData);

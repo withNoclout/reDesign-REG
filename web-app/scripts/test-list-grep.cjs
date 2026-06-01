@@ -1,7 +1,7 @@
 const axios = require('axios');
 const https = require('https');
 
-const agent = new https.Agent({ rejectUnauthorized: false });
+const agent = new https.Agent({ rejectUnauthorized: true });
 
 async function grepBundleForList() {
     // We already found chunk 6332 is EvaluateofficerModule (the list module)

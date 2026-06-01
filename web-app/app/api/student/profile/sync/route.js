@@ -1,30 +1,29 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { fetchFromUniversityApi } from '@/lib/universityApi';
 import { parseProfileData } from '@/lib/profileParser';
 import { cacheProfile } from '@/lib/supabaseProfile';
 import { success, unauthorized } from '@/lib/apiResponse';
+import { getAuthContext } from '@/lib/auth';
 
 // This endpoint explicitly forces a fresh pull from the University API
 // and overwrites the Supabase Database Cache.
 
 export async function POST() {
     try {
-        const cookieStore = await cookies();
-        const token = cookieStore.get('reg_token')?.value;
-        const storedStudentId = cookieStore.get('std_code')?.value;
-
-        if (!token) {
+        const authContext = await getAuthContext();
+        if (!authContext) {
             return unauthorized('No authentication token');
         }
+
+        const { token, userId } = authContext;
 
         console.log(`[Profile Sync] Force refreshing data from University API...`);
 
         // 1. Fetch from University
         const rawApiData = await fetchFromUniversityApi(token);
 
-        // 2. Parse & Validate — pass storedStudentId fallback since ID endpoint may not return studentCode
-        const { profile, isPartial } = parseProfileData(rawApiData, storedStudentId);
+        // 2. Parse & Validate — fall back to the already validated user identity if needed
+        const { profile, isPartial } = parseProfileData(rawApiData, userId);
 
 
         if (isPartial) {

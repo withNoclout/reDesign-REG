@@ -18,7 +18,7 @@ const BASE_URL = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
 const USERNAME = env.REG_USERNAME;
 const PASSWORD = env.REG_PASSWORD;
 
-const agent = new https.Agent({ rejectUnauthorized: false });
+const agent = new https.Agent({ rejectUnauthorized: true });
 
 async function run() {
     try {

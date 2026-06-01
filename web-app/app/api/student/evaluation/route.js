@@ -1,40 +1,36 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import axios from 'axios';
 import https from 'https';
 import zlib from 'zlib';
 import { promisify } from 'util';
 import { getServiceSupabase } from '@/lib/supabase';
+import { getAuthContext } from '@/lib/auth';
 
 const gunzip = promisify(zlib.gunzip);
 const BASE_URL = 'https://reg3.kmutnb.ac.th/regapiweb1/api/th';
-
-// Ignore self-signed certs
-const agent = new https.Agent({ rejectUnauthorized: false });
+const agent = new https.Agent({ rejectUnauthorized: true });
 
 const evalCache = new Map();
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
-export function clearEvalCache(stdCode) {
-    if (stdCode) {
-        evalCache.delete(stdCode);
-        console.log(`[Evaluation Cache] Cleared for student: ${stdCode}`);
+export function clearEvalCache(userId) {
+    if (userId) {
+        evalCache.delete(userId);
+        console.log(`[Evaluation Cache] Cleared for student: ${userId}`);
     }
 }
 
 export async function GET() {
     try {
-        const cookieStore = await cookies();
-        const token = cookieStore.get('reg_token')?.value;
-        const stdCode = cookieStore.get('std_code')?.value;
-
-        if (!token) {
+        const authContext = await getAuthContext();
+        if (!authContext) {
             return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
         }
 
-        // Cache check
-        if (stdCode) {
-            const cached = evalCache.get(stdCode);
+        const { token, userId } = authContext;
+
+        if (userId) {
+            const cached = evalCache.get(userId);
             if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
                 return NextResponse.json({ success: true, data: cached.data });
             }
@@ -54,18 +50,14 @@ export async function GET() {
             const decompressed = await gunzip(compressedBuffer);
             const courses = JSON.parse(decompressed.toString('utf-8'));
 
-            // Fetch local cached evaluations from Supabase to counter University API delays
             let localCacheRecords = [];
-            if (stdCode) {
-                // Normalize stdCode for DB checking (remove 's' prefix if exists)
-                const normalizedStdCode = stdCode.startsWith('s') ? stdCode.substring(1).trim() : stdCode.trim();
-
+            if (userId) {
                 try {
                     const supabase = getServiceSupabase();
                     const { data } = await supabase
                         .from('evaluation_submissions')
                         .select('evaluate_id, officer_id, class_id')
-                        .eq('user_code', normalizedStdCode);
+                        .eq('user_code', String(userId).trim());
                     if (data) {
                         localCacheRecords = data.map(row => ({
                             evaluate_id: String(row.evaluate_id).trim(),
@@ -120,8 +112,8 @@ export async function GET() {
                 }
             });
 
-            if (stdCode) {
-                evalCache.set(stdCode, { timestamp: Date.now(), data: allEvaluations });
+            if (userId) {
+                evalCache.set(userId, { timestamp: Date.now(), data: allEvaluations });
             }
 
             const response = NextResponse.json({ success: true, data: allEvaluations });

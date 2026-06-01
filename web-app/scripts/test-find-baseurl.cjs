@@ -1,7 +1,7 @@
 const axios = require('axios');
 const https = require('https');
 
-const agent = new https.Agent({ rejectUnauthorized: false });
+const agent = new https.Agent({ rejectUnauthorized: true });
 
 async function findRequestService() {
     // The angular app uses `this.http` which is an instance of requestService

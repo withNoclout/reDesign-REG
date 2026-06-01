@@ -3,7 +3,7 @@ const https = require('https');
 const zlib = require('zlib');
 require('dotenv').config({ path: '.env.local' });
 
-const agent = new https.Agent({ rejectUnauthorized: false });
+const agent = new https.Agent({ rejectUnauthorized: true });
 
 async function testReg2RegapiwebAddanswer() {
     try {

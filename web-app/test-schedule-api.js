@@ -3,7 +3,7 @@ import axios from 'axios';
 import https from 'https';
 import zlib from 'zlib';
 import { promisify } from 'util';
-import { encryptForReg } from './lib/regCipherUtils.js'; // Assuming this exists or encryptPassword
+import { encryptForReg } from './lib/regCipherUtils.js';
 
 const gunzip = promisify(zlib.gunzip);
 
@@ -30,7 +30,7 @@ async function test() {
         console.log('Got token:', regToken.substring(0, 20) + '...');
 
         console.log('2. Fetching Timetable...');
-        const agent = new https.Agent({ rejectUnauthorized: false });
+        const agent = new https.Agent({ rejectUnauthorized: true });
         // The schedule route uses reg3...
         const timetableRes = await axios.get(
             `https://reg3.kmutnb.ac.th/regapiweb1/api/th/Timetable/Timetable/2568/2`,

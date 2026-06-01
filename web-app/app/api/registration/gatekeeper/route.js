@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import axios from 'axios';
+import { getAuthContext } from '@/lib/auth';
 
 const BASE_URL = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
 
@@ -8,19 +8,18 @@ const gatekeeperCache = new Map();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 export async function GET() {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('reg_token')?.value;
-    const stdCode = cookieStore.get('std_code')?.value;
+    const authContext = await getAuthContext();
+    const token = authContext?.token;
+    const userId = authContext?.userId;
 
-    if (!token) {
+    if (!authContext) {
         return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
-    // 🚀 FAST PATH: Check Active Memory Cache first
-    if (stdCode) {
-        const cached = gatekeeperCache.get(stdCode);
+    if (userId) {
+        const cached = gatekeeperCache.get(userId);
         if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
-            console.log(`[Gatekeeper API] Fast Memory Cache hit for ${stdCode}`);
+            console.log(`[Gatekeeper API] Fast Memory Cache hit for ${userId}`);
             return NextResponse.json({ success: true, data: cached.data, cached: true });
         }
     }
@@ -73,7 +72,7 @@ export async function GET() {
             student: {
                 // If Getstudentinfo fails (404 as seen), use decoded token or placeholder
                 // We can also extract from acadInfo partially
-                id: acadInfo.studentcode || stdCode || 'Unknown',
+                id: acadInfo.studentcode || userId || 'Unknown',
                 faculty: 'Engineering' // Placeholder
             },
             stage: stage,
@@ -82,8 +81,8 @@ export async function GET() {
         };
 
         // Update Memory Cache
-        if (stdCode) {
-            gatekeeperCache.set(stdCode, { timestamp: Date.now(), data: responseData });
+        if (userId) {
+            gatekeeperCache.set(userId, { timestamp: Date.now(), data: responseData });
         }
 
         return NextResponse.json({ success: true, data: responseData });

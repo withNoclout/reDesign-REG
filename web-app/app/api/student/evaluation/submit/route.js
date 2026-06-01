@@ -1,15 +1,13 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import axios from 'axios';
 import https from 'https';
 import { encryptForReg } from '@/lib/regCipherUtils';
 import { clearEvalCache } from '../route';
 import { getServiceSupabase } from '@/lib/supabase';
+import { getAuthContext } from '@/lib/auth';
 
 const BASE_URL = 'https://reg3.kmutnb.ac.th/regapiweb1/api/th';
-
-// Ignore self-signed certs
-const agent = new https.Agent({ rejectUnauthorized: false });
+const agent = new https.Agent({ rejectUnauthorized: true });
 
 export async function POST(request) {
     try {
@@ -20,13 +18,12 @@ export async function POST(request) {
             return NextResponse.json({ success: false, message: 'ข้อมูลไม่ครบถ้วน (classId, evaluateId, officerId)' }, { status: 400 });
         }
 
-        const cookieStore = await cookies();
-        const token = cookieStore.get('reg_token')?.value;
-        const stdCode = cookieStore.get('std_code')?.value;
-
-        if (!token) {
+        const authContext = await getAuthContext();
+        if (!authContext) {
             return NextResponse.json({ success: false, message: 'Unauthorized (No reg_token)' }, { status: 401 });
         }
+
+        const { token, userId } = authContext;
 
         const config = {
             headers: {
@@ -105,24 +102,20 @@ export async function POST(request) {
         }
 
         // --- THE FIX: Clear the cache so the frontend knows this instructor is done ---
-        if (stdCode) {
-            clearEvalCache(stdCode);
+        if (userId) {
+            clearEvalCache(userId);
 
-            // --- THE ENHANCEMENT: Remember this submission locally to counter university delays ---
             try {
-                // Normalize stdCode for DB insertion (remove 's' prefix if exists and trim)
-                const normalizedStdCode = stdCode.startsWith('s') ? stdCode.substring(1).trim() : stdCode.trim();
-
                 const supabase = getServiceSupabase();
                 await supabase.from('evaluation_submissions').upsert({
-                    user_code: normalizedStdCode,
+                    user_code: String(userId).trim(),
                     evaluate_id: String(evaluateId).trim(),
                     class_id: String(classId).trim(),
                     officer_id: String(officerId).trim(),
                     submitted_at: new Date().toISOString()
                 }, { onConflict: 'user_code, evaluate_id, officer_id, class_id' });
 
-                console.log(`[Submit Proxy] Cached submission for ${normalizedStdCode}: Officer ${officerId}`);
+                console.log(`[Submit Proxy] Cached submission for ${userId}: Officer ${officerId}`);
             } catch (dbErr) {
                 console.warn('[Submit Proxy] Failed to cache submission locally (non-blocking):', dbErr.message);
             }

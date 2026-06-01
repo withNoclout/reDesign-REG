@@ -6,8 +6,8 @@ This document strictly defines layout rules and style standards for the web appl
 - **Separation of Concerns:** Functional items like "Teacher Evaluation" (`/evaluation`), "Schedule" etc., MUST be placed entirely within their respective sub-menus via `GradeSubNav`.
 - **DO NOT** clutter the `/grade` page with external interactive cards, evaluation panels, or unrelated alerts unless it specifically concerns the student's grades viewing.
 
-## 2. Shared Credentials for Proxy Functionality
-- Operations that require background simulation on `reg2.kmutnb.ac.th` (such as Automatic Evaluations or Manual Scraped Questionnaires) utilize a shared backend-encrypted `password` stored securely in the Supabase database.
+## 2. Security Boundary for Proxy-Like Features
+- Features that would require background replay of a student's upstream credentials MUST be disabled until they can operate from a validated session token alone. The frontend MUST NOT assume the backend stores or can recover user passwords.
 
 ## 3. UI/UX Tone
 - Use Modern minimalist styles (Glassmorphism, Dark Mode defaults).

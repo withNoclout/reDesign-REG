@@ -8,7 +8,7 @@ import { promisify } from 'util';
 const gunzip = promisify(zlib.gunzip);
 const BASE_URL = 'https://reg3.kmutnb.ac.th/regapiweb1/api/th';
 
-const agent = new https.Agent({ rejectUnauthorized: false });
+const agent = new https.Agent({ rejectUnauthorized: true });
 const MOCK_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
 export async function GET(request) {

@@ -2,7 +2,7 @@
 const axios = require('axios');
 const https = require('https');
 
-const agent = new https.Agent({ rejectUnauthorized: false });
+const agent = new https.Agent({ rejectUnauthorized: true });
 
 async function findAPIs() {
     console.log('Fetching reg2 Angular main bundle...');

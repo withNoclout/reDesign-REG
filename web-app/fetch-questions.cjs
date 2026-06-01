@@ -15,7 +15,7 @@ function encryptForReg(plaintext) {
 }
 
 async function run() {
-    const agent = new https.Agent({ rejectUnauthorized: false });
+    const agent = new https.Agent({ rejectUnauthorized: true });
     const BASE_URL = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
 
     console.log('1. Get token...');

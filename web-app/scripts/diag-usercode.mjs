@@ -21,7 +21,7 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 async function diagnostic() {
     console.log(`Diagnosing for ${username}...`);
-    const agent = new https.Agent({ rejectUnauthorized: false });
+    const agent = new https.Agent({ rejectUnauthorized: true });
 
     // 1. Login to get the REAL usercode from university JSON
     const loginRes = await axios.post('https://reg4.kmutnb.ac.th/regapiweb2/api/th/Account/LoginAD',

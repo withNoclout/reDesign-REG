@@ -4,7 +4,7 @@ const axios = require('axios');
 const https = require('https');
 const crypto = require('crypto');
 
-const agent = new https.Agent({ rejectUnauthorized: false });
+const agent = new https.Agent({ rejectUnauthorized: true });
 const BASE_URL = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
 
 // Encryption function (EXACT copy from working login route)

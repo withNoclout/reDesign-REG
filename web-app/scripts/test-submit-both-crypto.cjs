@@ -6,7 +6,7 @@ const https = require('https');
 const zlib = require('zlib');
 require('dotenv').config({ path: '.env.local' });
 
-const agent = new https.Agent({ rejectUnauthorized: false });
+const agent = new https.Agent({ rejectUnauthorized: true });
 const SECRET_KEY = "mySecretKeyHere";
 
 // Method 1: Use CryptoJS identically to Angular (browser CryptoJS)

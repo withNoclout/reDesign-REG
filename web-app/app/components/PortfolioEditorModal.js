@@ -60,29 +60,27 @@ export default function PortfolioEditorModal({ isOpen, onClose, onRefresh, editI
         }
     };
 
-    const triggerUpload = async (itemId, tempPath, retryCount = 0) => {
+    const triggerUpload = async (itemId, retryCount = 0) => {
         const MAX_RETRIES = 3;
 
         try {
             setUploading(true);
-            console.log('[Frontend] Triggering upload for:', itemId, tempPath);
+            console.log('[Frontend] Triggering upload for:', itemId);
 
             const res = await fetch('/api/portfolio/upload', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ itemId, tempPath }),
+                body: JSON.stringify({ itemId }),
             });
 
-            // Check if response is OK before parsing JSON
             if (!res.ok) {
                 const errorText = await res.text();
                 console.error('[Frontend] Upload failed with status:', res.status, errorText);
 
-                // Retry logic for specific errors
                 if (retryCount < MAX_RETRIES && (res.status >= 500 || res.status === 504)) {
                     console.log(`[Frontend] Retrying upload (${retryCount + 1}/${MAX_RETRIES})...`);
-                    await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
-                    return triggerUpload(itemId, tempPath, retryCount + 1);
+                    await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+                    return triggerUpload(itemId, retryCount + 1);
                 }
 
                 throw new Error(`HTTP ${res.status}: ${errorText || res.statusText}`);
@@ -165,9 +163,8 @@ export default function PortfolioEditorModal({ isOpen, onClose, onRefresh, editI
                     setSelectedStudents([]);
                     setLoading(false);
 
-                    // If there's a temp file, trigger upload
                     if (savedItem.temp_path) {
-                        await triggerUpload(savedItem.id, savedItem.temp_path);
+                        await triggerUpload(savedItem.id);
                     } else {
                         onRefresh && onRefresh();
                         onClose();

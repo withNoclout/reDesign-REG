@@ -19,7 +19,7 @@ if (!connectionString) {
 const client = new Client({
     connectionString,
     ssl: {
-        rejectUnauthorized: false
+        rejectUnauthorized: true
     }
 });
 

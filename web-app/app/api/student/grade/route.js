@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import axios from 'axios';
-
+import { getAuthContext } from '@/lib/auth';
 const BASE_URL = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
 
 // Grade endpoints to try (in priority order)
@@ -17,22 +16,20 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 export async function GET() {
     try {
-        const cookieStore = await cookies();
-        const token = cookieStore.get('reg_token')?.value;
-        const stdCode = cookieStore.get('std_code')?.value;
-
-        if (!token) {
+        const authContext = await getAuthContext();
+        if (!authContext) {
             return NextResponse.json(
                 { success: false, message: 'ไม่พบ session กรุณาเข้าสู่ระบบใหม่' },
                 { status: 401 }
             );
         }
 
-        // 🚀 FAST PATH: Check Active Memory Cache first
-        if (stdCode) {
-            const cached = gradeCache.get(stdCode);
+        const { token, userId } = authContext;
+
+        if (userId) {
+            const cached = gradeCache.get(userId);
             if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
-                console.log(`[API] Fast Memory Cache hit (latency ~0ms) for grade: ${stdCode}`);
+                console.log(`[API] Fast Memory Cache hit (latency ~0ms) for grade: ${userId}`);
                 return NextResponse.json({ success: true, data: cached.data, cached: true });
             }
         }
@@ -65,9 +62,8 @@ export async function GET() {
                 })
             );
 
-            // Update Memory Cache
-            if (stdCode) {
-                gradeCache.set(stdCode, { timestamp: Date.now(), data: fastestResult });
+            if (userId) {
+                gradeCache.set(userId, { timestamp: Date.now(), data: fastestResult });
             }
 
             return NextResponse.json({ success: true, data: fastestResult });

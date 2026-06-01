@@ -16,7 +16,7 @@ const password = process.env.REG_PASSWORD;
 
 async function checkIds() {
     console.log(`Checking IDs for ${username}...`);
-    const agent = new https.Agent({ rejectUnauthorized: false });
+    const agent = new https.Agent({ rejectUnauthorized: true });
 
     // 1. Login
     const loginRes = await axios.post('https://reg4.kmutnb.ac.th/regapiweb2/api/th/Account/LoginAD', {
@@ -36,7 +36,7 @@ async function checkIds() {
 
 // Rewriting a better version of inspect-eval-types.mjs using the correct URL from login info
 async function realCheck() {
-    const agent = new https.Agent({ rejectUnauthorized: false });
+    const agent = new https.Agent({ rejectUnauthorized: true });
     const BASE_URL = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
 
     console.log('Logging in...');

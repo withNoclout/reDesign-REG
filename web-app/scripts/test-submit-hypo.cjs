@@ -7,7 +7,7 @@ const { promisify } = require('util');
 const gunzip = promisify(zlib.gunzip);
 const { encryptForReg } = require('../lib/regCipherUtils');
 
-const agent = new https.Agent({ rejectUnauthorized: false });
+const agent = new https.Agent({ rejectUnauthorized: true });
 const REG4_URL = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
 const REG3_URL = 'https://reg3.kmutnb.ac.th/regapiweb1/api/th';
 const REG2_URL = 'https://reg2.kmutnb.ac.th/regapiweb3/api/th';

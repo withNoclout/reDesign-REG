@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import axios from 'axios';
 import { getServiceSupabase } from '@/lib/supabase';
+import { AUTH_IDENTITY_COOKIE_MAX_AGE_SECONDS, AUTH_IDENTITY_COOKIE_NAME, createSignedAuthIdentityCookie } from '@/lib/auth';
 import { createRateLimiter, getClientIp } from '@/lib/rateLimit';
 import { encryptForReg } from '@/lib/regCipherUtils';
 import crypto from 'crypto';
@@ -126,116 +127,106 @@ export async function POST(request) {
 
                 const apiData = loginResponse.data;
 
-                // Decode tokenuser JWT to extract user profile
+                // Decode upstream JWTs and bind the authenticated user identity to the session
                 let userProfile = {};
+                let identityCookieValue = null;
                 try {
                     const tokenuser = apiData.tokenuser;
-                    if (tokenuser) {
-                        const payloadBase64 = tokenuser.split('.')[1];
-                        const payloadJson = Buffer.from(payloadBase64, 'base64url').toString('utf-8');
-                        const decoded = JSON.parse(payloadJson);
-                        userProfile = {
-                            username: decoded.username || '',
-                            usernameeng: decoded.usernameeng || '',
-                            name: decoded.name || '',
-                            nameeng: decoded.nameeng || '',
-                            email: decoded.email || '',
-                            usercode: decoded.usercode || '',
-                            userid: decoded.userid || '',
-                            userstatus: decoded.userstatus || '',
-                            userstatusdes: decoded.userstatusdes || '',
-                            statusdes: decoded.statusdes || '',
-                            statusdeseng: decoded.statusdeseng || '',
-                            role: decoded.role || [],
-                            reportdate: decoded.reportdate || '',
-                            img: apiData.img || apiData.navimg || '', // Initial image from API
-                        };
-
-                        // ----------------------------------------------------------------
-                        // REGISTRATION / PROFILE IMAGE DATABASE LOGIC
-                        // ----------------------------------------------------------------
-                        let finalImageUrl = userProfile.img; // Default from university
-
-                        try {
-                            const supabase = getServiceSupabase();
-                            // Normalize usercode for DB matching (remove 's' prefix if exists)
-                            const normalizedUsercode = userProfile.usercode.startsWith('s') ? userProfile.usercode.substring(1) : userProfile.usercode;
-
-                            // 1. Check if student exists in Supabase
-                            const { data: existingStudent, error: selectError } = await supabase
-                                .from('students')
-                                .select('profile_image_url, is_custom_image')
-                                .eq('usercode', normalizedUsercode)
-                                .single();
-
-                            if (selectError && selectError.code !== 'PGRST116') { // PGRST116 is "no rows found"
-                                console.error('[API] Supabase Select Error:', selectError);
-                            }
-
-                            if (existingStudent) {
-                                // 2. If student exists, use their DB state
-                                if (existingStudent.is_custom_image === 1) {
-                                    // Use their custom uploaded image
-                                    finalImageUrl = existingStudent.profile_image_url;
-                                } else {
-                                    // Update the DB with the latest university image (in case it changed)
-                                    await supabase.from('students')
-                                        .update({ profile_image_url: userProfile.img })
-                                        .eq('usercode', userProfile.usercode);
-                                }
-                            } else {
-                                // 3. New student, insert into DB with university default image (is_custom_image = 0)
-                                const { error: insertError } = await supabase
-                                    .from('students')
-                                    .insert({
-                                        usercode: normalizedUsercode,
-                                        name: userProfile.name,
-                                        nameeng: userProfile.nameeng,
-                                        email: userProfile.email,
-                                        profile_image_url: userProfile.img,
-                                        is_custom_image: 0
-                                    });
-
-                                if (insertError) console.error('[API] Supabase Insert Error:', insertError);
-                            }
-
-                            // Override the university image with the finalized database image
-                            userProfile.img = finalImageUrl;
-
-                        } catch (dbError) {
-                            console.error('[API] Database operation failed during login:', dbError);
-                            // Fallback to university image if DB fails
-                        }
-
-                    } else {
+                    if (!tokenuser) {
                         throw new Error('No tokenuser in response');
                     }
-                } catch (decodeErr) {
-                    console.warn('[API] Failed to decode tokenuser JWT:', decodeErr.message);
-                }
+                    if (!apiData.token) {
+                        throw new Error('No token in response');
+                    }
 
-                // [NEW] Seamless Credential Capture for Automated Evaluation
-                if (userProfile.usercode && password) {
+                    const tokenUserPayloadBase64 = tokenuser.split('.')[1];
+                    const tokenUserPayloadJson = Buffer.from(tokenUserPayloadBase64, 'base64url').toString('utf-8');
+                    const decoded = JSON.parse(tokenUserPayloadJson);
+
+                    const tokenPayloadBase64 = apiData.token.split('.')[1];
+                    const tokenPayloadJson = Buffer.from(tokenPayloadBase64, 'base64url').toString('utf-8');
+                    const decodedToken = JSON.parse(tokenPayloadJson);
+
+                    if (!decoded.usercode || !decodedToken.session) {
+                        throw new Error('Missing secure identity claims in upstream tokens');
+                    }
+
+                    identityCookieValue = createSignedAuthIdentityCookie({
+                        userCode: decoded.usercode,
+                        session: decodedToken.session
+                    });
+
+                    userProfile = {
+                        username: decoded.username || '',
+                        usernameeng: decoded.usernameeng || '',
+                        name: decoded.name || '',
+                        nameeng: decoded.nameeng || '',
+                        email: decoded.email || '',
+                        usercode: decoded.usercode || '',
+                        userid: decoded.userid || '',
+                        userstatus: decoded.userstatus || '',
+                        userstatusdes: decoded.userstatusdes || '',
+                        statusdes: decoded.statusdes || '',
+                        statusdeseng: decoded.statusdeseng || '',
+                        role: decoded.role || [],
+                        reportdate: decoded.reportdate || '',
+                        img: apiData.img || apiData.navimg || '',
+                    };
+
+                    // ----------------------------------------------------------------
+                    // REGISTRATION / PROFILE IMAGE DATABASE LOGIC
+                    // ----------------------------------------------------------------
+                    let finalImageUrl = userProfile.img;
+
                     try {
-                        const { iv, encryptedData } = encryptPassword(password);
                         const supabase = getServiceSupabase();
-                        // Normalize usercode for DB matching (remove 's' prefix if exists)
                         const normalizedUsercode = userProfile.usercode.startsWith('s') ? userProfile.usercode.substring(1) : userProfile.usercode;
 
-                        // Asynchronously upsert so it doesn't block the login flow
-                        supabase.from('user_credentials').upsert({
-                            user_code: String(normalizedUsercode),
-                            encrypted_password: encryptedData,
-                            iv: iv,
-                            // Do not overwrite is_auto_eval_enabled if it already exists, let it be default false or user settings
-                        }, { onConflict: 'user_code' }).then(({ error }) => {
-                            if (error) console.error('[API] Failed to capture credentials:', error);
-                            else console.log('[API] Seamlessly captured user credentials');
-                        });
-                    } catch (e) {
-                        console.error('[API] Failed to encrypt or save credentials during login:', e);
+                        const { data: existingStudent, error: selectError } = await supabase
+                            .from('students')
+                            .select('profile_image_url, is_custom_image')
+                            .eq('usercode', normalizedUsercode)
+                            .single();
+
+                        if (selectError && selectError.code !== 'PGRST116') {
+                            console.error('[API] Supabase Select Error:', selectError);
+                        }
+
+                        if (existingStudent) {
+                            if (existingStudent.is_custom_image === 1) {
+                                finalImageUrl = existingStudent.profile_image_url;
+                            } else {
+                                await supabase.from('students')
+                                    .update({ profile_image_url: userProfile.img })
+                                    .eq('usercode', userProfile.usercode);
+                            }
+                        } else {
+                            const { error: insertError } = await supabase
+                                .from('students')
+                                .insert({
+                                    usercode: normalizedUsercode,
+                                    name: userProfile.name,
+                                    nameeng: userProfile.nameeng,
+                                    email: userProfile.email,
+                                    profile_image_url: userProfile.img,
+                                    is_custom_image: 0
+                                });
+
+                            if (insertError) console.error('[API] Supabase Insert Error:', insertError);
+                        }
+
+                        userProfile.img = finalImageUrl;
+                    } catch (dbError) {
+                        console.error('[API] Database operation failed during login:', dbError);
                     }
+                } catch (decodeErr) {
+                    console.error('[API] Failed to establish secure session identity:', decodeErr.message);
+                    return NextResponse.json(
+                        { success: false, message: 'ไม่สามารถสร้าง session ที่ปลอดภัยได้ กรุณาลองใหม่อีกครั้ง' },
+                        { status: 502 }
+                    );
                 }
+
 
                 // Build user data for frontend (no raw JWTs exposed)
                 const fallbackImg = apiData.img || apiData.navimg || '';
@@ -264,16 +255,23 @@ export async function POST(request) {
                     });
                 }
 
-                // Store Student Code in Cookie for Offline/Cache Fallback
-                if (userData.usercode) {
-                    response.cookies.set('std_code', userData.usercode, {
-                        httpOnly: true,
-                        secure: process.env.NODE_ENV === 'production',
-                        path: '/',
-                        sameSite: 'lax',
-                        maxAge: 60 * 55 // ~55 minutes (matches reg_token session)
-                    });
-                }
+                // Store server-signed identity bound to the validated upstream session
+                response.cookies.set(AUTH_IDENTITY_COOKIE_NAME, identityCookieValue, {
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === 'production',
+                    path: '/',
+                    sameSite: 'lax',
+                    maxAge: AUTH_IDENTITY_COOKIE_MAX_AGE_SECONDS
+                });
+
+                // Clear the legacy identity cookie during the cutover.
+                response.cookies.set('std_code', '', {
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === 'production',
+                    path: '/',
+                    sameSite: 'lax',
+                    maxAge: 0
+                });
 
                 // Upsert user_directory for searchable user directory
                 if (userData.usercode) {

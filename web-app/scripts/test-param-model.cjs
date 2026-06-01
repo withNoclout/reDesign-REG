@@ -1,7 +1,7 @@
 const axios = require('axios');
 const https = require('https');
 
-const agent = new https.Agent({ rejectUnauthorized: false });
+const agent = new https.Agent({ rejectUnauthorized: true });
 
 async function findParamModel() {
     // Download the EvaluateofficerformModule chunk (5628) which has the Addanswer calls

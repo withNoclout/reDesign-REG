@@ -10,7 +10,7 @@ if (!connectionString) {
 
 const client = new Client({
     connectionString,
-    ssl: { rejectUnauthorized: false }
+    ssl: { rejectUnauthorized: true }
 });
 
 async function addEmailVerifiedCol() {

@@ -1,7 +1,7 @@
 const axios = require('axios');
 const https = require('https');
 require('dotenv').config({ path: '.env.local' });
-const agent = new https.Agent({ rejectUnauthorized: false });
+const agent = new https.Agent({ rejectUnauthorized: true });
 
 async function findWorkingPayload() {
     const loginRes = await axios.post('http://localhost:3000/api/auth/login', { username: process.env.REG_USERNAME, password: process.env.REG_PASSWORD });

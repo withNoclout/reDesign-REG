@@ -4,7 +4,7 @@ const zlib = require('zlib');
 const { promisify } = require('util');
 require('dotenv').config({ path: '.env.local' });
 
-const agent = new https.Agent({ rejectUnauthorized: false });
+const agent = new https.Agent({ rejectUnauthorized: true });
 
 async function testSubmitAPI() {
     try {

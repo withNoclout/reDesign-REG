@@ -46,7 +46,7 @@ async function addTopicColumn() {
 
     const client = new Client({
         connectionString: dbUrl,
-        ssl: { rejectUnauthorized: false } // Supabase requires SSL
+        ssl: { rejectUnauthorized: true } // Supabase requires SSL
     });
 
     try {

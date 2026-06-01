@@ -19,7 +19,7 @@ const USERNAME = env.REG_USERNAME;
 const PASSWORD = env.REG_PASSWORD;
 
 // Ignore self-signed certs if any
-const agent = new https.Agent({ rejectUnauthorized: false });
+const agent = new https.Agent({ rejectUnauthorized: true });
 
 async function run() {
     try {

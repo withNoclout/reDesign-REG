@@ -1,8 +1,11 @@
-
 import { cookies } from 'next/headers';
 import axios from 'axios';
+import jwt from 'jsonwebtoken';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
+
+export const AUTH_IDENTITY_COOKIE_NAME = 'reg_identity';
+export const AUTH_IDENTITY_COOKIE_MAX_AGE_SECONDS = 60 * 55;
 
 // In-memory cache for token validation (avoids hitting external API on every request)
 const _authCache = new Map();
@@ -16,7 +19,6 @@ function _getCachedAuth(token) {
 
 function _setCachedAuth(token, result) {
     _authCache.set(token, { result, time: Date.now() });
-    // Evict stale entries periodically (keep map small)
     if (_authCache.size > 200) {
         const now = Date.now();
         for (const [k, v] of _authCache) {
@@ -25,16 +27,64 @@ function _setCachedAuth(token, result) {
     }
 }
 
+function normalizeUserId(value) {
+    if (!value) return null;
+    const normalized = String(value).trim().replace(/^s/i, '');
+    return normalized || null;
+}
+
+function decodeJwtPayload(token) {
+    if (!token) return null;
+
+    try {
+        const parts = token.split('.');
+        if (parts.length !== 3) return null;
+        return JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf-8'));
+    } catch {
+        return null;
+    }
+}
+
+function extractUserIdFromUpstream(data) {
+    return normalizeUserId(data?.studentCode || data?.studentcode || data?.usercode || data?.studentId);
+}
+
+function verifyIdentityCookie(identityCookie, tokenSession) {
+    if (!identityCookie || !tokenSession || !process.env.JWT_SECRET) return null;
+
+    try {
+        const payload = jwt.verify(identityCookie, process.env.JWT_SECRET);
+        if (payload?.session !== tokenSession) return null;
+        return normalizeUserId(payload?.userCode);
+    } catch {
+        return null;
+    }
+}
+
+export function createSignedAuthIdentityCookie({ userCode, session }) {
+    const normalizedUserId = normalizeUserId(userCode);
+    if (!normalizedUserId || !session) {
+        throw new Error('Missing user identity claims for session cookie');
+    }
+    if (!process.env.JWT_SECRET) {
+        throw new Error('JWT_SECRET is required to sign auth identity cookies');
+    }
+
+    return jwt.sign(
+        { userCode: normalizedUserId, session },
+        process.env.JWT_SECRET,
+        { expiresIn: AUTH_IDENTITY_COOKIE_MAX_AGE_SECONDS }
+    );
+}
+
 /**
- * Retrieves the authenticated user's ID (Student Code or User Code).
- * Validates session against the external REG API, then retrieves user ID
- * from the std_code cookie (set during login).
- * Results are cached for 30s per token to avoid redundant external API calls.
- * 
- * @returns {Promise<string|null>} The user ID if authenticated, or null.
+ * Validates the upstream session token and returns the authenticated identity.
+ *
+ * Source of truth order:
+ * 1. Validated upstream response (`Getacadstd`) when it exposes a student code.
+ * 2. Server-signed identity cookie bound to the validated token session.
  */
-export async function getAuthUser() {
-    // 1. Real Auth Check
+export async function getAuthContext() {
     const cookieStore = await cookies();
     const token = cookieStore.get('reg_token')?.value;
 
@@ -43,35 +93,51 @@ export async function getAuthUser() {
         return null;
     }
 
-    // 3. Check cache first
     const cached = _getCachedAuth(token);
     if (cached !== undefined) return cached;
 
     try {
-        // Validate token is still active by hitting the REG API
         const authRes = await axios.get(`${BASE_URL}/Schg/Getacadstd`, {
             headers: { 'Authorization': `Bearer ${token}` },
             validateStatus: status => status < 500
         });
 
-        if (authRes.status !== 200) {
+        if (authRes.status !== 200 || !authRes.data) {
             console.log(`[Auth] External API rejected token. Status: ${authRes.status}`);
             _setCachedAuth(token, null);
             return null;
         }
 
-        // Token is valid — get user ID from std_code cookie (set during login)
-        const userId = cookieStore.get('std_code')?.value;
-        if (!userId) {
-            console.warn('[Auth] Token valid but std_code cookie missing');
+        const tokenPayload = decodeJwtPayload(token);
+        const tokenSession = tokenPayload?.session || null;
+        const signedIdentityCookie = cookieStore.get(AUTH_IDENTITY_COOKIE_NAME)?.value;
+
+        const upstreamUserId = extractUserIdFromUpstream(authRes.data);
+        const signedUserId = verifyIdentityCookie(signedIdentityCookie, tokenSession);
+
+        if (upstreamUserId && signedUserId && upstreamUserId !== signedUserId) {
+            console.warn('[Auth] Identity mismatch between upstream response and signed cookie');
             _setCachedAuth(token, null);
             return null;
         }
 
-        _setCachedAuth(token, userId);
-        return userId;
+        const userId = upstreamUserId || signedUserId;
+        if (!userId) {
+            console.warn('[Auth] Token validated but no trusted identity was available');
+            _setCachedAuth(token, null);
+            return null;
+        }
+
+        const result = { token, userId, tokenPayload, upstream: authRes.data };
+        _setCachedAuth(token, result);
+        return result;
     } catch (err) {
         console.error('[Auth] Check failed:', err.message);
         return null;
     }
+}
+
+export async function getAuthUser() {
+    const authContext = await getAuthContext();
+    return authContext?.userId || null;
 }

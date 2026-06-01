@@ -27,7 +27,7 @@ import axios from 'axios';
  */
 
 const BASE_URL = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
-const agent = new https.Agent({ rejectUnauthorized: false });
+const agent = new https.Agent({ rejectUnauthorized: true });
 
 export async function GET() {
     const cookieStore = await cookies();

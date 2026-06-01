@@ -39,7 +39,7 @@ const BASE_URL_V1 = 'https://reg4.kmutnb.ac.th/regapiweb1/api/th';
 const BASE_URL_V2 = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
 
 const httpsAgent = new https.Agent({
-    rejectUnauthorized: false
+    rejectUnauthorized: true
 });
 
 async function runResearch() {

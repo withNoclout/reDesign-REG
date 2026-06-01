@@ -18,7 +18,7 @@ function encryptForReg(plaintext) {
     return Buffer.concat([salt, iv, encrypted]).toString('base64');
 }
 
-const agent = new https.Agent({ rejectUnauthorized: false });
+const agent = new https.Agent({ rejectUnauthorized: true });
 
 async function run() {
     try {

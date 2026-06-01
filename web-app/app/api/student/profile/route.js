@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { fetchFromUniversityApi } from '@/lib/universityApi';
 import { parseProfileData } from '@/lib/profileParser';
 import { getCachedProfile, cacheProfile } from '@/lib/supabaseProfile';
 import { success, unauthorized } from '@/lib/apiResponse';
+import { getAuthContext } from '@/lib/auth';
 
 // Rapid In-Memory Cache (0ms latency, saves DB hits)
 // Keys: student_id, Values: { timestamp, data: StudentProfile }
@@ -12,32 +12,27 @@ const MEMORY_TTL_MS = 5 * 60 * 1000; // 5 mins
 
 export async function GET() {
     try {
-        const cookieStore = await cookies();
-        const token = cookieStore.get('reg_token')?.value;
-        const storedStudentId = cookieStore.get('std_code')?.value;
-
-        if (!token) {
+        const authContext = await getAuthContext();
+        if (!authContext) {
             return unauthorized('No authentication token');
         }
 
+        const { token, userId } = authContext;
+
         // --- 1. L1 CACHE: IN-MEMORY (Instant) ---
-        if (storedStudentId) {
-            const memCached = memoryCache.get(storedStudentId);
+        if (userId) {
+            const memCached = memoryCache.get(userId);
             if (memCached && (Date.now() - memCached.timestamp < MEMORY_TTL_MS)) {
-                console.log(`[Profile Controller] L1 Memory Cache Hit: ${storedStudentId}`);
+                console.log(`[Profile Controller] L1 Memory Cache Hit: ${userId}`);
                 return success(memCached.data);
             }
         }
 
-        // --- 2. L2 CACHE: DATABASE (Database-First Approach) ---
-        if (storedStudentId) {
-            const dbProfile = await getCachedProfile(storedStudentId);
+        if (userId) {
+            const dbProfile = await getCachedProfile(userId);
             if (dbProfile) {
-                console.log(`[Profile Controller] L2 Database Cache Hit: ${storedStudentId}`);
-
-                // Promote to L1 Memory Cache
-                memoryCache.set(storedStudentId, { timestamp: Date.now(), data: dbProfile });
-
+                console.log(`[Profile Controller] L2 Database Cache Hit: ${userId}`);
+                memoryCache.set(userId, { timestamp: Date.now(), data: dbProfile });
                 return success(dbProfile);
             }
         }
@@ -49,15 +44,14 @@ export async function GET() {
             // Fetch raw data
             const rawApiData = await fetchFromUniversityApi(token);
 
-            // Parse & Validate — pass storedStudentId as cookie fallback since
-            // Getacadstd does not always return studentCode/usercode in its response.
-            const { profile, isPartial } = parseProfileData(rawApiData, storedStudentId);
-
+            // Parse & Validate — fall back to the already validated user identity when
+            // the university response omits studentCode/usercode.
+            const { profile, isPartial } = parseProfileData(rawApiData, userId);
 
             // Only cache if we have a complete profile (Full Atomic Promise)
             if (!isPartial) {
                 await cacheProfile(profile);
-                memoryCache.set(profile.studentId, { timestamp: Date.now(), data: profile });
+                memoryCache.set(userId || profile.studentId, { timestamp: Date.now(), data: profile });
                 console.log(`[Profile Controller] Cached full profile for ${profile.studentId}`);
             } else {
                 // Partial data — still return it but don't persist so next request tries again

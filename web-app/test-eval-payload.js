@@ -9,7 +9,7 @@ const gunzip = promisify(zlib.gunzip);
 const BASE_URL = 'https://reg3.kmutnb.ac.th/regapiweb1/api/th';
 const LOGIN_BASE_URL = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
 
-const agent = new https.Agent({ rejectUnauthorized: false });
+const agent = new https.Agent({ rejectUnauthorized: true });
 
 async function getAuthToken() {
     const username = process.env.REG_USERNAME || 's6701091611176';

@@ -6,9 +6,12 @@ import { getServiceSupabase } from '@/lib/supabase';
 import { getAuthUser } from '@/lib/auth';
 
 const UPLOAD_TIMEOUT = 30000; // 30 seconds
-
-// BASE_DIR: Root directory for web-app (consistent across all upload-related files)
 const BASE_DIR = process.cwd(); // = web-app/
+
+function resolveTempFilePath(tempPath) {
+    return path.isAbsolute(tempPath) ? path.normalize(tempPath) : path.resolve(BASE_DIR, tempPath);
+}
+
 console.log('[Retry Upload API] BASE_DIR:', BASE_DIR);
 
 export async function POST(request) {
@@ -71,7 +74,7 @@ export async function POST(request) {
         }
 
         // Verify temp file exists using BASE_DIR
-        const fullPath = path.join(BASE_DIR, item.temp_path);
+        const fullPath = resolveTempFilePath(item.temp_path);
 
         try {
             await fs.access(fullPath);
@@ -98,7 +101,7 @@ export async function POST(request) {
 
         console.log('[Retry Upload API] Spawning upload script...');
 
-        const args = [itemId, item.temp_path];
+        const args = [String(item.id)];
 
         return new Promise((resolve) => {
             uploadProcess = spawn('node', [scriptPath, ...args], {

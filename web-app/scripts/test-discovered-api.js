@@ -3,7 +3,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
 const axios = require('axios');
 const https = require('https');
 
-const agent = new https.Agent({ rejectUnauthorized: false });
+const agent = new https.Agent({ rejectUnauthorized: true });
 const BASE_URL = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
 
 /**

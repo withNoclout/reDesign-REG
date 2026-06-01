@@ -36,7 +36,7 @@ function encryptData(plaintext) {
 }
 
 // Ignore self-signed certs if any
-const agent = new https.Agent({ rejectUnauthorized: false });
+const agent = new https.Agent({ rejectUnauthorized: true });
 
 async function runTest() {
     try {
