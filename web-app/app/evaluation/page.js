@@ -252,8 +252,28 @@ export default function EvaluationPage() {
 
                     return (
                         <>
-                            {/* Empty State / Completed State */}
-                            {!loading && !error && pendingEvals.length === 0 && (
+                            {/* Empty State */}
+                            {!loading && !error && evalList.length === 0 && (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    className="text-center py-20 bg-[rgba(255,255,255,0.05)] backdrop-blur-md border border-[rgba(255,255,255,0.1)] rounded-3xl mt-4"
+                                >
+                                    <div className="w-20 h-20 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                                        <LockIcon className="w-10 h-10 text-blue-300" />
+                                    </div>
+                                    <div className="text-white text-2xl font-bold mb-2 font-prompt">
+                                        ยังไม่มีรายการประเมินในขณะนี้
+                                    </div>
+                                    <div className="text-white/60 text-sm max-w-md mx-auto">
+                                        ระบบหลักไม่ได้ส่งรายชื่ออาจารย์ที่ต้องประเมินกลับมาในภาคการศึกษาปัจจุบัน
+                                        หากคาดว่าควรมีรายการ ให้ลองตรวจสอบจากระบบทะเบียนหลักอีกครั้งในภายหลัง
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            {/* Completed State */}
+                            {!loading && !error && evalList.length > 0 && pendingEvals.length === 0 && completedEvals.length > 0 && (
                                 <motion.div
                                     initial={{ opacity: 0, scale: 0.95 }}
                                     animate={{ opacity: 1, scale: 1 }}
