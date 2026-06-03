@@ -16,6 +16,7 @@ import '../globals.css';
 const SHOW_IDEAL_GRADES = true;
 // ⚠️ DO NOT MODIFY — hardcoded student code for grade protection
 const DEMO_STUDENT_CODE = '6701091611290';
+const DEMO_LOCKED_TERM_IDS = new Set(['2568/1', '2567/2', '2567/1']);
 
 /**
  * ⚠️ DO NOT MODIFY OR DELETE — Hardcoded academic record for student 6701091611290
@@ -96,6 +97,144 @@ const IDEAL_ACADEMIC_RECORD = {
     ]
 };
 
+function sortSemestersDescending(semesters) {
+    return semesters.sort((a, b) => {
+        if (Number(b.year) !== Number(a.year)) return Number(b.year) - Number(a.year);
+        return Number(b.semester) - Number(a.semester);
+    });
+}
+
+function transformFlatGradeData(flatData) {
+    const grouped = {};
+    const semesterSummaries = {};
+    let latestGpax = '0.00';
+    let totalCredits = 0;
+
+    flatData.forEach(item => {
+        const key = `${item.acadyear}/${item.semester}`;
+
+        if (!grouped[key]) {
+            grouped[key] = {
+                id: key,
+                year: String(item.acadyear),
+                semester: String(item.semester),
+                gpa: '0.00',
+                credits: 0,
+                subjects: []
+            };
+        }
+
+        if (item.coursename === '- SEMESTER TOTAL') {
+            const normalizedGpa = Number(item.gpa).toFixed(2);
+            const normalizedCredits = Number(item.creditsatisfy || 0);
+
+            grouped[key].gpa = normalizedGpa;
+            grouped[key].credits = normalizedCredits;
+            semesterSummaries[key] = {
+                id: key,
+                gpa: normalizedGpa,
+                credits: normalizedCredits,
+                gradePoints: Number(item.gradepoint || 0),
+                gpax: Number(item.gpax || 0),
+                cumulativeCredits: Number(item.sumcreditsatisfy || 0)
+            };
+
+            if (Number(item.gpax) > 0) {
+                latestGpax = Number(item.gpax).toFixed(2);
+                totalCredits = Number(item.sumcreditsatisfy || 0);
+            }
+            return;
+        }
+
+        grouped[key].subjects.push({
+            code: item.coursecode,
+            name: item.coursename,
+            credit: item.creditattempt,
+            grade: item.grade
+        });
+    });
+
+    const semesters = sortSemestersDescending(Object.values(grouped));
+    if (semesters.length > 0) {
+        const latestSummary = semesterSummaries[semesters[0].id];
+        if (latestSummary) {
+            latestGpax = latestSummary.gpax.toFixed(2);
+            totalCredits = latestSummary.cumulativeCredits;
+        }
+    }
+
+    return {
+        gpax: latestGpax,
+        totalCredits,
+        semesters,
+        semesterSummaries
+    };
+}
+
+function mergeDemoAcademicRecord(demoRecord, liveRecord) {
+    if (!liveRecord) return demoRecord;
+
+    const liveSemesterMap = new Map(liveRecord.semesters.map(term => [term.id, term]));
+    const mergedSemesters = demoRecord.semesters.map(term => {
+        const isLockedTerm = DEMO_LOCKED_TERM_IDS.has(term.id);
+        const liveTerm = liveSemesterMap.get(term.id);
+
+        if (!liveTerm || isLockedTerm) {
+            return term;
+        }
+
+        const liveSubjectMap = new Map(liveTerm.subjects.map(subject => [subject.code, subject]));
+        const mergedSubjects = term.subjects.map(subject => {
+            const liveSubject = liveSubjectMap.get(subject.code);
+            if (!liveSubject) return subject;
+
+            return {
+                ...subject,
+                credit: subject.credit ?? liveSubject.credit,
+                grade: subject.grade || liveSubject.grade || ''
+            };
+        });
+
+        const extraLiveSubjects = liveTerm.subjects.filter(subject =>
+            !term.subjects.some(existing => existing.code === subject.code)
+        );
+
+        return {
+            ...term,
+            gpa: term.gpa && term.gpa !== '-' ? term.gpa : liveTerm.gpa,
+            credits: term.credits || liveTerm.credits,
+            subjects: [...mergedSubjects, ...extraLiveSubjects]
+        };
+    });
+
+    const extraLiveSemesters = liveRecord.semesters.filter(term =>
+        !demoRecord.semesters.some(existing => existing.id === term.id)
+    );
+
+    const baseCredits = Number(demoRecord.totalCredits || 0);
+    const baseGpax = Number(demoRecord.gpax || 0);
+    const liveDynamicSummaries = Object.values(liveRecord.semesterSummaries || {}).filter(summary =>
+        !DEMO_LOCKED_TERM_IDS.has(summary.id)
+    );
+    const addedCredits = liveDynamicSummaries.reduce((sum, summary) => sum + Number(summary.credits || 0), 0);
+    const addedGradePoints = liveDynamicSummaries.reduce((sum, summary) => sum + Number(summary.gradePoints || 0), 0);
+    const mergedTotalCredits = addedCredits > 0 ? baseCredits + addedCredits : demoRecord.totalCredits;
+    const mergedGpax = addedCredits > 0
+        ? ((baseGpax * baseCredits) + addedGradePoints) / mergedTotalCredits
+        : Number(demoRecord.gpax || 0);
+
+    return {
+        gpax: Number.isFinite(mergedGpax) ? mergedGpax.toFixed(2) : demoRecord.gpax,
+        totalCredits: mergedTotalCredits,
+        semesters: sortSemestersDescending([...mergedSemesters, ...extraLiveSemesters])
+    };
+}
+
+function shouldUseDemoMerge(userCode) {
+    return SHOW_IDEAL_GRADES && userCode === DEMO_STUDENT_CODE;
+}
+
+
 export default function GradePage() {
     const router = useRouter();
     const { user, isAuthenticated, loading: authLoading, logout: handleLogout } = useAuth();
@@ -121,8 +260,7 @@ export default function GradePage() {
 
     useEffect(() => {
         const fetchGrades = async () => {
-            // Show ideal grades for guest mode (portfolio showcase) or specific demo user
-            if (isGuest || (SHOW_IDEAL_GRADES && user?.usercode === DEMO_STUDENT_CODE)) {
+            if (isGuest) {
                 setTimeout(() => {
                     setAcademicRecord(IDEAL_ACADEMIC_RECORD);
                     setLoading(false);
@@ -140,95 +278,43 @@ export default function GradePage() {
                 if (result.success && result.data) {
                     console.log('API Grade Data:', result.data);
 
-                    // Transform flat API data to our UI structure
                     try {
-                        const flatData = result.data;
+                        const liveAcademicRecord = transformFlatGradeData(result.data);
+                        const academicRecordForView = shouldUseDemoMerge(user?.usercode)
+                            ? mergeDemoAcademicRecord(IDEAL_ACADEMIC_RECORD, liveAcademicRecord)
+                            : liveAcademicRecord;
 
-                        // Group by academic year and semester
-                        const grouped = {};
-                        let latestGpax = '0.00';
-                        let totalCredits = 0;
-
-                        flatData.forEach(item => {
-                            const key = `${item.acadyear}/${item.semester}`;
-
-                            if (!grouped[key]) {
-                                grouped[key] = {
-                                    id: key,
-                                    year: item.acadyear,
-                                    semester: item.semester,
-                                    gpa: '0.00',
-                                    credits: 0,
-                                    subjects: []
-                                };
-                            }
-
-                            if (item.coursename === "- SEMESTER TOTAL") {
-                                // This is the summary row
-                                grouped[key].gpa = item.gpa ? item.gpa.toFixed(2) : '0.00';
-                                grouped[key].credits = item.creditsatisfy || 0;
-
-                                // Update global stats from the latest semester (assuming sorting or logic)
-                                if (parseFloat(item.gpax) > 0) {
-                                    // Just taking the last one encountered might be risky, but usually data is sorted.
-                                    // Better to track max year/sem, but for now:
-                                    latestGpax = item.gpax.toFixed(2);
-                                    totalCredits = item.sumcreditsatisfy; // Cumulative credits
-                                }
-                            } else {
-                                // Regular subject
-                                grouped[key].subjects.push({
-                                    code: item.coursecode,
-                                    name: item.coursename,
-                                    credit: item.creditattempt,
-                                    grade: item.grade
-                                });
-                            }
-                        });
-
-                        // Convert to array and sort descending (newest first)
-                        const semesters = Object.values(grouped).sort((a, b) => {
-                            if (b.year !== a.year) return b.year - a.year;
-                            return b.semester - a.semester;
-                        });
-
-                        // Use the GPAX from the newest semester
-                        if (semesters.length > 0 && semesters[0].year) {
-                            // Find the summary row of the latest semester if needed, 
-                            // but we already captured latestGpax during iteration if the list was consistent.
-                            // Let's ensure strict correctness: find the absolute latest semester with stats.
-                            const latestStat = flatData.find(i =>
-                                i.coursename === "- SEMESTER TOTAL" &&
-                                i.acadyear === semesters[0].year &&
-                                i.semester === semesters[0].semester
-                            );
-                            if (latestStat) {
-                                latestGpax = latestStat.gpax.toFixed(2);
-                                totalCredits = latestStat.sumcreditsatisfy;
-                            }
-                        }
-
-                        setAcademicRecord({
-                            gpax: latestGpax,
-                            totalCredits: totalCredits,
-                            semesters: semesters
-                        });
+                        setAcademicRecord(academicRecordForView);
                         setError(null);
-
                     } catch (parseErr) {
                         console.error('Data parsing error:', parseErr);
-                        setError('เกิดข้อผิดพลาดในการแปลงข้อมูล');
-                        setAcademicRecord(null);
+                        if (shouldUseDemoMerge(user?.usercode)) {
+                            setAcademicRecord(IDEAL_ACADEMIC_RECORD);
+                            setError(null);
+                        } else {
+                            setError('เกิดข้อผิดพลาดในการแปลงข้อมูล');
+                            setAcademicRecord(null);
+                        }
                     }
                 } else {
                     console.warn('Grade API failed/empty:', result.message);
-                    setError(result.message || 'ไม่สามารถดึงข้อมูลผลการเรียนได้');
-                    setAcademicRecord(null);
+                    if (shouldUseDemoMerge(user?.usercode)) {
+                        setAcademicRecord(IDEAL_ACADEMIC_RECORD);
+                        setError(null);
+                    } else {
+                        setError(result.message || 'ไม่สามารถดึงข้อมูลผลการเรียนได้');
+                        setAcademicRecord(null);
+                    }
                 }
             } catch (err) {
                 console.error('Fetch error:', err);
-                setError('เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่');
-                setAcademicRecord(null);
+                if (shouldUseDemoMerge(user?.usercode)) {
+                    setAcademicRecord(IDEAL_ACADEMIC_RECORD);
+                    setError(null);
+                } else {
+                    setError('เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่');
+                    setAcademicRecord(null);
+                }
             } finally {
                 setLoading(false);
             }
