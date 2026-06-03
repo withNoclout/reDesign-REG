@@ -2,6 +2,15 @@ import { NextResponse } from 'next/server';
 import { generateShareToken } from '../../../../utils/jwt';
 import { getAuthUser } from '@/lib/auth';
 
+function resolveBaseUrl(request) {
+    const configuredBaseUrl = process.env.NEXT_PUBLIC_BASE_URL?.trim();
+    if (configuredBaseUrl) {
+        return configuredBaseUrl.replace(/\/+$/, '');
+    }
+    return request.nextUrl.origin;
+}
+
+
 export async function POST(request) {
     try {
         // Auth check — only authenticated users can generate share links
@@ -64,7 +73,7 @@ export async function POST(request) {
         };
 
         const token = generateShareToken(payload, expiresIn);
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+        const baseUrl = resolveBaseUrl(request);
         const shareLink = `${baseUrl}/share?t=${encodeURIComponent(token)}`;
 
         return NextResponse.json({

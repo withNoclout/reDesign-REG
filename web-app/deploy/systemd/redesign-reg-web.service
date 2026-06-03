@@ -1,0 +1,28 @@
+[Unit]
+Description=redesign-reg.kmutnb.ac.th Next.js application
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/reDesign-REG/web-app
+Environment=NODE_ENV=production
+Environment=PORT=3333
+Environment=NEXT_TELEMETRY_DISABLED=1
+EnvironmentFile=/etc/redesign-reg/redesign-reg-web.env
+ExecStartPre=/usr/bin/test -d /var/www/reDesign-REG/web-app/.next
+ExecStartPre=/usr/local/bin/node /var/www/reDesign-REG/web-app/deploy/check-env.mjs
+ExecStart=/usr/local/bin/npm run start:prod
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=60
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=redesign-reg-web
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { Suspense, useState, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LockIcon, AlertTriangleIcon, ClockIcon, CalendarIcon, BookOpenIcon, ArrowUpIcon, ArrowDownIcon, UserIcon } from '../../components/Icons';
@@ -91,7 +91,7 @@ function stripTitles(name) {
     return s.replace(/\s+/g, ' ').trim();
 }
 
-export default function SchedulePage() {
+function SchedulePageContent() {
     const router = useRouter();
     const { user, isAuthenticated, loading: authLoading, logout: handleLogout } = useAuth();
     const { isGuest, allowedModules, guestName, loading: guestLoading } = useGuest();
@@ -923,5 +923,13 @@ export default function SchedulePage() {
                 )}
             </AnimatePresence>
         </main>
+    );
+}
+
+export default function SchedulePage() {
+    return (
+        <Suspense fallback={null}>
+            <SchedulePageContent />
+        </Suspense>
     );
 }
