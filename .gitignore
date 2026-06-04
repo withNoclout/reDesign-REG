@@ -54,6 +54,7 @@ ui-ux-skill/
 web-app/logs/
 web-app/public/uploads/
 
+.runtime/
 # Credentials / testing accounts
 **/user_fortesting.txt
 **/userfortesting.txt

@@ -1,0 +1,173 @@
+import { NextResponse } from 'next/server';
+import { getServiceSupabase } from '@/lib/supabase';
+import { getAuthUser } from '@/lib/auth';
+import { spawn } from 'child_process';
+import { promises as fs } from 'fs';
+import path from 'path';
+
+const UPLOAD_TIMEOUT = 30000; // 30 seconds
+
+// BASE_DIR: Root directory for web-app (consistent across all upload-related files)
+const BASE_DIR = process.cwd(); // = web-app/
+console.log('[Upload API] BASE_DIR:', BASE_DIR);
+
+export async function POST(request) {
+    let uploadProcess = null;
+    let timeoutId = null;
+
+    try {
+        // Auth check
+        const userId = await getAuthUser();
+        if (!userId) {
+            return NextResponse.json(
+                { success: false, message: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+
+        const body = await request.json();
+        const { itemId } = body;
+
+        if (!itemId) {
+            return NextResponse.json(
+                { success: false, message: 'Missing itemId' },
+                { status: 400 }
+            );
+        }
+
+        const supabase = getServiceSupabase();
+        const { data: item, error: itemError } = await supabase
+            .from('news_items')
+            .select('id, temp_path, uploaded_to_supabase')
+            .eq('id', itemId)
+            .eq('created_by', String(userId))
+            .single();
+
+        if (itemError || !item) {
+            console.error('[Upload API] Item lookup failed:', itemError);
+            return NextResponse.json(
+                { success: false, message: 'Item not found' },
+                { status: 404 }
+            );
+        }
+
+        if (item.uploaded_to_supabase) {
+            return NextResponse.json(
+                { success: false, message: 'Item already uploaded' },
+                { status: 400 }
+            );
+        }
+
+        if (!item.temp_path) {
+            return NextResponse.json(
+                { success: false, message: 'No temp file found for this item' },
+                { status: 400 }
+            );
+        }
+
+        console.log('[Upload API] Received upload request:', { itemId: item.id, userId });
+
+        // Verify script exists
+        const scriptPath = path.join(process.cwd(), 'scripts', 'upload-temp-to-supabase.js');
+
+        try {
+            await fs.access(scriptPath);
+        } catch (error) {
+            console.error('[Upload API] Script not found:', scriptPath);
+            return NextResponse.json(
+                { success: false, message: 'Upload script not found' },
+                { status: 500 }
+            );
+        }
+
+        console.log('[Upload API] Spawning upload script...');
+
+        const args = [String(item.id)];
+
+        return new Promise((resolve) => {
+            uploadProcess = spawn('node', [scriptPath, ...args], {
+                cwd: process.cwd(),
+                env: { ...process.env }
+            });
+
+            let stdout = '';
+            let stderr = '';
+            let isResolved = false;
+
+            const cleanup = () => {
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                    timeoutId = null;
+                }
+                if (uploadProcess && !uploadProcess.killed) {
+                    uploadProcess.kill();
+                    uploadProcess = null;
+                }
+            };
+
+            // Set timeout
+            timeoutId = setTimeout(() => {
+                if (!isResolved) {
+                    isResolved = true;
+                    console.error('[Upload API] Timeout after', UPLOAD_TIMEOUT, 'ms');
+                    cleanup();
+                    resolve(NextResponse.json({
+                        success: false,
+                        message: 'Upload timed out after 30 seconds'
+                    }, { status: 504 }));
+                }
+            }, UPLOAD_TIMEOUT);
+
+            uploadProcess.stdout.on('data', (data) => {
+                stdout += data.toString();
+                console.log('[Upload Script]', data.toString().trim());
+            });
+
+            uploadProcess.stderr.on('data', (data) => {
+                stderr += data.toString();
+                console.error('[Upload Script Error]', data.toString().trim());
+            });
+
+            uploadProcess.on('close', (code) => {
+                if (!isResolved) {
+                    isResolved = true;
+                    cleanup();
+                    console.log('[Upload API] Script exited with code:', code);
+
+                    if (code === 0) {
+                        resolve(NextResponse.json({
+                            success: true,
+                            message: 'Upload completed successfully'
+                        }));
+                    } else {
+                        resolve(NextResponse.json({
+                            success: false,
+                            message: 'Upload failed',
+                            error: stderr || stdout || 'Unknown error'
+                        }, { status: 500 }));
+                    }
+                }
+            });
+
+            uploadProcess.on('error', (error) => {
+                if (!isResolved) {
+                    isResolved = true;
+                    cleanup();
+                    console.error('[Upload API] Failed to start script:', error);
+                    resolve(NextResponse.json({
+                        success: false,
+                        message: 'Failed to start upload script',
+                        error: error.message
+                    }, { status: 500 }));
+                }
+            });
+        });
+
+    } catch (error) {
+        console.error('[Upload API] Error:', error);
+        return NextResponse.json(
+            { success: false, message: error.message },
+            { status: 500 }
+        );
+    }
+}

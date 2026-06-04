@@ -18,10 +18,14 @@ if [[ ! -f "$PREVIEW_CERT" || ! -f "$PREVIEW_KEY" ]]; then
   chmod 644 "$PREVIEW_CERT"
 fi
 
-cp /var/www/reDesign-REG/web-app/deploy/apache/redesign-reg-vpn-preview-ssl.conf /etc/apache2/sites-available/$PREVIEW_SITE
+install -m 0644 /var/www/reDesign-REG/web-app/deploy/apache/redesign-reg-vpn-preview-ssl.conf /etc/apache2/sites-available/"$PREVIEW_SITE"
+install -m 0644 /var/www/reDesign-REG/web-app/deploy/systemd/redesign-reg-web.service /etc/systemd/system/redesign-reg-web.service
 
 a2ensite "$PREVIEW_SITE"
 apache2ctl configtest
+systemctl daemon-reload
+systemctl enable redesign-reg-web.service
+/usr/local/bin/node /var/www/reDesign-REG/web-app/deploy/release-web.mjs --activate
 systemctl reload apache2
 
 echo "VPN preview enabled at https://172.16.214.69/"

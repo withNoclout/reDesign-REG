@@ -5,7 +5,6 @@ import { HeartIcon } from './components/Icons';
 import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
 import { useAuth } from './context/AuthContext';
-import './globals.css';
 
 const LAST_USERS_KEY = 'reg_last_users';
 const MAX_SAVED_USERS = 3;

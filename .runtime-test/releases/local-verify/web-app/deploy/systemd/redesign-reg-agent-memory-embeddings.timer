@@ -1,0 +1,11 @@
+[Unit]
+Description=Run redesign-reg agent memory embedding backfill every 30 minutes
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=30min
+Unit=redesign-reg-agent-memory-embeddings.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target

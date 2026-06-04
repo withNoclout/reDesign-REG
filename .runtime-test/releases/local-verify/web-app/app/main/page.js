@@ -1,0 +1,195 @@
+'use client';
+
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import { LockIcon } from '../components/Icons';
+import { useAuth } from '../context/AuthContext';
+import { useGuest } from '../context/GuestContext';
+import {
+    staggerContainer,
+    fadeInUp,
+    scaleIn,
+    cardHover,
+    itemVariant
+} from '@/lib/animations';
+import Navbar from '../components/Navbar';
+import GuestBanner from '../components/GuestBanner';
+import UserProfileCard from '../components/UserProfileCard';
+import AcademicInfoCard from '../components/AcademicInfoCard';
+import ErrorAlert from '../components/ErrorAlert';
+import GlowingBackground from '../components/GlowingBackground';
+import PortfolioGrid from '../components/PortfolioGrid';
+import '../globals.css';
+
+const ADMIN_USER_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID || 's6701091611290';
+
+function normalizeUserCode(value) {
+    return String(value || '').trim().replace(/^s/i, '');
+}
+
+
+export default function Main() {
+    const router = useRouter();
+    const { user, isAuthenticated, loading: authLoading, logout: handleLogout } = useAuth();
+    const { isGuest, allowedModules, guestName, loading: guestLoading } = useGuest();
+
+    // State
+    const [loadingInfo, setLoadingInfo] = useState(true);
+    const [error, setError] = useState(null);
+    const [studentInfo, setStudentInfo] = useState(null);
+    const [mounted, setMounted] = useState(false);
+    const [leftPanelHeight, setLeftPanelHeight] = useState(800);
+    const leftPanelRef = useRef(null);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    useEffect(() => {
+        if (!leftPanelRef.current) return;
+
+        const observer = new ResizeObserver((entries) => {
+            if (entries[0]) {
+                // Add a small buffer to ensure the grid doesn't clip too tightly against padding
+                setLeftPanelHeight(entries[0].contentRect.height);
+            }
+        });
+
+        observer.observe(leftPanelRef.current);
+        return () => observer.disconnect();
+    }, []);
+    // Check permissions
+    const canAccess = isGuest ? allowedModules.includes('profile') : isAuthenticated;
+    const isAdmin = isAuthenticated && normalizeUserCode(user?.usercode) === normalizeUserCode(ADMIN_USER_ID);
+
+    // Redirect if not authenticated/authorized
+    useEffect(() => {
+        if (!authLoading && !guestLoading && !canAccess) {
+            handleLogout();
+        }
+    }, [canAccess, authLoading, guestLoading, handleLogout]);
+
+    // Fetch Student Profile (Consolidated)
+    const fetchStudentInfo = useCallback(async () => {
+        if (!user || !isAuthenticated) return;
+        try {
+            setLoadingInfo(true);
+            // Use 'profile' API instead of broken 'info' API
+            const response = await fetch('/api/student/profile');
+            const result = await response.json();
+
+            if (result.success) {
+                setStudentInfo(result.data);
+            } else if (response.status === 401 || result.code === 'SESSION_EXPIRED') {
+                handleLogout();
+            } else {
+                // If profile fails (e.g. 503 partial), we might still have some data?
+                // The API now returns 200 even if partial, unless 500/401.
+                setError(result.message || 'ไม่สามารถดึงข้อมูลได้');
+            }
+        } catch (err) {
+            console.error('[Main] Failed to fetch student info:', err);
+            setError('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+        } finally {
+            setLoadingInfo(false);
+        }
+    }, [user, isAuthenticated, handleLogout]);
+
+
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            fetchStudentInfo();
+        } else {
+            setLoadingInfo(false);
+        }
+
+        // Fetch news for everyone (guest or auth)
+    }, [isAuthenticated, fetchStudentInfo]);
+
+    // Loading State
+    if (authLoading || guestLoading) {
+        return (
+            <main className="main-content">
+                <div className="bg-image"></div>
+                <div className="bg-overlay"></div>
+                <div className="flex items-center justify-center min-h-screen">
+                    <div className="text-white text-center">
+                        <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+                        <p className="mt-4">กำลังโหลด...</p>
+                    </div>
+                </div>
+            </main>
+        );
+    }
+
+    // Access Denied State (Redirecting...)
+    if (mounted && !canAccess) {
+        return null;
+    }
+
+    return (
+        <main className="main-content" id="main-content">
+            <GlowingBackground />
+            <div className="bg-image" aria-hidden="true"></div>
+            <div className="bg-overlay" aria-hidden="true"></div>
+
+            {/* Navbar */}
+            <Navbar activePage="profile" />
+
+            {/* Guest Banner */}
+            {isGuest && <GuestBanner guestName={guestName} />}
+
+            {/* Dashboard Content */}
+            <div className="main-container">
+                <ErrorAlert
+                    message={error}
+                    type="error"
+                    onDismiss={() => setError(null)}
+                />
+
+                <div className="dashboard-grid">
+                    {/* Left Column: Profile Card */}
+                    <div className="dashboard-left" ref={leftPanelRef}>
+                        <UserProfileCard user={user} loading={loadingInfo} profileData={studentInfo} />
+                        {studentInfo && (
+                            <AcademicInfoCard
+                                data={studentInfo}
+                                loading={loadingInfo}
+                            />
+                        )}
+                        {isAdmin && (
+                            <div className="glass-card mt-6 border border-orange-400/20 bg-orange-500/5 p-5 shadow-xl shadow-orange-950/20">
+                                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                                    <div>
+                                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-orange-200">Admin Workspace</p>
+                                        <h3 className="mt-2 text-lg font-semibold text-white font-prompt">Agent Memory Console</h3>
+                                        <p className="mt-2 text-sm text-white/65 font-prompt">
+                                            ตรวจสอบ graph snapshot, วิเคราะห์ blast radius ก่อนแก้ และค้นหา memory เดิมของระบบ
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => router.push('/agent-memory')}
+                                        className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-300"
+                                    >
+                                        เปิดคอนโซล
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Right Column: Portfolio & Exams */}
+                    <div className="dashboard-right flex-1 flex flex-col w-full h-full min-h-full">
+                        <PortfolioGrid leftPanelHeight={leftPanelHeight} />
+                    </div>
+                </div>
+            </div>
+
+            {/* News Editor Modal */}
+
+        </main>
+    );
+}

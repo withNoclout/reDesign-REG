@@ -1,0 +1,27 @@
+
+=== Chunk 5628 ===
+
+Addanswer context:
+is.frm2x.ngSubmit.emit(),!this.frm2.valid))return this.loading=!1,this.alert.alert("","","\u0e01\u0e23\u0e38\u0e13\u0e32\u0e15\u0e2d\u0e1a\u0e41\u0e1a\u0e1a\u0e1b\u0e23\u0e30\u0e40\u0e21\u0e34\u0e19\u0e43\u0e2b\u0e49\u0e04\u0e23\u0e1a\u0e16\u0e49\u0e27\u0e19"),!1;this.http.post("Evaluateofficerform/Addanswer/"+this.evaluateid+"/"+this.classid+"/"+this.officerid+"/1",this.frm.value).then(t=>{this.frm2?this.frm2.valid&&this.http.post("Evaluateofficerform/Addanswer/"+this.evaluateid2+"/"+this.classid+"/"+this.officerid+"/2",this.frm2.value).then(o=>{this.loading=!1,this.isConfirm=!0,this.getevalist(),wind
+
+Addanswer context:
+.frm.valid){if(this.frm2&&!this.frm2.valid)return this.loading=!1,this.alert.alert("","","\u0e01\u0e23\u0e38\u0e13\u0e32\u0e15\u0e2d\u0e1a\u0e41\u0e1a\u0e1a\u0e1b\u0e23\u0e30\u0e40\u0e21\u0e34\u0e19\u0e43\u0e2b\u0e49\u0e04\u0e23\u0e1a\u0e16\u0e49\u0e27\u0e19"),!1;this.http.post("Evaluateofficerform/Addanswer/"+this.evaluateid+"/"+this.classid+"/"+this.officerid+"/1",this.frm.value).then(t=>{this.frm2?this.frm2.valid&&this.http.post("Evaluateofficerform/Addanswer/"+this.evaluateid2+"/"+this.classid+"/"+this.officerid+"/2",this.frm2.value).then(o=>{this.loading=!1,this.commitalert()},o=>{401===o.status?t
+
+frm.value context:
+\u0e40\u0e21\u0e34\u0e19\u0e43\u0e2b\u0e49\u0e04\u0e23\u0e1a\u0e16\u0e49\u0e27\u0e19"),!1;this.http.post("Evaluateofficerform/Addanswer/"+this.evaluateid+"/"+this.classid+"/"+this.officerid+"/1",this.frm.value).then(t=>{this.frm2?this.frm2.valid&&this.http.post("Evaluateofficerform/Addanswer/"+this.evaluateid2+"/"+this.classid+"/"+this.officerid+"/2",this.frm2.value).then(o=>{this.loading=!1,this.isConfirm
+
+frm.value context:
+\u0e40\u0e21\u0e34\u0e19\u0e43\u0e2b\u0e49\u0e04\u0e23\u0e1a\u0e16\u0e49\u0e27\u0e19"),!1;this.http.post("Evaluateofficerform/Addanswer/"+this.evaluateid+"/"+this.classid+"/"+this.officerid+"/1",this.frm.value).then(t=>{this.frm2?this.frm2.valid&&this.http.post("Evaluateofficerform/Addanswer/"+this.evaluateid2+"/"+this.classid+"/"+this.officerid+"/2",this.frm2.value).then(o=>{this.loading=!1,this.commitale
+
+generateform context:
+n(o=>{t.evagrouplist2=o},o=>{401===o.status?t.alertlogin.alertlogin(o.error.result):t.alertlogin.alert(o.error.result)}))})()}getevalist(){var t=this;return(0,g.Z)(function*(){yield t.http.get("Evaluateofficerform/Evaluatequestion/"+t.classid+"/"+t.evaluateid+"/"+t.officerid).then(o=>{t.evalist=o,t.generateform(o)},o=>{401===o.status?t.alertlogin.alertlogin(o.error.result):t.alertlogin.alert(o.error.result)}),-9!=t.evaluateid2&&(yield t.http.get("Evaluateofficerform/Evaluatequestion/"+t.classid+"/"+t.evaluateid2+"/"+t.officerid).then(o=>{t.evalist2=o,t.generateform2(o)},o=>{401===o.status?t.alertlogin.ale
+
+generateform context:
+(o=>{-9!=this.evaluateid2?this.http.post("Evaluateofficerform/commit/"+this.evaluateid2+"/"+this.classid+"/"+this.officerid,{}).then(r=>{this.isConfirm=!0,this.loading=!1,this.router.navigate(["/evaluateofficer"])}):(this.isConfirm=!0,this.loading=!1,this.router.navigate(["/evaluateofficer"]))}))})}generateform(t){const o={};t.forEach(c=>{"H"!=c.questiontype&&("C"===c.questiontype?o[c.questiontype+""+c.questionid]=new s.NI({value:c.description,disabled:!1}):"M"===c.questiontype?c.evaluatechoice.forEach(u=>{o[c.questiontype+""+c.questionid+u.choiceid]=new s.NI({value:u.check,disabled:!1}),"T"===u.choicetyp
+
+generateform context:
+aluatechoice.forEach(u=>{"T"===u.choicetype&&(o[c.questiontype+""+c.questionid+u.choiceid+"txt"]=new s.NI({value:u.chkdescription,disabled:!1}))})))}),o.Ctxt=new s.NI({value:t[0]?.feedback,disabled:!1}),o.complaints=new s.NI({value:t[0]?.complaints,disabled:!1}),this.frm=new s.cw(o),this.loading=!1}generateform2(t){const o={};t.forEach(c=>{"H"!=c.questiontype&&("C"===c.questiontype?o[c.questiontype+""+c.questionid]=new s.NI({value:c.description,disabled:!1}):"M"===c.questiontype?c.evaluatechoice.forEach(u=>{o[c.questiontype+""+c.questionid+u.choiceid]=new s.NI({value:u.check,disabled:!1}),"T"===u.choicety
+
+=== Chunk 5226 ===
+
+=== Chunk 6166 ===

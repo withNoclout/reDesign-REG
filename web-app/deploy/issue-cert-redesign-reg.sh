@@ -5,6 +5,7 @@ DOMAIN="redesign-reg.kmutnb.ac.th"
 WEBROOT="/var/www/reDesign-REG/web-app/public"
 HTTP_SITE="redesign-reg.kmutnb.ac.th.conf"
 HTTPS_SITE="redesign-reg.kmutnb.ac.th-ssl.conf"
+PREVIEW_SITE="redesign-reg-vpn-preview-ssl.conf"
 EMAIL="${CERTBOT_EMAIL:-}"
 
 if [[ -z "$EMAIL" ]]; then
@@ -30,6 +31,9 @@ certbot certonly \
   --email "$EMAIL"
 
 a2ensite "$HTTPS_SITE"
+if [[ -e /etc/apache2/sites-enabled/"$PREVIEW_SITE" ]]; then
+  a2dissite "$PREVIEW_SITE"
+fi
 apache2ctl configtest
 systemctl reload apache2
 

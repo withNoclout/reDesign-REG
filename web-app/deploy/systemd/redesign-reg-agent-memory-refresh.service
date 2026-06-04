@@ -1,0 +1,21 @@
+[Unit]
+Description=redesign-reg graphify refresh and ingest job
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/reDesign-REG/web-app
+Environment=NODE_ENV=production
+Environment=NEXT_TELEMETRY_DISABLED=1
+EnvironmentFile=/etc/redesign-reg/redesign-reg-web.env
+ExecStartPre=/usr/local/bin/node /var/www/reDesign-REG/web-app/deploy/check-env.mjs
+ExecStart=/usr/local/bin/npm run graphify:refresh
+TimeoutStartSec=1800
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=redesign-reg-agent-memory-refresh
+NoNewPrivileges=true
+PrivateTmp=true

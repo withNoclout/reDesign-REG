@@ -315,4 +315,199 @@ CREATE TABLE IF NOT EXISTS public.fix_outcomes (
 CREATE INDEX IF NOT EXISTS idx_fix_outcomes_repo_created_at ON public.fix_outcomes (repo_name, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_fix_outcomes_assessment ON public.fix_outcomes (assessment_id);
 
+CREATE TABLE IF NOT EXISTS public.agent_memory_jobs (
+    job_name TEXT PRIMARY KEY,
+    repo_name TEXT NOT NULL,
+    state TEXT NOT NULL CHECK (state IN ('queued', 'running', 'success', 'failed')),
+    lock_id TEXT,
+    pid INTEGER,
+    hostname TEXT,
+    metadata JSONB DEFAULT '{}'::jsonb NOT NULL,
+    result JSONB DEFAULT '{}'::jsonb NOT NULL,
+    error JSONB DEFAULT '{}'::jsonb NOT NULL,
+    stale_after_ms BIGINT NOT NULL DEFAULT 7200000,
+    queued_at TIMESTAMPTZ,
+    started_at TIMESTAMPTZ,
+    finished_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+DROP TRIGGER IF EXISTS set_agent_memory_jobs_updated_at ON public.agent_memory_jobs;
+CREATE TRIGGER set_agent_memory_jobs_updated_at
+BEFORE UPDATE ON public.agent_memory_jobs
+FOR EACH ROW EXECUTE FUNCTION public.set_agent_memory_updated_at();
+
+CREATE INDEX IF NOT EXISTS idx_agent_memory_jobs_state ON public.agent_memory_jobs (state);
+CREATE INDEX IF NOT EXISTS idx_agent_memory_jobs_repo_updated_at ON public.agent_memory_jobs (repo_name, updated_at DESC);
+CREATE TABLE IF NOT EXISTS public.student_loan_source_snapshots (
+    id BIGSERIAL PRIMARY KEY,
+    source_key TEXT NOT NULL,
+    source_url TEXT NOT NULL,
+    content_hash TEXT NOT NULL,
+    raw_payload JSONB DEFAULT '{}'::jsonb NOT NULL,
+    parsed_payload JSONB DEFAULT '{}'::jsonb NOT NULL,
+    fetched_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    UNIQUE (source_key, content_hash)
+);
+
+CREATE INDEX IF NOT EXISTS idx_student_loan_source_snapshots_key_fetched
+    ON public.student_loan_source_snapshots (source_key, fetched_at DESC);
+
+CREATE TABLE IF NOT EXISTS public.student_loan_events (
+    event_id TEXT PRIMARY KEY,
+    source_key TEXT NOT NULL,
+    audience TEXT NOT NULL CHECK (audience IN ('new', 'continuing')),
+    education_level TEXT NOT NULL CHECK (education_level IN ('vocational', 'bachelor')),
+    stage TEXT NOT NULL,
+    phase TEXT NOT NULL CHECK (phase IN ('open', 'closingSoon')),
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    href TEXT NOT NULL,
+    opens_at TIMESTAMPTZ NOT NULL,
+    closes_at TIMESTAMPTZ NOT NULL,
+    visible_from TIMESTAMPTZ NOT NULL,
+    visible_until TIMESTAMPTZ NOT NULL,
+    dismiss_strategy TEXT NOT NULL CHECK (dismiss_strategy IN ('click', 'expiry')),
+    source_hash TEXT NOT NULL,
+    payload JSONB DEFAULT '{}'::jsonb NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+DROP TRIGGER IF EXISTS set_student_loan_events_updated_at ON public.student_loan_events;
+CREATE TRIGGER set_student_loan_events_updated_at
+BEFORE UPDATE ON public.student_loan_events
+FOR EACH ROW EXECUTE FUNCTION public.set_agent_memory_updated_at();
+
+CREATE INDEX IF NOT EXISTS idx_student_loan_events_audience_level
+    ON public.student_loan_events (audience, education_level, opens_at DESC);
+CREATE INDEX IF NOT EXISTS idx_student_loan_events_source_key
+    ON public.student_loan_events (source_key, opens_at DESC);
+
+CREATE TABLE IF NOT EXISTS public.student_loan_profiles (
+    user_code TEXT PRIMARY KEY,
+    borrower_type TEXT NOT NULL CHECK (borrower_type IN ('new', 'continuing')),
+    education_level TEXT NOT NULL CHECK (education_level IN ('vocational', 'bachelor')),
+    source TEXT NOT NULL CHECK (source IN ('manual', 'seeded', 'inferred', 'migrated')),
+    confirmed_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+DROP TRIGGER IF EXISTS set_student_loan_profiles_updated_at ON public.student_loan_profiles;
+CREATE TRIGGER set_student_loan_profiles_updated_at
+BEFORE UPDATE ON public.student_loan_profiles
+FOR EACH ROW EXECUTE FUNCTION public.set_agent_memory_updated_at();
+
+CREATE TABLE IF NOT EXISTS public.student_loan_rollout_overrides (
+    user_code TEXT PRIMARY KEY,
+    enabled BOOLEAN DEFAULT false NOT NULL,
+    mode TEXT NOT NULL CHECK (mode IN ('live', 'preview')),
+    preview_now TIMESTAMPTZ,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+DROP TRIGGER IF EXISTS set_student_loan_rollout_overrides_updated_at ON public.student_loan_rollout_overrides;
+CREATE TRIGGER set_student_loan_rollout_overrides_updated_at
+BEFORE UPDATE ON public.student_loan_rollout_overrides
+FOR EACH ROW EXECUTE FUNCTION public.set_agent_memory_updated_at();
+
+CREATE TABLE IF NOT EXISTS public.student_loan_notification_instances (
+    id BIGSERIAL PRIMARY KEY,
+    user_code TEXT NOT NULL,
+    event_id TEXT NOT NULL REFERENCES public.student_loan_events(event_id) ON DELETE CASCADE,
+    status TEXT NOT NULL CHECK (status IN ('active', 'clicked', 'expired', 'hidden')),
+    visible_from TIMESTAMPTZ NOT NULL,
+    visible_until TIMESTAMPTZ NOT NULL,
+    clicked_at TIMESTAMPTZ,
+    resolved_at TIMESTAMPTZ,
+    resolution_reason TEXT CHECK (resolution_reason IN ('click', 'expiry', 'rollout')),
+    preview BOOLEAN DEFAULT false NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    UNIQUE (user_code, event_id)
+);
+
+DROP TRIGGER IF EXISTS set_student_loan_notification_instances_updated_at ON public.student_loan_notification_instances;
+CREATE TRIGGER set_student_loan_notification_instances_updated_at
+BEFORE UPDATE ON public.student_loan_notification_instances
+FOR EACH ROW EXECUTE FUNCTION public.set_agent_memory_updated_at();
+
+CREATE INDEX IF NOT EXISTS idx_student_loan_notification_instances_user_status
+    ON public.student_loan_notification_instances (user_code, status, visible_from DESC);
+CREATE INDEX IF NOT EXISTS idx_student_loan_notification_instances_event
+    ON public.student_loan_notification_instances (event_id, user_code);
+
+
+CREATE TABLE IF NOT EXISTS public.google_mail_connections (
+    user_code TEXT PRIMARY KEY,
+    google_user_id TEXT NOT NULL,
+    email TEXT,
+    display_name TEXT,
+    picture_url TEXT,
+    access_token_encrypted TEXT NOT NULL,
+    refresh_token_encrypted TEXT,
+    token_type TEXT NOT NULL DEFAULT 'Bearer',
+    scope TEXT NOT NULL DEFAULT '',
+    access_token_expires_at TIMESTAMPTZ,
+    last_synced_at TIMESTAMPTZ,
+    last_sync_error TEXT,
+    revoked_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+DROP TRIGGER IF EXISTS set_google_mail_connections_updated_at ON public.google_mail_connections;
+CREATE TRIGGER set_google_mail_connections_updated_at
+BEFORE UPDATE ON public.google_mail_connections
+FOR EACH ROW EXECUTE FUNCTION public.set_agent_memory_updated_at();
+
+CREATE TABLE IF NOT EXISTS public.gmail_sync_cursors (
+    user_code TEXT PRIMARY KEY,
+    last_message_internal_date TEXT,
+    last_history_id TEXT,
+    last_query_at TIMESTAMPTZ,
+    last_success_at TIMESTAMPTZ,
+    last_error TEXT,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+DROP TRIGGER IF EXISTS set_gmail_sync_cursors_updated_at ON public.gmail_sync_cursors;
+CREATE TRIGGER set_gmail_sync_cursors_updated_at
+BEFORE UPDATE ON public.gmail_sync_cursors
+FOR EACH ROW EXECUTE FUNCTION public.set_agent_memory_updated_at();
+
+CREATE TABLE IF NOT EXISTS public.gmail_classroom_notifications (
+    notification_id TEXT PRIMARY KEY,
+    user_code TEXT NOT NULL,
+    gmail_message_id TEXT NOT NULL,
+    gmail_thread_id TEXT,
+    sender TEXT,
+    subject TEXT,
+    snippet TEXT,
+    source_type TEXT NOT NULL CHECK (source_type IN ('announcement', 'courseWork', 'returnedWork', 'general')),
+    course_hint TEXT,
+    href TEXT NOT NULL,
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    sort_at TIMESTAMPTZ NOT NULL,
+    resource_updated_at TIMESTAMPTZ NOT NULL,
+    seen_at TIMESTAMPTZ,
+    payload JSONB DEFAULT '{}'::jsonb NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+DROP TRIGGER IF EXISTS set_gmail_classroom_notifications_updated_at ON public.gmail_classroom_notifications;
+CREATE TRIGGER set_gmail_classroom_notifications_updated_at
+BEFORE UPDATE ON public.gmail_classroom_notifications
+FOR EACH ROW EXECUTE FUNCTION public.set_agent_memory_updated_at();
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_gmail_classroom_notifications_user_message ON public.gmail_classroom_notifications (user_code, gmail_message_id);
+CREATE INDEX IF NOT EXISTS idx_gmail_classroom_notifications_user_sort ON public.gmail_classroom_notifications (user_code, sort_at DESC);
+CREATE INDEX IF NOT EXISTS idx_gmail_classroom_notifications_user_seen ON public.gmail_classroom_notifications (user_code, seen_at, sort_at DESC);
 COMMIT;

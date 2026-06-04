@@ -1,0 +1,58 @@
+import { Prompt, Montserrat } from 'next/font/google';
+import { AuthProvider } from './context/AuthContext';
+import { GuestProvider } from './context/GuestContext';
+import { CredentialProvider } from './context/CredentialContext';
+import GlobalErrorListener from './components/GlobalErrorListener';
+
+const prompt = Prompt({
+    subsets: ['thai', 'latin'],
+    weight: ['300', '400', '500', '600', '700'],
+    display: 'swap',
+    variable: '--font-prompt',
+});
+
+const montserrat = Montserrat({
+    subsets: ['latin'],
+    weight: ['300', '400', '500', '600', '700'],
+    display: 'swap',
+    variable: '--font-montserrat',
+});
+
+export const metadata = {
+    title: 'ระบบลงทะเบียนนักศึกษา - KMUTNB',
+    description: 'KMUTNB Registration System Redesign',
+    icons: {
+        icon: [
+            { url: '/tab-icon.svg', type: 'image/svg+xml' },
+            { url: '/favicon.ico', sizes: 'any' },
+        ],
+        shortcut: '/favicon.ico',
+        apple: '/apple-touch-icon.png',
+    },
+};
+
+import { LazyMotion, domAnimation } from 'framer-motion';
+
+export default function RootLayout({ children }) {
+    return (
+        <html lang="th" className={`${prompt.variable} ${montserrat.variable}`} suppressHydrationWarning>
+            <head>
+            </head>
+            <body>
+                <a href="#main-content" className="skip-to-content">
+                    ข้ามไปยังเนื้อหาหลัก (Skip to content)
+                </a>
+                <GlobalErrorListener />
+                <LazyMotion features={domAnimation}>
+                    <AuthProvider>
+                        <GuestProvider>
+                            <CredentialProvider>
+                                {children}
+                            </CredentialProvider>
+                        </GuestProvider>
+                    </AuthProvider>
+                </LazyMotion>
+            </body>
+        </html>
+    )
+}

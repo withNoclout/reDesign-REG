@@ -229,4 +229,166 @@
  * @property {string} createdAt
  */
 
+/**
+ * Manual borrower profile chosen by the student for Student Loan scheduling.
+ *
+ * @typedef {Object} StudentLoanBorrowerProfile
+ * @property {'new'|'continuing'} borrowerType
+ * @property {'vocational'|'bachelor'} educationLevel
+ * @property {'manual'|'recommended'} source
+ * @property {string} confirmedAt
+ * @property {string} updatedAt
+ */
+
+/**
+ * Recommended borrower profile inferred from academic data before user confirmation.
+ *
+ * @typedef {Object} StudentLoanBorrowerRecommendation
+ * @property {'new'|'continuing'} borrowerType
+ * @property {'vocational'|'bachelor'} educationLevel
+ * @property {'high'|'medium'} confidence
+ * @property {number|null} estimatedCompletedSemesters
+ * @property {string} reason
+ */
+
+/**
+ * A normalized Student Loan schedule event sourced from Student Affairs pages.
+ *
+ * @typedef {Object} StudentLoanEvent
+ * @property {string} id
+ * @property {'new'|'continuing'} audience
+ * @property {'vocational'|'bachelor'} educationLevel
+ * @property {string} stage
+ * @property {'open'|'closingSoon'} phase
+ * @property {string} title
+ * @property {string} message
+ * @property {string} href
+ * @property {string} ctaLabel
+ * @property {string} opensAt
+ * @property {string} closesAt
+ * @property {string} reminderAt
+ * @property {string} sourceId
+ */
+
+/**
+ * A normalized Student Loan quick link.
+ *
+ * @typedef {Object} StudentLoanResource
+ * @property {string} id
+ * @property {string} title
+ * @property {string} href
+ * @property {'form'|'portal'|'article'|'guide'} kind
+ * @property {'new'|'continuing'} audience
+ * @property {'vocational'|'bachelor'|'all'} educationLevel
+ * @property {string} description
+ */
+
+/**
+ * A normalized Student Loan process step sourced from new-borrower guides.
+ *
+ * @typedef {Object} StudentLoanStep
+ * @property {string} id
+ * @property {string} title
+ * @property {string} href
+ * @property {string} stage
+ * @property {'new'|'continuing'} audience
+ * @property {'vocational'|'bachelor'|'all'} educationLevel
+ * @property {'pendingAnnouncement'|'scheduled'|'published'} status
+ * @property {string} summary
+ * @property {string} modifiedAt
+ * @property {{ opensAt: string, closesAt: string } | null} [schedule]
+ */
+
+/**
+ * A normalized Google Classroom notification mirrored into the local product.
+ *
+ * @typedef {Object} GoogleClassroomNotification
+ * @property {string} id
+ * @property {'announcement'|'courseWork'|'studentSubmission'} sourceType
+ * @property {string} eventType
+ * @property {string} courseId
+ * @property {string|null} courseName
+ * @property {string|null} announcementId
+ * @property {string|null} courseWorkId
+ * @property {string|null} studentSubmissionId
+ * @property {string} href
+ * @property {string} title
+ * @property {string} message
+ * @property {string} sortAt
+ * @property {string} resourceUpdatedAt
+ * @property {string|null} seenAt
+ * @property {Record<string, any>} payload
+ * @property {string} createdAt
+ * @property {string} updatedAt
+ */
+
+/**
+ * The current Google Classroom notification connection and unread state for a user.
+ *
+ * @typedef {Object} GoogleClassroomNotificationFeed
+ * @property {boolean} configured
+ * @property {boolean} connected
+ * @property {boolean} reconnectRequired
+ * @property {boolean} authRequired
+ * @property {string|null} userCode
+ * @property {Array<Object>} notifications
+ * @property {number} unreadCount
+ * @property {string|null} lastSyncedAt
+ * @property {string|null} lastSyncError
+ */
+
+/**
+ * A normalized LINE Messaging account known to the product.
+ *
+ * @typedef {Object} LineMessagingAccount
+ * @property {string} lineUserId
+ * @property {string|null} userCode
+ * @property {string|null} displayName
+ * @property {string|null} pictureUrl
+ * @property {string|null} language
+ * @property {string|null} statusMessage
+ * @property {'following'|'unfollowed'} friendshipStatus
+ * @property {'linked'|'unlinked'} linkStatus
+ * @property {string|null} lastFollowedAt
+ * @property {string|null} lastUnfollowedAt
+ * @property {string|null} lastLinkedAt
+ * @property {string|null} lastUnlinkedAt
+ * @property {string|null} lastWebhookAt
+ * @property {string|null} lastMessageAt
+ * @property {string} createdAt
+ * @property {string} updatedAt
+ */
+
+/**
+ * A pending or completed LINE account-link handshake initiated from the web product.
+ *
+ * @typedef {Object} LineLinkRequest
+ * @property {string} nonce
+ * @property {string} userCode
+ * @property {string|null} lineUserId
+ * @property {'pending'|'linked'|'failed'|'expired'} status
+ * @property {string} expiresAt
+ * @property {string|null} linkedAt
+ * @property {string|null} failedAt
+ * @property {string} createdAt
+ * @property {string} updatedAt
+ */
+
+/**
+ * Audit record for a webhook event received from LINE Messaging API.
+ *
+ * @typedef {Object} LineWebhookEventReceipt
+ * @property {string} webhookEventId
+ * @property {string} eventType
+ * @property {string|null} lineUserId
+ * @property {string|null} groupId
+ * @property {string|null} roomId
+ * @property {'processed'|'ignored'|'failed'} status
+ * @property {boolean} isRedelivery
+ * @property {string|null} occurredAt
+ * @property {string|null} processedAt
+ * @property {string|null} errorMessage
+ * @property {Record<string, any>} payload
+ */
+
 export { }; // Make this a module (required for JSDoc to work correctly in some configs)

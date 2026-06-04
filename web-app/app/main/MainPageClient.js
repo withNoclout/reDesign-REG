@@ -1,18 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
-import { LockIcon } from '../components/Icons';
 import { useAuth } from '../context/AuthContext';
 import { useGuest } from '../context/GuestContext';
-import {
-    staggerContainer,
-    fadeInUp,
-    scaleIn,
-    cardHover,
-    itemVariant
-} from '@/lib/animations';
 import Navbar from '../components/Navbar';
 import GuestBanner from '../components/GuestBanner';
 import UserProfileCard from '../components/UserProfileCard';
@@ -20,12 +10,11 @@ import AcademicInfoCard from '../components/AcademicInfoCard';
 import ErrorAlert from '../components/ErrorAlert';
 import GlowingBackground from '../components/GlowingBackground';
 import PortfolioGrid from '../components/PortfolioGrid';
-import '../globals.css';
 
-const ADMIN_USER_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID || 's6701091611290';
+
+
 
 export default function Main() {
-    const router = useRouter();
     const { user, isAuthenticated, loading: authLoading, logout: handleLogout } = useAuth();
     const { isGuest, allowedModules, guestName, loading: guestLoading } = useGuest();
 
@@ -56,7 +45,6 @@ export default function Main() {
     }, []);
     // Check permissions
     const canAccess = isGuest ? allowedModules.includes('profile') : isAuthenticated;
-    const isAdmin = isAuthenticated && user?.usercode === ADMIN_USER_ID;
 
     // Redirect if not authenticated/authorized
     useEffect(() => {
