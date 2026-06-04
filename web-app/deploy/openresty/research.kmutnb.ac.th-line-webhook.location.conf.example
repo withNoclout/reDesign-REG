@@ -1,0 +1,30 @@
+# Install this exact-match location block into the active server block for research.kmutnb.ac.th.
+# Replace all __PLACEHOLDERS__ before loading it.
+# Expected public URL shape:
+#   https://research.kmutnb.ac.th/line-callbacks/redesign-reg/__LINE_WEBHOOK_PATH_TOKEN__/webhook
+# The upstream app route stays private:
+#   http://__APP_UPSTREAM_HOST__:3333/api/line/webhook
+
+location = /line-callbacks/redesign-reg/__LINE_WEBHOOK_PATH_TOKEN__/webhook {
+    limit_except POST { deny all; }
+
+    client_max_body_size 256k;
+    client_body_timeout 15s;
+    proxy_http_version 1.1;
+    proxy_request_buffering on;
+    proxy_buffering off;
+    proxy_connect_timeout 5s;
+    proxy_send_timeout 30s;
+    proxy_read_timeout 30s;
+
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Reg-Line-Webhook-Proxy-Secret __LINE_WEBHOOK_PROXY_SHARED_SECRET__;
+    proxy_set_header X-Line-Signature $http_x_line_signature;
+    proxy_set_header Content-Type $content_type;
+
+    proxy_pass http://__APP_UPSTREAM_HOST__:3333/api/line/webhook;
+}
