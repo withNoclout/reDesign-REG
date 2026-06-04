@@ -11,6 +11,7 @@ import {
 import { getLineWebhookReadiness } from './lineWebhookReadiness.js';
 
 import { createLineWebhookStore } from './lineWebhookStore.js';
+import { getInstagramPocSettingsSummary } from './instagramPocService.js';
 
 function sanitizeSummaryAccount(account) {
     if (!account) return null;
@@ -83,10 +84,11 @@ export async function getLineSettingsSummary(
     userCode,
     { store = createLineWebhookStore(), getReadiness = getLineWebhookReadiness } = {}
 ) {
-    const [linkedAccount, pendingRequest, recentEvents] = await Promise.all([
+    const [linkedAccount, pendingRequest, recentEvents, instagram] = await Promise.all([
         store.getLinkedAccountForUser(userCode),
         store.findPendingLinkRequestForUser(userCode),
         typeof store.listRecentEvents === 'function' ? store.listRecentEvents(5) : [],
+        getInstagramPocSettingsSummary(userCode, { returnTo: '/settings/line' }),
     ]);
 
     const activePendingRequest = pendingRequest && !isLineLinkRequestExpired(pendingRequest) ? pendingRequest : null;
@@ -102,6 +104,7 @@ export async function getLineSettingsSummary(
         account: sanitizeSummaryAccount(linkedAccount),
         pendingLinkRequest: sanitizePendingRequest(activePendingRequest),
         instructions: buildInstructionPayload(activePairingCode),
+        instagram,
     };
 }
 
