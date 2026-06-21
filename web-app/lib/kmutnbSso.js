@@ -92,6 +92,10 @@ export function getKmutnbSsoConfig() {
     };
 }
 
+export function isKmutnbSsoLoginEnabled() {
+    return readString(process.env.KMUTNB_SSO_LOGIN_ENABLED)?.toLowerCase() === 'true';
+}
+
 export function getMissingKmutnbSsoConfig() {
     const config = getKmutnbSsoConfig();
     const missing = [];

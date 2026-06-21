@@ -23,7 +23,16 @@ import {
 // Menu configuration
 const MENU_ITEMS = [
     { id: 'profile', icon: 'profile', label: 'ข้อมูลส่วนตัว', active: false, href: '/main' },
-    { id: 'registration', icon: 'registration', label: 'ทะเบียน', active: false, href: '#' },
+    {
+        id: 'registration',
+        icon: 'registration',
+        label: 'ทะเบียน',
+        active: false,
+        href: '/registration/enroll',
+        submenu: [
+            { id: 'registration', label: 'ลงทะเบียนเรียน', href: '/registration/enroll' }
+        ]
+    },
     {
         id: 'grade',
         icon: 'grade',
@@ -37,7 +46,6 @@ const MENU_ITEMS = [
         ]
     },
     { id: 'search', icon: 'search', label: 'ค้นหาระบบ', active: false, href: '#' },
-    { id: 'manual', icon: 'manual', label: 'คู่มือการใช้งาน', active: false, href: '#' },
     {
         id: 'others',
         icon: 'others',
@@ -101,12 +109,17 @@ export default function Navbar({ activePage = 'profile', activeSubmenu = null })
     const { user, logout: handleLogout } = useAuth();
     const { isGuest, allowedModules } = useGuest();
     const [menuOpen, setMenuOpen] = useState(false);
+    const [subMenuOpen, setSubMenuOpen] = useState(null);
     const [scrolled, setScrolled] = useState(false);
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
         setMounted(true);
     }, []);
+
+    const toggleSubMenu = (itemId) => {
+        setSubMenuOpen((prev) => (prev === itemId ? null : itemId));
+    };
 
     const toggleMenu = () => setMenuOpen(!menuOpen);
 
@@ -174,40 +187,90 @@ export default function Navbar({ activePage = 'profile', activeSubmenu = null })
                     {items.map((item, index) => {
                         const IconComponent = Icons[item.icon];
                         const hasSubmenu = item.submenu && item.submenu.length > 0;
-
+                        const hasDirectLink = Boolean(item.href && item.href !== '#');
+                        const subMenuOpenForItem = hasSubmenu && subMenuOpen === item.id;
                         const accessible = isMenuAccessible(item);
 
                         return (
                             <motion.li
                                 key={item.id}
                                 variants={staggerItem}
-                                className={`relative group ${hasSubmenu ? 'has-submenu' : ''} ${!accessible ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                className={`relative ${hasSubmenu ? 'has-submenu' : ''} ${!accessible ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                onMouseEnter={() => {
+                                    if (hasSubmenu) {
+                                        setSubMenuOpen(item.id);
+                                    }
+                                }}
+                                onMouseLeave={() => {
+                                    if (hasSubmenu) {
+                                        setSubMenuOpen((prev) => (prev === item.id ? null : prev));
+                                    }
+                                }}
                             >
                                 {accessible ? (
                                     <>
-                                        <motion.a
-                                            href={item.href}
-                                            className={`nav-link min-h-[44px] flex items-center ${item.active ? 'active' : ''}`}
-                                            {...menuItemSlide}
-                                            transition={{ delay: index * TIMING.stagger }}
-                                        >
-                                            <IconComponent />
-                                            {item.label}
-                                            {hasSubmenu && (
-                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="ml-1 opacity-70 group-hover:rotate-180 transition-transform">
-                                                    <path d="M6 9l6 6 6-6" />
-                                                </svg>
-                                            )}
-                                        </motion.a>
+                                        {hasSubmenu ? (
+                                            <div className="flex items-center gap-1">
+                                                {hasDirectLink ? (
+                                                    <motion.a
+                                                        href={item.href}
+                                                        className={`nav-link min-h-[44px] flex items-center ${item.active ? 'active' : ''}`}
+                                                        {...menuItemSlide}
+                                                        transition={{ delay: index * TIMING.stagger }}
+                                                    >
+                                                        <IconComponent />
+                                                        {item.label}
+                                                    </motion.a>
+                                                ) : (
+                                                    <motion.button
+                                                        type="button"
+                                                        onClick={() => toggleSubMenu(item.id)}
+                                                        className={`nav-link min-h-[44px] flex items-center ${item.active ? 'active' : ''}`}
+                                                        aria-expanded={subMenuOpenForItem}
+                                                        aria-haspopup="menu"
+                                                        {...menuItemSlide}
+                                                        transition={{ delay: index * TIMING.stagger }}
+                                                    >
+                                                        <IconComponent />
+                                                        {item.label}
+                                                    </motion.button>
+                                                )}
+                                                <motion.button
+                                                    type="button"
+                                                    onClick={() => toggleSubMenu(item.id)}
+                                                    className={`nav-link min-h-[44px] !px-3 ${item.active ? 'active' : ''}`}
+                                                    aria-label={`เปิดเมนูย่อย ${item.label}`}
+                                                    aria-expanded={subMenuOpenForItem}
+                                                    aria-haspopup="menu"
+                                                    {...menuItemSlide}
+                                                    transition={{ delay: index * TIMING.stagger }}
+                                                >
+                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`opacity-70 transition-transform ${subMenuOpenForItem ? 'rotate-180' : ''}`}>
+                                                        <path d="M6 9l6 6 6-6" />
+                                                    </svg>
+                                                </motion.button>
+                                            </div>
+                                        ) : (
+                                            <motion.a
+                                                href={item.href}
+                                                className={`nav-link min-h-[44px] flex items-center ${item.active ? 'active' : ''}`}
+                                                {...menuItemSlide}
+                                                transition={{ delay: index * TIMING.stagger }}
+                                            >
+                                                <IconComponent />
+                                                {item.label}
+                                            </motion.a>
+                                        )}
 
-                                        {/* Dropdown Menu */}
                                         <AnimatePresence>
-                                            {hasSubmenu && (
-                                                <div className="absolute top-full left-0 pt-2 hidden group-hover:block min-w-[200px] z-50">
+                                            {hasSubmenu && subMenuOpenForItem && (
+                                                <div
+                                                    className="mt-2 pl-4 md:mt-0 md:pl-0 md:absolute md:top-full md:left-0 md:pt-2 md:min-w-[220px] md:z-50"
+                                                >
                                                     <motion.div
                                                         initial={{ opacity: 0, y: -10, scale: 0.95 }}
                                                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                        exit={{ opacity: 0, y: -10 }}
+                                                        exit={{ opacity: 0, y: -10, scale: 0.98 }}
                                                         transition={{ duration: 0.2 }}
                                                         className="bg-[rgba(15,23,42,0.95)] backdrop-blur-xl border border-[rgba(255,255,255,0.1)] rounded-xl py-2 shadow-xl overflow-hidden"
                                                     >
@@ -218,16 +281,33 @@ export default function Navbar({ activePage = 'profile', activeSubmenu = null })
                                                             }
 
                                                             const isActiveSubmenu = subItem.id === activeSubmenu;
+                                                            const isExternalSubItem = /^https?:\/\//i.test(subItem.href);
+
                                                             return (
                                                                 <a
                                                                     key={subItem.id}
                                                                     href={subItem.href}
+                                                                    target={isExternalSubItem ? '_blank' : undefined}
+                                                                    rel={isExternalSubItem ? 'noopener noreferrer' : undefined}
+                                                                    onClick={() => {
+                                                                        setSubMenuOpen(null);
+                                                                        setMenuOpen(false);
+                                                                    }}
                                                                     className={`block px-4 py-3 text-sm transition-colors flex items-center justify-between group/sub ${isActiveSubmenu ? 'text-[#ff8a65] bg-[rgba(255,255,255,0.06)]' : 'text-[rgba(255,255,255,0.8)] hover:text-[#ff5722] hover:bg-[rgba(255,255,255,0.05)]'}`}
                                                                 >
                                                                     {subItem.label}
-                                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-all text-[#ff5722] ${isActiveSubmenu ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2 group-hover/sub:opacity-100 group-hover/sub:translate-x-0'}`}>
-                                                                        <polyline points="9 18 15 12 9 6" />
-                                                                    </svg>
+                                                                    <span className={`transition-all text-[#ff5722] ${isActiveSubmenu ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2 group-hover/sub:opacity-100 group-hover/sub:translate-x-0'}`}>
+                                                                        {isExternalSubItem ? (
+                                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                                <path d="M15 3h6v6m0 0L10 20l-7-7L21 3z" />
+                                                                                <path d="M9 14l7 7" />
+                                                                            </svg>
+                                                                        ) : (
+                                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                                <polyline points="9 18 15 12 9 6" />
+                                                                            </svg>
+                                                                        )}
+                                                                    </span>
                                                                 </a>
                                                             );
                                                         })}
@@ -262,7 +342,6 @@ export default function Navbar({ activePage = 'profile', activeSubmenu = null })
                         );
                     })}
                 </motion.ul>
-
                 <div className="nav-right">
                     <motion.div
                         className="flex items-center gap-3 mr-4"

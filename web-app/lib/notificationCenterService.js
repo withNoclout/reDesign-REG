@@ -47,6 +47,23 @@ const THAI_MONTHS = new Map([
     ['ธ.ค.', '12'],
 ]);
 
+const ENGLISH_MONTHS = new Map([
+    ['january', '01'],
+    ['february', '02'],
+    ['march', '03'],
+    ['april', '04'],
+    ['may', '05'],
+    ['june', '06'],
+    ['july', '07'],
+    ['august', '08'],
+    ['september', '09'],
+    ['october', '10'],
+    ['november', '11'],
+    ['december', '12'],
+]);
+
+const EXAM_NOTIFICATION_GRACE_MS = 24 * 60 * 60 * 1000;
+
 function readString(value) {
     return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
@@ -75,19 +92,55 @@ function parseThaiDateToIso(value, fallbackTime = '09:00') {
     }
 
     const thaiMatch = text.match(/(\d{1,2})\s+([ก-๙.]+)\s+(\d{4})/);
-    if (!thaiMatch) return null;
-    const [, day, monthName, yearText] = thaiMatch;
-    const month = THAI_MONTHS.get(monthName.trim());
+    if (thaiMatch) {
+        const [, day, monthName, yearText] = thaiMatch;
+        const month = THAI_MONTHS.get(monthName.trim());
+        if (!month) return null;
+        const buddhistYear = Number(yearText);
+        const normalizedYear = buddhistYear > 2400 ? buddhistYear - 543 : buddhistYear;
+        return `${String(normalizedYear).padStart(4, '0')}-${month}-${String(day).padStart(2, '0')}T${fallbackTime}:00+07:00`;
+    }
+
+    const englishMatch = text.match(/(\d{1,2})(?:st|nd|rd|th)?\s+of\s+([A-Za-z]+)\s+(\d{4})/i);
+    if (!englishMatch) return null;
+    const [, day, monthName, yearText] = englishMatch;
+    const month = ENGLISH_MONTHS.get(monthName.trim().toLowerCase());
     if (!month) return null;
-    const buddhistYear = Number(yearText);
-    const normalizedYear = buddhistYear > 2400 ? buddhistYear - 543 : buddhistYear;
-    return `${String(normalizedYear).padStart(4, '0')}-${month}-${String(day).padStart(2, '0')}T${fallbackTime}:00+07:00`;
+    return `${String(Number(yearText)).padStart(4, '0')}-${month}-${String(day).padStart(2, '0')}T${fallbackTime}:00+07:00`;
 }
 
 function parseExamDateTimeToIso(examDate, examTime) {
     const timeMatch = readString(examTime)?.match(/(\d{1,2}):(\d{2})/);
     const fallbackTime = timeMatch ? `${String(timeMatch[1]).padStart(2, '0')}:${timeMatch[2]}` : '09:00';
     return parseThaiDateToIso(examDate, fallbackTime);
+}
+
+function parseDateLikeToIso(value, fallbackTime = '23:59') {
+    const text = readString(value);
+    if (!text) return null;
+
+    const dateOnlyMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (dateOnlyMatch) {
+        const [, year, month, day] = dateOnlyMatch;
+        return `${year}-${month}-${day}T${fallbackTime}:00+07:00`;
+    }
+
+    return toIsoString(text) || parseThaiDateToIso(text, fallbackTime);
+}
+
+function addGracePeriodToIso(isoString, graceMs) {
+    const timestamp = Date.parse(isoString || '');
+    if (Number.isNaN(timestamp)) return null;
+    return new Date(timestamp + graceMs).toISOString();
+}
+
+function isNotificationExpired(item, nowMs = Date.now()) {
+    const explicitExpiry = toIsoString(item?.expiresAt);
+    if (!explicitExpiry) {
+        return false;
+    }
+
+    return Date.parse(explicitExpiry) <= nowMs;
 }
 
 function sortBySection(items) {
@@ -211,6 +264,9 @@ function mapClassroomNotification(item) {
         : item.sourceType === 'returnedWork'
             ? 'ส่งคืน'
             : 'งานใหม่';
+    const courseWorkDueAt = item.sourceType === 'courseWork'
+        ? parseDateLikeToIso(item.payload?.dueAt || item.payload?.dueDate, '23:59')
+        : null;
 
     return {
         id: item.id,
@@ -225,6 +281,7 @@ function mapClassroomNotification(item) {
         ctaLabel: 'เปิดปลายทาง',
         href: item.href,
         sortAt: item.sortAt,
+        expiresAt: courseWorkDueAt ? addGracePeriodToIso(courseWorkDueAt, EXAM_NOTIFICATION_GRACE_MS) : null,
         unread: !item.seenAt,
         dismissible: false,
         requiresAuth: false,
@@ -233,6 +290,7 @@ function mapClassroomNotification(item) {
         meta: {
             sourceType: item.sourceType,
             courseName: item.courseName || null,
+            dueAt: courseWorkDueAt,
         },
     };
 }
@@ -286,13 +344,22 @@ function mapStudentLoanNotification(item) {
 
 function mapStudentAffairsNotification(item) {
     const status = readString(item.status) || 'available';
-    const section = status === 'update'
+    const isUpdated = status === 'updated' || status === 'update';
+    const opensAt = toIsoString(item.opensAt);
+    const closesAt = toIsoString(item.closesAt);
+    const expiresAt = closesAt ? addGracePeriodToIso(closesAt, EXAM_NOTIFICATION_GRACE_MS) : null;
+    const section = isUpdated
         ? 'latest'
         : (status === 'upcoming' ? 'upcoming' : 'actionRequired');
     const priority = status === 'open' ? 'high' : 'normal';
-    const badgeLabel = status === 'update'
+    const badgeLabel = isUpdated
         ? 'อัปเดต'
         : (status === 'upcoming' ? 'กำลังจะเปิด' : 'ประกาศ');
+    const sortAt = status === 'upcoming'
+        ? (opensAt || closesAt || toIsoString(item.publishedAt) || new Date().toISOString())
+        : (status === 'open'
+            ? (closesAt || opensAt || toIsoString(item.publishedAt) || new Date().toISOString())
+            : (toIsoString(item.publishedAt) || new Date().toISOString()));
 
     return {
         id: item.id,
@@ -306,13 +373,14 @@ function mapStudentAffairsNotification(item) {
         message: item.message,
         ctaLabel: item.ctaLabel || 'ดูประกาศ',
         href: item.href,
-        sortAt: toIsoString(item.publishedAt) || new Date().toISOString(),
+        sortAt,
+        expiresAt,
         unread: false,
         dismissible: false,
         requiresAuth: false,
         openAction: null,
         dismissAction: null,
-        meta: { status, rawKind: item.kind },
+        meta: { status, rawKind: item.kind, opensAt, closesAt },
     };
 }
 
@@ -382,6 +450,8 @@ function mapPortfolioInviteNotification(item) {
 }
 
 function mapExamNotification(item) {
+    const eventStartAt = parseExamDateTimeToIso(item.examDate, item.examTime);
+
     return {
         id: item.id,
         source: 'exam',
@@ -394,7 +464,8 @@ function mapExamNotification(item) {
         message: `${item.examDate} ${item.examTime} · ${item.location} · ${item.mySeat}`,
         ctaLabel: 'ดูรายละเอียดสอบ',
         href: '/grade/schedule?tab=exam',
-        sortAt: parseExamDateTimeToIso(item.examDate, item.examTime) || new Date().toISOString(),
+        sortAt: eventStartAt || new Date().toISOString(),
+        expiresAt: eventStartAt ? addGracePeriodToIso(eventStartAt, EXAM_NOTIFICATION_GRACE_MS) : null,
         unread: false,
         dismissible: false,
         requiresAuth: false,
@@ -405,6 +476,7 @@ function mapExamNotification(item) {
             examTime: item.examTime,
             location: item.location,
             mySeat: item.mySeat,
+            eventStartAt,
         },
     };
 }
@@ -556,7 +628,8 @@ export async function getUnifiedNotificationsFeed(authContext) {
         sourceErrors.push(buildSourceError('exam', examResult));
     }
 
-    const sections = buildUnifiedNotificationSections(items);
+    const visibleItems = items.filter((item) => !isNotificationExpired(item));
+    const sections = buildUnifiedNotificationSections(visibleItems);
     return {
         viewer: { authenticated: true, userCode },
         classroom: classroomState,

@@ -98,6 +98,8 @@ function buildChecklistNotifications(text, checklistUrl) {
             href: checklistUrl,
             ctaLabel: 'ไปยังฟอร์ม',
             publishedAt: opensAt.toISOString(),
+            opensAt: opensAt.toISOString(),
+            closesAt: closesAt.toISOString(),
         });
     }
 

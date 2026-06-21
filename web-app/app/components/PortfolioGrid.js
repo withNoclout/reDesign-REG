@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { useGuest } from '../context/GuestContext';
 import { usePortfolioSettings } from '../hooks/usePortfolioSettings';
@@ -190,17 +189,30 @@ function getPaginationGroup(currentPage, totalPages) {
     return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
 }
 
+const CUSTOM_LAYOUT_VERSION = 2;
+
+function stampCustomLayout(layout = []) {
+    return (Array.isArray(layout) ? layout : []).map((item) => ({
+        ...item,
+        layoutVersion: CUSTOM_LAYOUT_VERSION,
+    }));
+}
+
+function toGridNumber(value, fallback = 0) {
+    const nextValue = Number(value);
+    return Number.isFinite(nextValue) ? nextValue : fallback;
+}
+
+
 export default function PortfolioGrid({ leftPanelHeight = 800 }) {
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
     const { isGuest } = useGuest();
     const isMobile = useIsMobile();
-    const router = useRouter();
 
     // Portfolio Settings Hook
     const {
         settings,
-        isLoading,
-        setIsLoading,
+        isLoading: settingsLoading,
         isSaving,
         updateSetting,
         saveSettings
@@ -216,11 +228,7 @@ export default function PortfolioGrid({ leftPanelHeight = 800 }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
-    const [hasInitializedCustomLayout, setHasInitializedCustomLayout] = useState(false);
-
-    // Helper Classes
-    const columnClass = `columns-${settings.fixedConfig?.columnCount || 3}`;
-    const gapClass = settings.fixedConfig?.gapSize === 'compact' ? 'gap-1.5' : 'gap-6';
+    const [contentLoading, setContentLoading] = useState(true);
 
     const fetchContent = useCallback(async () => {
         try {
@@ -240,9 +248,9 @@ export default function PortfolioGrid({ leftPanelHeight = 800 }) {
         } catch (err) {
             console.error('Failed to fetch portfolio:', err);
         } finally {
-            setIsLoading(false);
+            setContentLoading(false);
         }
-    }, []);
+    }, [logout]);
 
     useEffect(() => {
         fetchContent();
@@ -302,7 +310,10 @@ export default function PortfolioGrid({ leftPanelHeight = 800 }) {
     };
 
     const handleSaveSettings = async () => {
-        await saveSettings(settings);
+        const nextSettings = settings.mode === 'custom'
+            ? { ...settings, customLayout: stampCustomLayout(migratedLayout) }
+            : settings;
+        await saveSettings(nextSettings);
     };
 
     const updateFixedConfig = (key, value) => {
@@ -310,10 +321,11 @@ export default function PortfolioGrid({ leftPanelHeight = 800 }) {
     };
 
     const handleCustomLayoutChange = (newLayout) => {
-        updateSetting('customLayout', newLayout); // Update React context memory ONLY, backend save is deferred
+        updateSetting('customLayout', stampCustomLayout(newLayout));
     };
 
     const isCustomMode = settings.mode === 'custom' && !isMobile;
+    const isPortfolioLoading = settingsLoading || contentLoading;
 
     // Sorted items for rendering (Filter out hidden if Guest)
     const sortedItems = useMemo(() => {
@@ -344,26 +356,49 @@ export default function PortfolioGrid({ leftPanelHeight = 800 }) {
     const rowHeight = Math.max(10, cellWidth); // Fixed 1:1 Square
     const maxRows = Math.floor(leftPanelHeight / (rowHeight + MARGIN));
 
-    // Migrate Legacy Layouts (12-cols > Dynamic 25px cols)
+    // Migrate legacy 12-column layouts only when they look like the old coordinate space.
+    // New layouts are stamped with layoutVersion to avoid width-based false positives.
     const migratedLayout = useMemo(() => {
-        const layout = settings.customLayout || [];
+        const layout = Array.isArray(settings.customLayout) ? settings.customLayout : [];
         if (layout.length === 0) return layout;
 
-        // Detect old 12-col grids
-        const isLegacy = layout.every(l => l.w <= 12);
+        const isCurrentLayout = layout.every(l => l?.layoutVersion === CUSTOM_LAYOUT_VERSION);
+        if (isCurrentLayout) return layout.slice(0, 10);
+
+        const hasLegacyMarker = layout.some(l => l?.layoutVersion === 1 || l?.schemaVersion === 1 || l?.__legacy === true);
+        const fitsTwelveColumnSpace = layout.every((l) => {
+            const x = toGridNumber(l.x);
+            const w = toGridNumber(l.w);
+            return x >= 0 && w > 0 && x + w <= 12;
+        });
+        const hasLegacyTwelveColumnEdge = layout.some((l) => {
+            const x = toGridNumber(l.x);
+            const w = toGridNumber(l.w);
+            return w > 10 || x + w === 12;
+        });
+        const isLegacy = hasLegacyMarker || (fitsTwelveColumnSpace && hasLegacyTwelveColumnEdge);
+
         if (!isLegacy) return layout.slice(0, 10);
 
         const H_SCALE = COLS / 12;
-        const V_SCALE = 150 / rowHeight; // Translate legacy 150px height
+        const V_SCALE = 150 / rowHeight;
 
-        return layout.map(l => ({
-            ...l,
-            x: Math.round(l.x * H_SCALE),
-            y: Math.round(l.y * V_SCALE),
-            w: Math.max(2, Math.round(l.w * H_SCALE)),
-            h: Math.max(2, Math.round(l.h * V_SCALE))
-        })).slice(0, 10);
-    }, [settings.customLayout]);
+        return layout.map(l => {
+            const x = toGridNumber(l.x);
+            const y = toGridNumber(l.y);
+            const w = toGridNumber(l.w, 1);
+            const h = toGridNumber(l.h, 1);
+
+            return {
+                ...l,
+                layoutVersion: CUSTOM_LAYOUT_VERSION,
+                x: Math.min(COLS - 2, Math.max(0, Math.round(x * H_SCALE))),
+                y: Math.max(0, Math.round(y * V_SCALE)),
+                w: Math.min(COLS, Math.max(2, Math.round(w * H_SCALE))),
+                h: Math.max(2, Math.round(h * V_SCALE))
+            };
+        }).slice(0, 10);
+    }, [settings.customLayout, COLS, rowHeight]);
 
 
     // --- Advanced Bento Auto-Pagination Logic ---
@@ -584,7 +619,24 @@ export default function PortfolioGrid({ leftPanelHeight = 800 }) {
 
             {/* Layout Rendering Container */}
             <div ref={gridContainerRef} className="w-full flex-1 flex flex-col">
-                {isCustomMode && currentPage === 1 ? (
+                {isPortfolioLoading ? (
+                    <div
+                        className="grid w-full px-4"
+                        style={{
+                            gridTemplateColumns: `repeat(${settings.fixedConfig?.columnCount || 3}, minmax(0, 1fr))`,
+                            gap: `${settings.fixedConfig?.gapSize === 'compact' ? 6 : 24}px`,
+                        }}
+                    >
+                        {Array.from({ length: 6 }).map((_, index) => (
+                            <div
+                                key={`portfolio-skeleton-${index}`}
+                                className="h-60 rounded-3xl border border-white/10 bg-white/5 overflow-hidden animate-pulse"
+                            >
+                                <div className="h-full w-full bg-gradient-to-br from-white/10 via-white/5 to-transparent" />
+                            </div>
+                        ))}
+                    </div>
+                ) : isCustomMode && currentPage === 1 ? (
                     <CustomPortfolioGrid
                         items={paginatedItems.slice(0, settings.maxItemsPerPage || 100)}
                         savedLayout={migratedLayout}
@@ -639,6 +691,10 @@ export default function PortfolioGrid({ leftPanelHeight = 800 }) {
                                         )}
 
                                         {paginatedItems.map((item, index) => {
+                                            const isImageReady = Boolean(item.image_url && item.uploaded_to_supabase);
+                                            const cardTitle = item.topic || item.description || 'Portfolio item';
+                                            const showDescription = Boolean(item.topic && item.description);
+
                                             return (
                                                 <motion.div
                                                     key={item.id}
@@ -648,11 +704,44 @@ export default function PortfolioGrid({ leftPanelHeight = 800 }) {
                                                     exit={{ opacity: 0, scale: 0.9 }}
                                                     transition={{ delay: index * 0.05 }}
                                                     style={{ height: `${cardHeight}px` }}
-                                                    className={`flex flex-col p-4 rounded-3xl group relative bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 transition-[box-shadow,background-color,border-color] duration-300 hover:shadow-2xl w-full overflow-hidden ${item.is_visible === false && !isManageMode ? 'grayscale opacity-50' : ''}`}
+                                                    className={`rounded-3xl group relative bg-black/30 backdrop-blur-md border border-white/10 hover:border-white/20 transition-[box-shadow,border-color,transform] duration-300 hover:shadow-2xl w-full overflow-hidden ${item.is_visible === false && !isManageMode ? 'grayscale opacity-50' : ''}`}
                                                 >
+                                                    <div className="absolute inset-0">
+                                                        {isImageReady ? (
+                                                            <img
+                                                                src={item.image_url}
+                                                                alt={item.description || item.topic || 'Portfolio image'}
+                                                                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                                                                loading="lazy"
+                                                            />
+                                                        ) : (
+                                                            <div
+                                                                className="absolute inset-0 flex flex-col items-center justify-center text-white/45"
+                                                                style={{
+                                                                    background: 'radial-gradient(circle at top left, rgba(255,87,34,0.24), transparent 34%), rgba(15,23,42,0.82)'
+                                                                }}
+                                                            >
+                                                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mb-2">
+                                                                    <circle cx="12" cy="12" r="10" />
+                                                                    <line x1="12" y1="8" x2="12" y2="12" />
+                                                                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                                                                </svg>
+                                                                <span className="text-sm font-medium">Not Uploaded</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/10 pointer-events-none" />
+
+                                                    {item.is_visible === false && (
+                                                        <div className="absolute inset-0 z-10 bg-black/45 flex items-center justify-center pointer-events-none">
+                                                            <span className="bg-black/60 backdrop-blur px-3 py-1 rounded-full text-xs text-white/80 font-bold border border-white/10">Hidden</span>
+                                                        </div>
+                                                    )}
+
                                                     {/* Management Overlays */}
                                                     {isManageMode && (
-                                                        <div className="absolute top-2 right-2 z-30 flex items-center gap-2">
+                                                        <div className="absolute top-2 right-2 z-40 flex items-center gap-2">
                                                             {/* Edit Button (own items only) */}
                                                             {!item.is_collaboration && (
                                                                 <button
@@ -661,7 +750,7 @@ export default function PortfolioGrid({ leftPanelHeight = 800 }) {
                                                                         setEditingItem(item);
                                                                         setIsModalOpen(true);
                                                                     }}
-                                                                    className="p-2 rounded-full bg-white/20 text-white hover:bg-[#ff5722] backdrop-blur-md shadow-lg transition-all"
+                                                                    className="p-2 rounded-full bg-black/45 text-white hover:bg-[#ff5722] backdrop-blur-md shadow-lg transition-all border border-white/10"
                                                                     title="Edit"
                                                                 >
                                                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
@@ -674,7 +763,7 @@ export default function PortfolioGrid({ leftPanelHeight = 800 }) {
                                                                     e.stopPropagation();
                                                                     handleToggleVisibility(item.id, item.is_visible);
                                                                 }}
-                                                                className={`p-2 rounded-full backdrop-blur-md shadow-lg transition-all ${item.is_visible !== false ? 'bg-white/20 text-white hover:bg-white/30' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'}`}
+                                                                className={`p-2 rounded-full backdrop-blur-md shadow-lg transition-all border border-white/10 ${item.is_visible !== false ? 'bg-black/45 text-white hover:bg-white/20' : 'bg-red-500/25 text-red-200 hover:bg-red-500/40'}`}
                                                                 title={item.is_visible !== false ? "Visible" : "Hidden"}
                                                             >
                                                                 {item.is_visible !== false ? (
@@ -690,7 +779,7 @@ export default function PortfolioGrid({ leftPanelHeight = 800 }) {
                                                                     e.stopPropagation();
                                                                     handleDelete(item.id);
                                                                 }}
-                                                                className="p-2 rounded-full bg-red-500/20 text-red-500 hover:bg-red-500 hover:text-white backdrop-blur-md shadow-lg transition-all"
+                                                                className="p-2 rounded-full bg-red-500/25 text-red-200 hover:bg-red-500 hover:text-white backdrop-blur-md shadow-lg transition-all border border-red-400/20"
                                                                 title="Delete"
                                                             >
                                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
@@ -698,98 +787,64 @@ export default function PortfolioGrid({ leftPanelHeight = 800 }) {
                                                         </div>
                                                     )}
 
-                                                    {/* Image — flex-grow fills all vertical space above the footer */}
-                                                    <div className="relative overflow-hidden rounded-2xl mb-3 bg-black/20 flex-grow w-full min-h-0">
-                                                        <div className="absolute inset-0 h-full w-full">
-                                                            {item.is_visible === false && (
-                                                                <div className="absolute inset-0 z-10 bg-black/50 flex items-center justify-center pointer-events-none">
-                                                                    <span className="bg-black/50 backdrop-blur px-2 py-1 rounded text-xs text-white/70 font-bold border border-white/10">Hidden</span>
-                                                                </div>
-                                                            )}
-                                                            {item.image_url && item.uploaded_to_supabase ? (
-                                                                <img
-                                                                    src={item.image_url}
-                                                                    alt={item.description}
-                                                                    className="w-full h-full object-cover"
-                                                                    loading="lazy"
-                                                                />
-                                                            ) : (
-                                                                <div className="absolute inset-0 flex flex-col items-center justify-center text-white/20">
-                                                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mb-2">
-                                                                        <circle cx="12" cy="12" r="10" />
-                                                                        <line x1="12" y1="8" x2="12" y2="12" />
-                                                                        <line x1="12" y1="16" x2="12.01" y2="16" />
-                                                                    </svg>
-                                                                    <span className="text-sm">Not Uploaded</span>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-
                                                     {/* Status Badges */}
                                                     {!item.uploaded_to_supabase && !item.is_collaboration && (
-                                                        <div className="absolute top-3 right-3 bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg z-10 backdrop-blur-md bg-opacity-90">
+                                                        <div className="absolute top-3 right-3 z-30 bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg backdrop-blur-md bg-opacity-90">
                                                             Upload Pending
                                                         </div>
                                                     )}
 
                                                     {/* Collaboration Badge */}
                                                     {item.is_collaboration && (
-                                                        <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white/90 px-3 py-1 rounded-full text-xs font-medium shadow-lg z-10 border border-white/10 flex items-center gap-1.5">
+                                                        <div className="absolute top-3 left-3 z-30 bg-black/60 backdrop-blur-md text-white/90 px-3 py-1 rounded-full text-xs font-medium shadow-lg border border-white/10 flex items-center gap-1.5">
                                                             <LinkIcon size={14} className="inline" /> Shared with you
                                                         </div>
                                                     )}
 
                                                     {/* Collaborator Count Badge (own items) */}
                                                     {!item.is_collaboration && item.collaborator_count > 0 && (
-                                                        <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white/90 px-2.5 py-1 rounded-full text-xs font-medium shadow-lg z-10 border border-white/10 flex items-center gap-1">
+                                                        <div className="absolute top-3 left-3 z-30 bg-black/60 backdrop-blur-md text-white/90 px-2.5 py-1 rounded-full text-xs font-medium shadow-lg border border-white/10 flex items-center gap-1">
                                                             <UsersIcon size={14} className="inline" /> {item.collaborator_count}
                                                         </div>
                                                     )}
 
-                                                    {/* Content Below Image (Flex Grow to push footer to bottom) */}
-                                                    <div className='flex flex-col flex-grow space-y-3'>
-                                                        {/* Topic (New Field) */}
-                                                        {item.topic && (
-                                                            <h3 className='font-prompt font-bold text-white leading-tight text-lg'>
-                                                                {item.topic}
-                                                            </h3>
-                                                        )}
-
-                                                        {/* Description (Restored) */}
-                                                        {item.description && (
-                                                            <p className="text-white/60 text-sm line-clamp-2 mt-1 flex-grow">
-                                                                {item.description}
-                                                            </p>
-                                                        )}
-
-                                                        {/* Metadata & Actions */}
-                                                        <div className='flex items-center justify-between border-t border-white/5 pt-3 mt-auto'>
-                                                            <div className="flex flex-col gap-0.5">
-                                                                <span className="text-white/70 text-xs font-light">
-                                                                    {new Date(item.created_at).toLocaleDateString('th-TH', {
-                                                                        year: 'numeric',
-                                                                        month: 'short',
-                                                                        day: 'numeric'
-                                                                    })}
-                                                                </span>
-                                                                {item.is_collaboration && item.added_by && (
-                                                                    <span className="text-white/40 text-[10px]">
-                                                                        Added by: {item.added_by}
-                                                                    </span>
+                                                    <div className="absolute inset-x-0 bottom-0 z-20 p-4">
+                                                        <div className="space-y-2">
+                                                            <div>
+                                                                <h3 className="font-prompt font-bold text-white leading-tight text-lg line-clamp-2 drop-shadow">
+                                                                    {cardTitle}
+                                                                </h3>
+                                                                {showDescription && (
+                                                                    <p className="text-white/70 text-sm line-clamp-2 mt-1 drop-shadow">
+                                                                        {item.description}
+                                                                    </p>
                                                                 )}
                                                             </div>
 
-                                                            {/* Retry Button */}
-                                                            {
-                                                                !item.uploaded_to_supabase && item.temp_path && (
+                                                            <div className="flex items-center justify-between gap-3 border-t border-white/10 pt-3">
+                                                                <div className="flex flex-col gap-0.5 min-w-0">
+                                                                    <span className="text-white/75 text-xs font-light">
+                                                                        {new Date(item.created_at).toLocaleDateString('th-TH', {
+                                                                            year: 'numeric',
+                                                                            month: 'short',
+                                                                            day: 'numeric'
+                                                                        })}
+                                                                    </span>
+                                                                    {item.is_collaboration && item.added_by && (
+                                                                        <span className="text-white/45 text-[10px] truncate">
+                                                                            Added by: {item.added_by}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+
+                                                                {!item.uploaded_to_supabase && item.temp_path && (
                                                                     <button
                                                                         onClick={(e) => {
                                                                             e.stopPropagation();
                                                                             handleRetryItem(item.id);
                                                                         }}
                                                                         disabled={retryingItem === item.id}
-                                                                        className="px-3 py-1.5 bg-orange-500/10 hover:bg-orange-500 text-orange-400 hover:text-white border border-orange-500/20 hover:border-orange-500 rounded-lg text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                                                                        className="px-3 py-1.5 bg-orange-500/15 hover:bg-orange-500 text-orange-200 hover:text-white border border-orange-400/30 hover:border-orange-500 rounded-lg text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                                                                     >
                                                                         {retryingItem === item.id ? (
                                                                             <>
@@ -806,8 +861,8 @@ export default function PortfolioGrid({ leftPanelHeight = 800 }) {
                                                                             </>
                                                                         )}
                                                                     </button>
-                                                                )
-                                                            }
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </motion.div>

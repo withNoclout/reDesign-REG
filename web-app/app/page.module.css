@@ -1,0 +1,361 @@
+.pageShell {
+  min-height: 100dvh;
+  background: #5C2626;
+  color: #1f1f1f;
+}
+
+.splitLayout {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 667px;
+  background: #5C2626;
+  overflow: hidden;
+}
+
+.visualPane {
+  position: relative;
+  overflow: hidden;
+  background: #5C2626;
+}
+
+.visualPane::before {
+  content: "";
+  position: absolute;
+  left: -34px;
+  top: -2px;
+  width: 1002px;
+  height: 1051px;
+  background: #5C2626;
+}
+
+.authPane {
+  position: relative;
+  z-index: 0;
+  background: transparent;
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding: 223px 0 48px 75px;
+}
+
+.authPane::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: -74px;
+  z-index: -1;
+  width: 684px;
+  height: 1171px;
+  background: #ffffff;
+}
+
+.loginCard {
+  width: 238px;
+  max-width: 100%;
+  --login-display-font: var(--font-text-me-one), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.wordmarkWrap {
+  width: max-content;
+  margin-bottom: 42px;
+}
+
+.wordmarkLogo {
+  display: block;
+  width: 136px;
+  height: 49px;
+}
+
+.loginHeader {
+  display: none;
+}
+
+
+.altAction {
+  width: 238px;
+  height: 41px;
+  margin-bottom: 19px;
+  border: none;
+  border-radius: 0;
+  background: #E9E9E9;
+  color: #989797;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--login-display-font);
+  font-size: 18px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.ssoButtonText {
+  display: block;
+  font-family: var(--login-display-font);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+  color: #989797;
+}
+ 
+ .altAction:hover:not(:disabled),
+ .altAction:focus-visible:not(:disabled) {
+  background: #E9E9E9;
+  color: #989797;
+}
+ 
+ .altAction:disabled {
+  cursor: progress;
+  opacity: 0.75;
+}
+
+.divider {
+  display: block;
+  width: 237px;
+  height: 16px;
+  margin-bottom: 23px;
+}
+
+.contractDivider {
+  display: block;
+  width: 237px;
+  height: 16px;
+}
+
+.loginForm {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.fieldStack {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow: visible;
+}
+
+.inputGroup {
+  position: relative;
+}
+
+.inputGlyph {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  max-width: calc(100% - 16px);
+  overflow: hidden;
+  color: #989797;
+  font-family: var(--login-display-font);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+  pointer-events: none;
+  text-align: center;
+  text-overflow: clip;
+  transform: translate(-50%, -50%);
+  user-select: none;
+  white-space: nowrap;
+}
+
+.inputField {
+  width: 238px;
+  height: 41px;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: #E9E9E9;
+  color: #252525;
+  caret-color: #252525;
+  font-family: var(--login-display-font);
+  font-size: 18px;
+  line-height: 41px;
+  text-align: center;
+  transition: none;
+}
+
+.inputGroup:first-child .inputField {
+  border-radius: 0;
+}
+
+.passwordRow {
+  display: flex;
+  align-items: center;
+  background: #E9E9E9;
+}
+
+.passwordRow .inputField {
+  color: transparent;
+  padding-right: 0;
+  -webkit-text-fill-color: transparent;
+}
+
+.passwordMask {
+  color: #252525;
+  letter-spacing: 0.02em;
+}
+
+.inputField::placeholder {
+  color: transparent;
+}
+
+.inputField:focus {
+  background: #E9E9E9;
+  box-shadow: none;
+}
+
+
+.loginSubmit {
+  width: 238px;
+  height: 41px;
+  border: none;
+  border-radius: 0;
+  background: #000000;
+  color: transparent;
+  font-family: var(--login-display-font);
+  font-size: 18px;
+  font-weight: 400;
+  cursor: pointer;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s ease;
+}
+
+.loginArrow {
+  display: block;
+}
+
+.loginSubmit:hover:not(:disabled),
+.loginSubmit:focus-visible:not(:disabled) {
+  background: #000000;
+  transform: none;
+}
+
+.loginSubmit:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.loginSubmit:disabled {
+  cursor: progress;
+  opacity: 0.72;
+}
+
+
+.errorMessage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(174, 45, 45, 0.12);
+  background: #fff1f1;
+  color: #b13a3a;
+  font-family: var(--font-prompt), Arial, sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.errorMessage svg {
+  flex-shrink: 0;
+}
+
+.contactBlock {
+  position: absolute;
+  left: 150px;
+  bottom: 49px;
+  width: 89px;
+}
+
+.contactValue {
+  margin: 0;
+  color: #000000;
+  font-family: var(--login-display-font);
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 24px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.shake {
+  animation: login-shake 0.45s ease;
+}
+
+@keyframes login-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-6px);
+  }
+
+  50% {
+    transform: translateX(6px);
+  }
+
+  75% {
+    transform: translateX(-4px);
+  }
+}
+
+
+@media (max-width: 1200px) {
+  .splitLayout {
+    grid-template-columns: 1fr;
+    background: #ffffff;
+  }
+
+  .visualPane {
+    display: none;
+  }
+
+  .authPane {
+    min-height: 100dvh;
+    justify-content: center;
+    padding: 56px 20px 48px;
+  }
+}
+
+@media (max-width: 640px) {
+  .wordmarkWrap {
+    margin-bottom: 38px;
+  }
+
+  .wordmark {
+    font-size: 2.8rem;
+    letter-spacing: 0.28em;
+  }
+
+  .loginTitle {
+    font-size: 1.62rem;
+    line-height: 1.1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shake,
+  .loginSubmit,
+  .inputField {
+    animation: none !important;
+    transition: none !important;
+  }
+}

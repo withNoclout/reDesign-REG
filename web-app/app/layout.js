@@ -1,5 +1,5 @@
 import './globals.css';
-import { Prompt, Montserrat } from 'next/font/google';
+import { Prompt, Montserrat, Text_Me_One } from 'next/font/google';
 import { LazyMotion, domAnimation } from 'framer-motion';
 
 import { AuthProvider } from './context/AuthContext';
@@ -20,6 +20,13 @@ const montserrat = Montserrat({
     weight: ['300', '400', '500', '600', '700'],
     display: 'swap',
     variable: '--font-montserrat',
+});
+
+const textMeOne = Text_Me_One({
+    subsets: ['latin'],
+    weight: '400',
+    display: 'swap',
+    variable: '--font-text-me-one',
 });
 
 const criticalShellCss = `
@@ -159,7 +166,7 @@ export default function RootLayout({ children }) {
     return (
         <html
             lang="th"
-            className={`${prompt.variable} ${montserrat.variable}`}
+            className={`${prompt.variable} ${montserrat.variable} ${textMeOne.variable}`}
             suppressHydrationWarning
         >
             <head>

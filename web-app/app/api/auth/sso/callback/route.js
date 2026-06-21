@@ -9,6 +9,7 @@ import {
     fetchKmutnbSsoUserInfo,
     getMissingKmutnbSsoConfig,
     isKmutnbSsoConfigured,
+    isKmutnbSsoLoginEnabled,
     KMUTNB_SSO_FLOW_COOKIE_NAME,
     normalizeKmutnbSsoUserInfo,
     sanitizeReturnTo,
@@ -17,6 +18,10 @@ import {
 import { createKmutnbSsoSession } from '@/lib/kmutnbSsoSessionStore';
 
 export async function GET(request) {
+    if (!isKmutnbSsoLoginEnabled()) {
+        return error('KMUTNB SSO login is disabled', 503, 'SSO_DISABLED');
+    }
+
     if (!isKmutnbSsoConfigured()) {
         return error(
             `KMUTNB SSO backend is not configured: ${getMissingKmutnbSsoConfig().join(', ')}`,

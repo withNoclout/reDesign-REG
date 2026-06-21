@@ -131,6 +131,12 @@ body {
   gap: 20px;
   list-style: none;
   transition: all 0.3s ease;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.nav-menu > li {
+  flex-shrink: 0;
 }
 
 .nav-link {
@@ -144,6 +150,8 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+  white-space: nowrap;
+  flex-wrap: nowrap;
 }
 
 .nav-link:hover,

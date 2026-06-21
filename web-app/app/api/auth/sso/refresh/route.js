@@ -4,6 +4,7 @@ import {
     getMissingKmutnbSsoConfig,
     introspectKmutnbSsoAccessToken,
     isKmutnbSsoConfigured,
+    isKmutnbSsoLoginEnabled,
     KMUTNB_SSO_SESSION_COOKIE_NAME,
     normalizeKmutnbSsoUserInfo,
     refreshKmutnbSsoTokenBundle,
@@ -12,6 +13,10 @@ import {
 import { getKmutnbSsoSession, refreshKmutnbSsoSession } from '@/lib/kmutnbSsoSessionStore';
 
 export async function POST() {
+    if (!isKmutnbSsoLoginEnabled()) {
+        return error('KMUTNB SSO login is disabled', 503, 'SSO_DISABLED');
+    }
+
     if (!isKmutnbSsoConfigured()) {
         return error(
             `KMUTNB SSO backend is not configured: ${getMissingKmutnbSsoConfig().join(', ')}`,

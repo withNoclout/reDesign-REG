@@ -5,10 +5,35 @@ import { getCachedProfile, cacheProfile } from '@/lib/supabaseProfile';
 import { success, unauthorized } from '@/lib/apiResponse';
 import { getAuthContext } from '@/lib/auth';
 
-// Rapid In-Memory Cache (0ms latency, saves DB hits)
-// Keys: student_id, Values: { timestamp, data: StudentProfile }
 const memoryCache = new Map();
-const MEMORY_TTL_MS = 5 * 60 * 1000; // 5 mins
+const MEMORY_TTL_MS = 5 * 60 * 1000;
+
+function readString(value) {
+    return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function buildSsoFallbackProfile(authContext) {
+    const ssoUser = authContext?.ssoUser;
+    const studentInfo = ssoUser?.studentInfo && typeof ssoUser.studentInfo === 'object' ? ssoUser.studentInfo : {};
+    const userId = authContext?.userId;
+    if (!ssoUser || !userId) return null;
+
+    return {
+        studentId: userId,
+        faculty: readString(studentInfo.faculty_name) || readString(studentInfo.faculty) || null,
+        department: readString(studentInfo.department_name) || readString(studentInfo.department) || null,
+        major: readString(studentInfo.program_name) || readString(studentInfo.curriculum_name) || readString(studentInfo.major) || null,
+        advisor1: readString(studentInfo.advisor_name) || readString(studentInfo.advisor1) || null,
+        advisor2: readString(studentInfo.advisor2) || null,
+        advisor3: readString(studentInfo.advisor3) || null,
+        admitYear: readString(studentInfo.admitacadyear) || readString(studentInfo.admit_year) || null,
+        currentYear: readString(studentInfo.currentacadyear) || readString(studentInfo.current_year) || null,
+        currentSemester: readString(studentInfo.currentsemester) || readString(studentInfo.current_semester) || null,
+        enrollYear: readString(studentInfo.enrollacadyear) || readString(studentInfo.enroll_year) || null,
+        enrollSemester: readString(studentInfo.enrollsemester) || readString(studentInfo.enroll_semester) || null,
+        partialSource: 'kmutnb_sso',
+    };
+}
 
 export async function GET() {
     try {
@@ -17,9 +42,8 @@ export async function GET() {
             return unauthorized('No authentication token');
         }
 
-        const { token, userId } = authContext;
+        const { token, userId, authProvider } = authContext;
 
-        // --- 1. L1 CACHE: IN-MEMORY (Instant) ---
         if (userId) {
             const memCached = memoryCache.get(userId);
             if (memCached && (Date.now() - memCached.timestamp < MEMORY_TTL_MS)) {
@@ -37,31 +61,32 @@ export async function GET() {
             }
         }
 
-        // --- 3. FETCH: FIRST TIME LOGIN OR NO CACHE ---
-        console.log(`[Profile Controller] No Cache found. Fetching from University API...`);
+        if (!token && authProvider === 'kmutnb_sso') {
+            const fallbackProfile = buildSsoFallbackProfile(authContext);
+            if (fallbackProfile) {
+                console.log(`[Profile Controller] Serving KMUTNB SSO fallback profile for ${userId}`);
+                memoryCache.set(userId, { timestamp: Date.now(), data: fallbackProfile });
+                return success(fallbackProfile);
+            }
+        }
+
+        console.log('[Profile Controller] No Cache found. Fetching from University API...');
 
         try {
-            // Fetch raw data
             const rawApiData = await fetchFromUniversityApi(token);
-
-            // Parse & Validate — fall back to the already validated user identity when
-            // the university response omits studentCode/usercode.
             const { profile, isPartial } = parseProfileData(rawApiData, userId);
 
-            // Only cache if we have a complete profile (Full Atomic Promise)
             if (!isPartial) {
                 await cacheProfile(profile);
                 memoryCache.set(userId || profile.studentId, { timestamp: Date.now(), data: profile });
                 console.log(`[Profile Controller] Cached full profile for ${profile.studentId}`);
             } else {
-                // Partial data — still return it but don't persist so next request tries again
                 console.warn(`[Profile Controller] Partial profile for ${profile.studentId} — will not cache`);
             }
 
             return success(profile);
-
         } catch (fetchOrParseError) {
-            console.warn(`[Profile Controller] Fetch/Parse Failed:`, fetchOrParseError.message);
+            console.warn('[Profile Controller] Fetch/Parse Failed:', fetchOrParseError.message);
 
             if (fetchOrParseError.isAuthError) {
                 return NextResponse.json({ success: false, message: 'Session Expired', code: 'SESSION_EXPIRED' }, { status: 401 });
@@ -69,7 +94,6 @@ export async function GET() {
 
             return NextResponse.json({ success: false, message: 'Service Unavailable (Upstream API Down and No Cache)' }, { status: 503 });
         }
-
     } catch (error) {
         console.error('[Profile Controller] Critical Error:', error);
         return NextResponse.json({ success: false, message: 'Internal Server Error' }, { status: 500 });

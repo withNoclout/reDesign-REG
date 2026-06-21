@@ -6,10 +6,15 @@ import {
     createKmutnbSsoFlow,
     getMissingKmutnbSsoConfig,
     isKmutnbSsoConfigured,
+    isKmutnbSsoLoginEnabled,
     sanitizeReturnTo,
 } from '@/lib/kmutnbSso';
 
 export async function GET(request) {
+    if (!isKmutnbSsoLoginEnabled()) {
+        return error('KMUTNB SSO login is disabled', 503, 'SSO_DISABLED');
+    }
+
     if (!isKmutnbSsoConfigured()) {
         return error(
             `KMUTNB SSO backend is not configured: ${getMissingKmutnbSsoConfig().join(', ')}`,

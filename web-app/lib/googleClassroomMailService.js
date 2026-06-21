@@ -78,6 +78,8 @@ function buildNotificationSummary(notification) {
         title: notification.title,
         message: notification.message,
         sortAt: notification.sortAt,
+        resourceUpdatedAt: notification.resourceUpdatedAt || null,
+        payload: notification.payload || {},
         seenAt: notification.seenAt,
     };
 }

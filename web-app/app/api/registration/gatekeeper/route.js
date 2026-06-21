@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import axios from 'axios';
 import { getAuthContext } from '@/lib/auth';
 
@@ -7,13 +8,55 @@ const BASE_URL = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
 const gatekeeperCache = new Map();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
+function summarizeOutstandingFees(fees) {
+    const outstandingFees = Array.isArray(fees)
+        ? fees
+            .filter((fee) => Number(fee?.balance) > 0)
+            .map((fee) => ({
+                acadyear: fee.acadyear ?? null,
+                semester: fee.semester ?? null,
+                feeid: fee.feeid ?? null,
+                feeidname: fee.feeidname ?? '',
+                amount: Number(fee.amount ?? 0),
+                balance: Number(fee.balance ?? 0),
+                voucher: fee.voucher ?? '',
+            }))
+        : [];
+
+    const outstandingBalance = outstandingFees.reduce((sum, fee) => sum + fee.balance, 0);
+
+    return {
+        outstandingFees,
+        outstandingBalance,
+        hasDebt: outstandingBalance > 0,
+    };
+}
+
+
 export async function GET() {
     const authContext = await getAuthContext();
-    const token = authContext?.token;
-    const userId = authContext?.userId;
+    let token = authContext?.token ?? null;
+    const userId = authContext?.userId ?? null;
+    let acadInfoFromAuth = authContext?.upstream ?? null;
 
-    if (!authContext) {
-        return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    if (!token) {
+        const cookieStore = await cookies();
+        token = cookieStore.get('reg_token')?.value ?? null;
+        if (!token) {
+            return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+        }
+
+        const fallbackAuthRes = await axios.get(`${BASE_URL}/Schg/Getacadstd`, {
+            headers: { 'Authorization': `Bearer ${token}` },
+            validateStatus: () => true,
+            timeout: 3000,
+        });
+
+        if (fallbackAuthRes.status !== 200 || !fallbackAuthRes.data) {
+            return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+        }
+
+        acadInfoFromAuth = fallbackAuthRes.data;
     }
 
     if (userId) {
@@ -25,68 +68,65 @@ export async function GET() {
     }
 
     const headers = { 'Authorization': `Bearer ${token}` };
-    // Strict timeout of 3 seconds to prevent indefinite hangs
     const config = { headers, validateStatus: () => true, timeout: 3000 };
 
     try {
-        // Parallel Fetch for Performance
-        const [studentInfoRes, enrollStageRes, enrollFeeRes, acadStdRes] = await Promise.allSettled([
-            axios.get(`${BASE_URL}/Schg/Getstudentinfo`, config),
+        const [enrollStageRes, enrollFeeRes, acadStdRes] = await Promise.allSettled([
             axios.get(`${BASE_URL}/Student/Getenrollstage`, config),
             axios.get(`${BASE_URL}/Debt/Enrollfee`, config),
-            axios.get(`${BASE_URL}/Schg/Getacadstd`, config)
+            acadInfoFromAuth ? Promise.resolve({ status: 200, data: acadInfoFromAuth }) : axios.get(`${BASE_URL}/Schg/Getacadstd`, config)
         ]);
 
-        // Process Enroll Stage
-        // 1 = New, 2 = Advisor, 3 = Payment, 4 = Complete? (Need to verify exact mapping)
-        // For now, assume any stage > 0 is "In Progress"
         let stage = 0;
         if (enrollStageRes.status === 'fulfilled' && enrollStageRes.value?.status === 200) {
-            stage = enrollStageRes.value.data;
+            stage = Number(enrollStageRes.value.data) || 0;
         }
 
-        // Process Debt
-        let hasDebt = false;
-        if (enrollFeeRes.status === 'fulfilled' && enrollFeeRes.value?.status === 200) {
-            // Check if any fee has a balance > 0
-            // Filter out fees that are not relevant if needed, but safe assume balance > 0 is debt
-            const fees = enrollFeeRes.value.data || [];
-            hasDebt = fees.some(f => f.balance > 0);
-        }
+        const fees = enrollFeeRes.status === 'fulfilled' && enrollFeeRes.value?.status === 200
+            ? enrollFeeRes.value.data
+            : [];
+        const { outstandingFees, outstandingBalance, hasDebt } = summarizeOutstandingFees(fees);
 
-        // Process Academic Info
         let acadInfo = {};
         if (acadStdRes.status === 'fulfilled' && acadStdRes.value?.status === 200) {
             acadInfo = acadStdRes.value.data;
         }
 
-        // Construct Gatekeeper Response
-        const eligibility = {
-            isRegistrationPeriod: true, // Hardcoded for now, or check dates from EnrollControl if available
-            hasDebt: hasDebt,
-            academicStatus: 'Normal', // Mocked or derived from acadInfo
-            canRegister: !hasDebt // Basic rule
-        };
+        const blockingReasons = [];
+        const isRegistrationPeriod = true;
+
+        if (!isRegistrationPeriod) {
+            blockingReasons.push('ยังไม่อยู่ในช่วงเวลาลงทะเบียน');
+        }
+
+        if (hasDebt) {
+            blockingReasons.push(`มียอดค้างชำระ ${outstandingBalance.toLocaleString('th-TH')} บาท`);
+        }
 
         const responseData = {
             student: {
-                // If Getstudentinfo fails (404 as seen), use decoded token or placeholder
-                // We can also extract from acadInfo partially
                 id: acadInfo.studentcode || userId || 'Unknown',
-                faculty: 'Engineering' // Placeholder
+                faculty: 'Engineering'
             },
-            stage: stage,
-            eligibility: eligibility,
-            acadInfo: acadInfo
+            stage,
+            eligibility: {
+                isRegistrationPeriod,
+                hasDebt,
+                academicStatus: 'Normal',
+                canRegister: blockingReasons.length === 0,
+                outstandingBalance,
+                outstandingFees,
+                blockingReasons,
+                stageMessage: stage > 0 ? `REG รายงานสถานะการลงทะเบียนเป็น Stage ${stage}` : 'REG ยังไม่รายงานสถานะการลงทะเบียน'
+            },
+            acadInfo
         };
 
-        // Update Memory Cache
         if (userId) {
             gatekeeperCache.set(userId, { timestamp: Date.now(), data: responseData });
         }
 
         return NextResponse.json({ success: true, data: responseData });
-
     } catch (error) {
         console.error('Gatekeeper Error:', error);
         return NextResponse.json({ success: false, message: 'Gatekeeper System Error' }, { status: 500 });

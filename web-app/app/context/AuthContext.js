@@ -4,119 +4,216 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo } 
 import { useRouter } from 'next/navigation';
 
 const AuthContext = createContext(null);
-
-/**
- * User profile shape (from decoded tokenuser JWT):
- * {
- *   username: string,       // ชื่อ (ไทย)
- *   usernameeng: string,    // ชื่อ (อังกฤษ)
- *   name: string,           // ชื่อเต็ม (ไทย)
- *   nameeng: string,        // ชื่อเต็ม (อังกฤษ)
- *   email: string,
- *   usercode: string,       // รหัสนักศึกษา
- *   userid: string,
- *   userstatus: string,     // "Y" = active
- *   userstatusdes: string,  // "ปกติ"
- *   statusdes: string,      // "ปกติ"
- *   statusdeseng: string,   // "Regular"
- *   role: string[],         // ["student", ""]
- *   reportdate: string,     // วันที่รายงานตัว
- *   img: string,            // Profile image URL
- *   navimg: string,         // Nav profile image URL
- * }
- */
-
 const SESSION_KEY = 'reg_user_session';
+
+function readStoredSession() {
+    if (typeof window === 'undefined') return null;
+
+    try {
+        const stored = localStorage.getItem(SESSION_KEY);
+        if (!stored) return null;
+        const parsed = JSON.parse(stored);
+        return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch (error) {
+        console.warn('[Auth] Failed to restore session:', error.message);
+        localStorage.removeItem(SESSION_KEY);
+        return null;
+    }
+}
+
+function persistSession(userData) {
+    if (typeof window === 'undefined') return;
+
+    try {
+        localStorage.setItem(SESSION_KEY, JSON.stringify(userData));
+    } catch (error) {
+        console.warn('[Auth] Failed to store session:', error.message);
+    }
+}
+
+function clearStoredSession() {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(SESSION_KEY);
+}
+
+function readString(value) {
+    return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+function firstNonEmpty(...values) {
+    for (const value of values) {
+        const normalized = readString(value);
+        if (normalized) return normalized;
+    }
+    return null;
+}
+
+function buildDisplayName(personnelInfo = {}, studentInfo = {}) {
+    return firstNonEmpty(
+        studentInfo.full_name_th,
+        studentInfo.full_name,
+        studentInfo.name_th,
+        studentInfo.name,
+        personnelInfo.full_name_th,
+        [personnelInfo.firstname_th, personnelInfo.lastname_th].filter(Boolean).join(' '),
+    );
+}
+
+function buildDisplayNameEn(personnelInfo = {}, studentInfo = {}) {
+    return firstNonEmpty(
+        studentInfo.full_name_en,
+        studentInfo.name_en,
+        personnelInfo.full_name_en,
+        [personnelInfo.firstname_en, personnelInfo.lastname_en].filter(Boolean).join(' '),
+    );
+}
+
+function buildSsoSessionUser(statusData) {
+    const session = statusData?.session;
+    const user = statusData?.user;
+    if (!session?.userCode || !user) return null;
+
+    const studentInfo = user.studentInfo && typeof user.studentInfo === 'object' ? user.studentInfo : {};
+    const personnelInfo = user.personnelInfo && typeof user.personnelInfo === 'object' ? user.personnelInfo : {};
+    const userCode = firstNonEmpty(session.userCode, user.userCode);
+    if (!userCode) return null;
+
+    const displayName = firstNonEmpty(user.displayName, buildDisplayName(personnelInfo, studentInfo), userCode);
+    const displayNameEn = firstNonEmpty(user.nameEn, buildDisplayNameEn(personnelInfo, studentInfo), displayName);
+    const email = firstNonEmpty(user.email, studentInfo.email, personnelInfo.email);
+    const username = firstNonEmpty(user.username, studentInfo.student_code, studentInfo.student_id, userCode);
+    const accountType = firstNonEmpty(user.accountType, 'sso');
+
+    return {
+        username,
+        usernameeng: displayNameEn,
+        name: displayName,
+        nameeng: displayNameEn,
+        email: email || '',
+        usercode: userCode,
+        userid: userCode,
+        userstatus: 'Y',
+        userstatusdes: 'SSO',
+        statusdes: accountType,
+        statusdeseng: accountType.toUpperCase(),
+        role: [accountType],
+        reportdate: '',
+        img: null,
+        navimg: null,
+        authProvider: 'kmutnb_sso',
+        authMode: 'sso',
+        ssoSubject: firstNonEmpty(session.subject, user.subject),
+        legacyRegToken: false,
+    };
+}
 
 export function AuthProvider({ children }) {
     const router = useRouter();
-    const [user, setUser] = useState(() => {
-        if (typeof window !== 'undefined') {
+    const [user, setUser] = useState(() => readStoredSession());
+    const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(readStoredSession()));
+    const [loading, setLoading] = useState(true);
+    const [isVerified, setIsVerified] = useState(false);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        async function bootstrapAuth() {
+            const stored = readStoredSession();
+            const hasStoredLegacySession = stored && stored.authProvider !== 'kmutnb_sso';
+
+            if (hasStoredLegacySession) {
+                setUser(stored);
+                setIsAuthenticated(true);
+            }
+
             try {
-                const stored = localStorage.getItem(SESSION_KEY);
-                if (stored) {
-                    const parsed = JSON.parse(stored);
-                    return parsed;
+                const response = await fetch('/api/auth/sso/status', {
+                    cache: 'no-store',
+                    credentials: 'same-origin',
+                });
+                const payload = await response.json().catch(() => null);
+                const ssoUser = buildSsoSessionUser(payload?.data);
+
+                if (cancelled) return;
+
+                if (ssoUser) {
+                    setUser(ssoUser);
+                    setIsAuthenticated(true);
+                    persistSession(ssoUser);
+                } else if (stored?.authProvider === 'kmutnb_sso') {
+                    clearStoredSession();
+                    setUser(null);
+                    setIsAuthenticated(false);
+                } else if (!hasStoredLegacySession) {
+                    setUser(null);
+                    setIsAuthenticated(false);
                 }
-            } catch (e) {
-                console.warn('[Auth] Failed to restore session:', e.message);
-                localStorage.removeItem(SESSION_KEY);
+            } catch (error) {
+                if (!cancelled && !hasStoredLegacySession) {
+                    setUser(null);
+                    setIsAuthenticated(false);
+                }
+                console.warn('[Auth] Failed to bootstrap SSO status:', error.message);
+            } finally {
+                if (!cancelled) setLoading(false);
             }
         }
-        return null;
-    });
 
-    const [isAuthenticated, setIsAuthenticated] = useState(() => {
-        if (typeof window !== 'undefined') {
-            return !!localStorage.getItem(SESSION_KEY);
-        }
-        return false;
-    });
+        bootstrapAuth();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
-    const [loading, setLoading] = useState(false);
-    const [isVerified, setIsVerified] = useState(false); // Drive connected status
-
-    // Ensure state sync after hydration if needed, but primary state is ready immediately.
     useEffect(() => {
-        // Just a safety check in case `localStorage` mutated outside React tree.
-        const stored = localStorage.getItem(SESSION_KEY);
+        const stored = readStoredSession();
         if (!stored && isAuthenticated) {
             setIsAuthenticated(false);
             setUser(null);
         }
     }, [isAuthenticated]);
 
-    // Login: store user data from API response
     const login = useCallback((userData) => {
-
         setUser(userData);
         setIsAuthenticated(true);
-        try {
-            localStorage.setItem(SESSION_KEY, JSON.stringify(userData));
-        } catch (e) {
-            console.warn('[Auth] Failed to store session:', e.message);
-        }
+        persistSession(userData);
     }, []);
 
-    // Mark as verified
     const markAsVerified = useCallback(() => {
         setIsVerified(true);
     }, []);
 
-    // Logout: clear everything
     const logout = useCallback(async () => {
         setUser(null);
         setIsAuthenticated(false);
         setIsVerified(false);
-        localStorage.removeItem(SESSION_KEY);
+        clearStoredSession();
 
         try {
             await fetch('/api/auth/logout', { method: 'POST' });
-        } catch (e) { }
+        } catch {
+            // Ignore logout transport failures; local session is already cleared.
+        }
 
         router.push('/');
     }, [router]);
 
-    // Update profile image
     const updateProfileImage = useCallback(async (newImgUrl) => {
         if (!user?.usercode) return;
 
         let finalParams = { img: newImgUrl };
 
         if (newImgUrl) {
-            // Upload to server
             try {
                 const res = await fetch('/api/user/upload-image', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        image: newImgUrl
-                    })
+                    body: JSON.stringify({ image: newImgUrl }),
                 });
 
                 const data = await res.json();
                 if (data.success && data.path) {
-                    finalParams.img = data.path; // Use server path
+                    finalParams.img = data.path;
                 } else {
                     console.warn('Upload failed, using Base64 fallback in session only');
                 }
@@ -124,12 +221,11 @@ export function AuthProvider({ children }) {
                 console.error('Upload error:', err);
             }
         } else {
-            // Reset image
             try {
                 await fetch('/api/user/upload-image', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ reset: true })
+                    body: JSON.stringify({ reset: true }),
                 });
             } catch (err) {
                 console.error('Reset upload error:', err);
@@ -137,12 +233,12 @@ export function AuthProvider({ children }) {
             finalParams.img = null;
         }
 
-        setUser(prev => {
+        setUser((prev) => {
             const updated = {
                 ...prev,
-                img: finalParams.img || (newImgUrl === null ? (prev.originalImg || null) : prev.img)
+                img: finalParams.img || (newImgUrl === null ? (prev.originalImg || null) : prev.img),
             };
-            localStorage.setItem(SESSION_KEY, JSON.stringify(updated));
+            persistSession(updated);
             return updated;
         });
     }, [user]);

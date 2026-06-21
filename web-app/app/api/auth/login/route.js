@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import axios from 'axios';
 import { getServiceSupabase } from '@/lib/supabase';
 import { AUTH_IDENTITY_COOKIE_MAX_AGE_SECONDS, AUTH_IDENTITY_COOKIE_NAME, createSignedAuthIdentityCookie } from '@/lib/auth';
+import { buildAuthCookieOptions } from '@/lib/authCookiePolicy.mjs';
 import { createRateLimiter, getClientIp } from '@/lib/rateLimit';
 import { encryptForReg } from '@/lib/regCipherUtils';
 import crypto from 'crypto';
@@ -243,35 +244,20 @@ export async function POST(request) {
                     message: 'เข้าสู่ระบบสำเร็จ',
                     data: userData
                 });
+                const authCookieOptions = buildAuthCookieOptions(request, 60 * 55);
+                const identityCookieOptions = buildAuthCookieOptions(request, AUTH_IDENTITY_COOKIE_MAX_AGE_SECONDS);
+                const clearedLegacyCookieOptions = buildAuthCookieOptions(request, 0);
 
                 // Store API token in HttpOnly cookie
                 if (apiData.token) {
-                    response.cookies.set('reg_token', apiData.token, {
-                        httpOnly: true,
-                        secure: process.env.NODE_ENV === 'production',
-                        path: '/',
-                        sameSite: 'lax',
-                        maxAge: 60 * 55 // ~55 minutes
-                    });
+                    response.cookies.set('reg_token', apiData.token, authCookieOptions);
                 }
 
                 // Store server-signed identity bound to the validated upstream session
-                response.cookies.set(AUTH_IDENTITY_COOKIE_NAME, identityCookieValue, {
-                    httpOnly: true,
-                    secure: process.env.NODE_ENV === 'production',
-                    path: '/',
-                    sameSite: 'lax',
-                    maxAge: AUTH_IDENTITY_COOKIE_MAX_AGE_SECONDS
-                });
+                response.cookies.set(AUTH_IDENTITY_COOKIE_NAME, identityCookieValue, identityCookieOptions);
 
                 // Clear the legacy identity cookie during the cutover.
-                response.cookies.set('std_code', '', {
-                    httpOnly: true,
-                    secure: process.env.NODE_ENV === 'production',
-                    path: '/',
-                    sameSite: 'lax',
-                    maxAge: 0
-                });
+                response.cookies.set('std_code', '', clearedLegacyCookieOptions);
 
                 // Upsert user_directory for searchable user directory
                 if (userData.usercode) {
