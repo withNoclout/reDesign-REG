@@ -8,13 +8,14 @@ const DEFAULT_LOGIN_FORM_ID = 'production-login-form';
 const DESKTOP_CANVAS_BREAKPOINT = 901;
 const LOGIN_CANVAS_WIDTH = 1440;
 const LOGIN_CANVAS_HEIGHT = 1024;
-const NAV_RIPPLE_DURATION_MS = 5200;
+const NAV_RIPPLE_DURATION_MS = 6200;
 const NAV_RIPPLE_RING_COUNT = 4;
-const NAV_RIPPLE_RING_DELAY_MS = 620;
-const NAV_RIPPLE_CLEANUP_MS = NAV_RIPPLE_DURATION_MS + ((NAV_RIPPLE_RING_COUNT - 1) * NAV_RIPPLE_RING_DELAY_MS) + 800;
-const NAV_RIPPLE_IMPACT_X = 400;
-const NAV_RIPPLE_IMPACT_MIN_DELAY_MS = 760;
-const NAV_RIPPLE_IMPACT_MAX_DELAY_MS = 1860;
+const NAV_RIPPLE_RING_DELAY_MS = 720;
+const NAV_RIPPLE_CLEANUP_MS = NAV_RIPPLE_DURATION_MS + ((NAV_RIPPLE_RING_COUNT - 1) * NAV_RIPPLE_RING_DELAY_MS) + 900;
+const NAV_RIPPLE_IMPACT_MIN_DELAY_MS = 920;
+const NAV_RIPPLE_IMPACT_MAX_DELAY_MS = 2360;
+const NAV_RIPPLE_ABSORB_SEGMENT_PX = 148;
+const NAV_RIPPLE_ABSORB_CORNER_SEGMENT_PX = 190;
 const NAV_RIPPLE_PANEL_RECT = Object.freeze({
     x: 400,
     y: 274,
@@ -22,14 +23,54 @@ const NAV_RIPPLE_PANEL_RECT = Object.freeze({
     height: 600,
 });
 
-function getNavRippleImpactDelay(rippleX, ringIndex) {
-    const travelDelay = Math.max(
-        NAV_RIPPLE_IMPACT_MIN_DELAY_MS,
-        Math.min(NAV_RIPPLE_IMPACT_MAX_DELAY_MS, (NAV_RIPPLE_IMPACT_X - rippleX) * 3.6),
-    );
+function clampNumber(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+}
+
+function getDistanceToRect(point, rect) {
+    const nearestX = clampNumber(point.x, rect.x, rect.x + rect.width);
+    const nearestY = clampNumber(point.y, rect.y, rect.y + rect.height);
+    const dx = nearestX - point.x;
+    const dy = nearestY - point.y;
+
+    return Math.sqrt((dx * dx) + (dy * dy));
+}
+
+function getNavRippleAbsorbDelay(ripple, ringIndex) {
+    const distance = getDistanceToRect(ripple, NAV_RIPPLE_PANEL_RECT);
+    const travelDelay = clampNumber(distance * 3.2, NAV_RIPPLE_IMPACT_MIN_DELAY_MS, NAV_RIPPLE_IMPACT_MAX_DELAY_MS);
 
     return Math.round(travelDelay + (ringIndex * NAV_RIPPLE_RING_DELAY_MS));
 }
+
+function getNavRippleAbsorbSegments(ripple) {
+    const rect = NAV_RIPPLE_PANEL_RECT;
+    const segmentHalf = NAV_RIPPLE_ABSORB_SEGMENT_PX / 2;
+    const cornerLength = NAV_RIPPLE_ABSORB_CORNER_SEGMENT_PX;
+    const rectRight = rect.x + rect.width;
+    const rectBottom = rect.y + rect.height;
+
+    if (ripple.y < rect.y + segmentHalf) {
+        return [
+            { edge: 'top', x1: rect.x, y1: rect.y, x2: clampNumber(rect.x + cornerLength, rect.x, rectRight), y2: rect.y, delayOffset: 0 },
+            { edge: 'left', x1: rect.x, y1: rect.y, x2: rect.x, y2: clampNumber(rect.y + cornerLength, rect.y, rectBottom), delayOffset: 140 },
+        ];
+    }
+
+    if (ripple.y > rectBottom - segmentHalf) {
+        return [
+            { edge: 'bottom', x1: rect.x, y1: rectBottom, x2: clampNumber(rect.x + cornerLength, rect.x, rectRight), y2: rectBottom, delayOffset: 0 },
+            { edge: 'left', x1: rect.x, y1: clampNumber(rectBottom - cornerLength, rect.y, rectBottom), x2: rect.x, y2: rectBottom, delayOffset: 140 },
+        ];
+    }
+
+    const centerY = clampNumber(ripple.y, rect.y + segmentHalf, rectBottom - segmentHalf);
+
+    return [
+        { edge: 'left', x1: rect.x, y1: centerY - segmentHalf, x2: rect.x, y2: centerY + segmentHalf, delayOffset: 0 },
+    ];
+}
+
 
 const DEFAULT_NAV_ITEMS = [
     { id: 'grade', label: 'GRADE', href: '/grade', slot: 'grade' },
@@ -984,33 +1025,36 @@ function RippleLayer({ clipIdBase, navRipples }) {
                 aria-hidden="true"
             >
                 {navRipples.flatMap((ripple) =>
-                    Array.from({ length: NAV_RIPPLE_RING_COUNT }, (_, index) => {
-                        const impactDelay = getNavRippleImpactDelay(ripple.x, index);
-                        return (
-                            <g key={`impact-${ripple.id}-${index}`} style={{ '--impact-delay': `${impactDelay}ms` }}>
+                    Array.from({ length: NAV_RIPPLE_RING_COUNT }, (_, ringIndex) => {
+                        const impactDelay = getNavRippleAbsorbDelay(ripple, ringIndex);
+                        return getNavRippleAbsorbSegments(ripple).flatMap((segment, segmentIndex) => {
+                            const delay = impactDelay + segment.delayOffset;
+                            const key = `${ripple.id}-${ringIndex}-${segment.edge}-${segmentIndex}`;
+                            const style = { '--impact-delay': `${delay}ms` };
+
+                            return [
                                 <line
-                                    className={styles.loginTransitionNavRippleImpactLine}
-                                    x1="389"
-                                    y1="0"
-                                    x2="389"
-                                    y2="1024"
-                                />
-                                <rect
-                                    className={styles.loginTransitionNavRippleImpactFrame}
-                                    x={NAV_RIPPLE_PANEL_RECT.x}
-                                    y={NAV_RIPPLE_PANEL_RECT.y}
-                                    width={NAV_RIPPLE_PANEL_RECT.width}
-                                    height={NAV_RIPPLE_PANEL_RECT.height}
-                                />
-                                <rect
-                                    className={styles.loginTransitionNavRippleImpactHalo}
-                                    x={NAV_RIPPLE_PANEL_RECT.x - 6}
-                                    y={NAV_RIPPLE_PANEL_RECT.y - 6}
-                                    width={NAV_RIPPLE_PANEL_RECT.width + 12}
-                                    height={NAV_RIPPLE_PANEL_RECT.height + 12}
-                                />
-                            </g>
-                        );
+                                    className={styles.loginTransitionNavRippleAbsorbBloom}
+                                    key={`bloom-${key}`}
+                                    pathLength="1"
+                                    style={style}
+                                    x1={segment.x1}
+                                    y1={segment.y1}
+                                    x2={segment.x2}
+                                    y2={segment.y2}
+                                />,
+                                <line
+                                    className={styles.loginTransitionNavRippleAbsorbSegment}
+                                    key={`segment-${key}`}
+                                    pathLength="1"
+                                    style={style}
+                                    x1={segment.x1}
+                                    y1={segment.y1}
+                                    x2={segment.x2}
+                                    y2={segment.y2}
+                                />,
+                            ];
+                        });
                     }),
                 )}
             </svg>
