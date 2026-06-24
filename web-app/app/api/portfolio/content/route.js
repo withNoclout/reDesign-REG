@@ -1,20 +1,23 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import axios from 'axios';
 import sharp from 'sharp';
 import fs from 'fs/promises';
 import path from 'path';
 import { getServiceSupabase } from '@/lib/supabase';
 import { getAuthUser } from '@/lib/auth';
 import { sanitizeStudentCodes } from '@/lib/sanitize';
-import { getTempDir } from '@/lib/runtimePaths.mjs';
 
-const BASE_URL = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
 
-const TEMP_DIR = getTempDir();
+function getPortfolioTempDir() {
+    return typeof process.env.REDESIGN_REG_TEMP_DIR === 'string' && process.env.REDESIGN_REG_TEMP_DIR.trim()
+        ? path.resolve(process.env.REDESIGN_REG_TEMP_DIR.trim())
+        : path.join(/* turbopackIgnore: true */ process.cwd(), 'public', 'temp');
+}
+
+
+const TEMP_DIR = getPortfolioTempDir();
 console.log('[Portfolio API] TEMP_DIR:', TEMP_DIR);
 
-export async function GET(request) {
+export async function GET(_request) {
     try {
         const userId = await getAuthUser();
 
@@ -232,7 +235,7 @@ export async function POST(request) {
         if (collaboratorsJson && data && data[0]?.id) {
             try {
                 const codes = JSON.parse(collaboratorsJson);
-                const { valid, sanitized, error: valErr } = sanitizeStudentCodes(codes);
+                const { valid, sanitized } = sanitizeStudentCodes(codes);
 
                 if (valid && sanitized.length > 0) {
                     // Filter out self-tagging

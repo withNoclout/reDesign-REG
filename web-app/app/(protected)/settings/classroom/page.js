@@ -1,1 +1,5 @@
-export { default } from '@/app/settings/classroom/ClassroomSettingsPageClient';
+import { redirectToMainMenu } from '@/app/redirectToMainMenu';
+
+export default function Page({ searchParams }) {
+    return redirectToMainMenu('classroom', searchParams);
+}

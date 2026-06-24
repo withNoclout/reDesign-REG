@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs/promises';
+import path from 'node:path';
 import { getAuthUser } from '@/lib/auth';
-import { getDataPath } from '@/lib/runtimePaths.mjs';
 import * as cheerio from 'cheerio';
 
 /**
@@ -17,6 +17,13 @@ import * as cheerio from 'cheerio';
  * 2. ค้นหาใน CSV ว่านักศึกษาคนนี้สอบวิชาอะไรบ้าง (ถ้าไม่ส่ง courseCode)
  * 3. ถ้าส่ง courseCode จะดึง *ทุกคน* ที่สอบวิชานั้นใน section/ห้อง/เวลาเดียวกัน ออกมาให้หมดเพื่อจัดผังที่นั่ง
  */
+
+function getExamSeatDataPath(filename) {
+    const dataDir = typeof process.env.REDESIGN_REG_DATA_DIR === 'string' && process.env.REDESIGN_REG_DATA_DIR.trim()
+        ? path.resolve(process.env.REDESIGN_REG_DATA_DIR.trim())
+        : path.join(/* turbopackIgnore: true */ process.cwd(), 'data');
+    return path.join(dataDir, filename);
+}
 
 function parseCsvLine(line) {
     // Csv parser that handles commas inside quotes
@@ -84,8 +91,8 @@ export async function GET(request) {
 
         const sanitizedStudentId = studentId.replace(/^s/i, '');
 
-        const kmutnbPath = getDataPath('exam_seats_kmutnb.csv');
-        const engPath = getDataPath('exam_seats_eng.csv');
+        const kmutnbPath = getExamSeatDataPath('exam_seats_kmutnb.csv');
+        const engPath = getExamSeatDataPath('exam_seats_eng.csv');
 
         let kmutnbData = '';
         let engData = '';
@@ -169,16 +176,16 @@ export async function GET(request) {
                     const html = await res.text();
                     const $ = cheerio.load(html);
 
-                    $('.media-body').each((i, el) => {
+                    $('.media-body').each((_index, el) => {
                         const courseText = $(el).find('strong.text-gray-dark').first().text().trim();
                         if (courseText.includes(targetCourseCode)) {
                             // Found the targeted exam section
-                            $(el).find('.seatmap-colnum').each((j, colEl) => {
+                            $(el).find('.seatmap-colnum').each((_index, colEl) => {
                                 const val = parseInt($(colEl).text().trim(), 10);
                                 if (!isNaN(val) && val > maxSeat) maxSeat = val;
                             });
 
-                            $(el).find('.seatmap-rownum').each((j, rowEl) => {
+                            $(el).find('.seatmap-rownum').each((_index, rowEl) => {
                                 const char = $(rowEl).text().trim();
                                 if (char && char.match(/[A-Za-z]/)) {
                                     const val = char.toUpperCase().charCodeAt(0) - 64; // A=1

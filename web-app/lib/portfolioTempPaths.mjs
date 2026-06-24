@@ -7,8 +7,12 @@ function getLegacyTempDir() {
   return path.join(getAppRoot(), 'public', 'temp');
 }
 
+function normalizePathForMatch(inputPath) {
+  return String(inputPath || '').trim().replaceAll('\\', '/');
+}
+
 function extractTempRelativePath(inputPath) {
-  const normalized = String(inputPath || '').trim().replaceAll('\\', '/');
+  const normalized = normalizePathForMatch(inputPath);
   if (!normalized) {
     return null;
   }
@@ -23,7 +27,21 @@ function extractTempRelativePath(inputPath) {
     return normalized.slice('public/temp/'.length);
   }
 
-  return null;
+  return normalized.startsWith('/') ? null : normalized;
+}
+
+function isPathInside(rootPath, candidatePath) {
+  const relativePath = path.relative(rootPath, candidatePath);
+  return relativePath === '' || (!relativePath.startsWith('..') && !path.isAbsolute(relativePath));
+}
+
+function resolveInside(rootPath, relativePath) {
+  if (!relativePath) {
+    return null;
+  }
+
+  const candidate = path.resolve(rootPath, relativePath);
+  return isPathInside(rootPath, candidate) ? candidate : null;
 }
 
 function pushCandidate(candidates, candidatePath) {
@@ -44,17 +62,20 @@ export function resolvePortfolioTempPath(tempPath) {
   }
 
   const candidates = [];
+  const tempDir = getTempDir();
+  const legacyTempDir = getLegacyTempDir();
   const tempRelativePath = extractTempRelativePath(normalizedInput);
 
   if (path.isAbsolute(normalizedInput)) {
-    pushCandidate(candidates, normalizedInput);
-  } else {
-    pushCandidate(candidates, path.resolve(getAppRoot(), normalizedInput));
+    const absoluteCandidate = path.normalize(normalizedInput);
+    if (isPathInside(tempDir, absoluteCandidate) || isPathInside(legacyTempDir, absoluteCandidate)) {
+      pushCandidate(candidates, absoluteCandidate);
+    }
   }
 
   if (tempRelativePath) {
-    pushCandidate(candidates, path.join(getTempDir(), tempRelativePath));
-    pushCandidate(candidates, path.join(getLegacyTempDir(), tempRelativePath));
+    pushCandidate(candidates, resolveInside(tempDir, tempRelativePath));
+    pushCandidate(candidates, resolveInside(legacyTempDir, tempRelativePath));
   }
 
   for (const candidate of candidates) {
@@ -63,5 +84,9 @@ export function resolvePortfolioTempPath(tempPath) {
     }
   }
 
-  return candidates[0];
+  if (candidates.length) {
+    return candidates[0];
+  }
+
+  throw new Error('Temp file path is outside allowed temp directories');
 }

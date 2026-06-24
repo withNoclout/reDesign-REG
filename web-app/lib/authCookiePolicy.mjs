@@ -1,4 +1,6 @@
 const INSECURE_IP_PREVIEW_HOSTS = new Set([
+    '127.0.0.1',
+    'localhost',
     '172.16.214.69',
     '202.44.32.253',
 ]);

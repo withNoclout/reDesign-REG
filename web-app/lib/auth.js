@@ -136,20 +136,27 @@ export function createSignedAuthIdentityCookie({ userCode, session }) {
     );
 }
 
-export async function getAuthContext() {
+async function resolveAuthContext() {
     const cookieStore = await cookies();
     const token = cookieStore.get('reg_token')?.value;
 
     if (!token) {
         const ssoAuthContext = await getSsoAuthContext(cookieStore);
-        if (ssoAuthContext) return ssoAuthContext;
+        if (ssoAuthContext) {
+            return { authContext: ssoAuthContext, reason: 'SSO_SESSION' };
+        }
 
         console.log('[Auth] No token found in cookies');
-        return null;
+        return { authContext: null, reason: 'TOKEN_MISSING' };
     }
 
     const cached = _getCachedAuth(token);
-    if (cached !== undefined) return cached;
+    if (cached !== undefined) {
+        return {
+            authContext: cached,
+            reason: cached ? 'CACHE_HIT' : 'TOKEN_REJECTED_CACHED',
+        };
+    }
 
     try {
         const authRes = await axios.get(`${BASE_URL}/Schg/Getacadstd`, {
@@ -160,7 +167,7 @@ export async function getAuthContext() {
         if (authRes.status !== 200 || !authRes.data) {
             console.log(`[Auth] External API rejected token. Status: ${authRes.status}`);
             _setCachedAuth(token, null);
-            return null;
+            return { authContext: null, reason: 'TOKEN_REJECTED' };
         }
 
         const tokenPayload = decodeJwtPayload(token);
@@ -173,23 +180,32 @@ export async function getAuthContext() {
         if (upstreamUserId && signedUserId && upstreamUserId !== signedUserId) {
             console.warn('[Auth] Identity mismatch between upstream response and signed cookie');
             _setCachedAuth(token, null);
-            return null;
+            return { authContext: null, reason: 'IDENTITY_MISMATCH' };
         }
 
         const userId = upstreamUserId || signedUserId;
         if (!userId) {
             console.warn('[Auth] Token validated but no trusted identity was available');
             _setCachedAuth(token, null);
-            return null;
+            return { authContext: null, reason: 'IDENTITY_MISSING' };
         }
 
         const result = { token, userId, tokenPayload, upstream: authRes.data, authProvider: 'legacy_reg' };
         _setCachedAuth(token, result);
-        return result;
+        return { authContext: result, reason: 'LEGACY_REG_TOKEN' };
     } catch (err) {
         console.error('[Auth] Check failed:', err.message);
-        return null;
+        return { authContext: null, reason: 'AUTH_CHECK_FAILED' };
     }
+}
+
+export async function getAuthContextStatus() {
+    return resolveAuthContext();
+}
+
+export async function getAuthContext() {
+    const { authContext } = await resolveAuthContext();
+    return authContext;
 }
 
 export async function getAuthUser() {

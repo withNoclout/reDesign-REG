@@ -1,1 +1,5 @@
-export { default } from '@/app/grade/schedule/GradeSchedulePageClient';
+import { redirectToMainMenu } from '@/app/redirectToMainMenu';
+
+export default function Page({ searchParams }) {
+    return redirectToMainMenu('schedule', searchParams);
+}

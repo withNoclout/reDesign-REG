@@ -1,1 +1,5 @@
-export { default } from '@/app/evaluation/EvaluationPageClient';
+import { redirectToMainMenu } from '@/app/redirectToMainMenu';
+
+export default function Page({ searchParams }) {
+    return redirectToMainMenu('evaluation', searchParams);
+}

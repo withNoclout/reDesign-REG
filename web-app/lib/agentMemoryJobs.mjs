@@ -5,19 +5,36 @@ import pg from 'pg';
 import { spawn } from 'child_process';
 
 import { sanitizePlainText } from './agentMemoryConfig.mjs';
-import { getAgentMemoryRoot } from './runtimePaths.mjs';
 
 const { Pool } = pg;
 const DEFAULT_STALE_MS = 2 * 60 * 60 * 1000;
 
+function getConfiguredRuntimeRoot() {
+    return typeof process.env.REDESIGN_REG_AGENT_MEMORY_DIR === 'string' && process.env.REDESIGN_REG_AGENT_MEMORY_DIR.trim()
+        ? process.env.REDESIGN_REG_AGENT_MEMORY_DIR.trim()
+        : null;
+}
+
 function getRuntimeRoot() {
-    return getAgentMemoryRoot();
+    return getConfiguredRuntimeRoot() ?? path.join(/* turbopackIgnore: true */ process.cwd(), '.agent-memory');
 }
 
 function getJobFilePath(jobName, suffix) {
     const cleanJobName = sanitizePlainText(jobName, 120).replace(/[^a-z0-9_-]+/gi, '-');
-    return path.join(getRuntimeRoot(), `${cleanJobName}.${suffix}.json`);
+    const fileName = `${cleanJobName}.${suffix}.json`;
+    return getConfiguredRuntimeRoot()
+        ? path.join(getConfiguredRuntimeRoot(), fileName)
+        : path.join(/* turbopackIgnore: true */ process.cwd(), '.agent-memory', fileName);
 }
+
+function resolveJobScriptPath(scriptRelativePath) {
+    const normalized = String(scriptRelativePath || '').trim().replaceAll('\\', '/');
+    if (!normalized.startsWith('scripts/') || normalized.split('/').includes('..')) {
+        throw new Error('Job script must be inside the scripts directory.');
+    }
+    return path.join(/* turbopackIgnore: true */ process.cwd(), 'scripts', normalized.slice('scripts/'.length));
+}
+
 
 function parseJsonSafely(raw) {
     try {
@@ -28,7 +45,7 @@ function parseJsonSafely(raw) {
 }
 
 async function ensureRuntimeRoot() {
-    await fs.mkdir(getRuntimeRoot(), { recursive: true });
+    await fs.mkdir(/* turbopackIgnore: true */ getRuntimeRoot(), { recursive: true });
 }
 
 function isProcessAlive(pid) {
@@ -43,14 +60,14 @@ function isProcessAlive(pid) {
 
 async function readJsonFile(filePath) {
     try {
-        return parseJsonSafely(await fs.readFile(filePath, 'utf8'));
+        return parseJsonSafely(await fs.readFile(/* turbopackIgnore: true */ filePath, 'utf8'));
     } catch {
         return null;
     }
 }
 
 async function writeJsonFile(filePath, payload) {
-    await fs.writeFile(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+    await fs.writeFile(/* turbopackIgnore: true */ filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
 }
 
 function hasJobDatabase() {
@@ -130,23 +147,23 @@ async function recoverInactiveLock(lockPath, options = {}) {
     };
 
     try {
-        const recoveryHandle = await fs.open(recoveryPath, 'wx');
+        const recoveryHandle = await fs.open(/* turbopackIgnore: true */ recoveryPath, 'wx');
         try {
             await recoveryHandle.writeFile(`${JSON.stringify(recoveryPayload, null, 2)}\n`, 'utf8');
             const latest = await readJsonFile(lockPath);
             if (!latest || !isLockPayloadActive(latest)) {
-                await fs.rm(lockPath, { force: true });
+                await fs.rm(/* turbopackIgnore: true */ lockPath, { force: true });
             }
         } finally {
             await recoveryHandle.close();
-            await fs.rm(recoveryPath, { force: true });
+            await fs.rm(/* turbopackIgnore: true */ recoveryPath, { force: true });
         }
     } catch (error) {
         if (error?.code !== 'EEXIST') throw error;
 
         const recoveryState = await readJsonFile(recoveryPath);
         if (!isLockPayloadActive(recoveryState)) {
-            await fs.rm(recoveryPath, { force: true });
+            await fs.rm(/* turbopackIgnore: true */ recoveryPath, { force: true });
             return recoverInactiveLock(lockPath, options);
         }
 
@@ -418,7 +435,7 @@ async function acquireFileLock(jobName, options = {}) {
     await ensureRuntimeRoot();
 
     try {
-        const handle = await fs.open(lockPath, 'wx');
+        const handle = await fs.open(/* turbopackIgnore: true */ lockPath, 'wx');
         try {
             await handle.writeFile(`${JSON.stringify(payload, null, 2)}\n`, 'utf8');
         } finally {
@@ -431,7 +448,7 @@ async function acquireFileLock(jobName, options = {}) {
         const existing = await readJsonFile(lockPath);
         if (!existing) {
             try {
-                const stats = await fs.stat(lockPath);
+                const stats = await fs.stat(/* turbopackIgnore: true */ lockPath);
                 if (now - stats.mtimeMs <= staleMs) {
                     const busyError = new Error(`${jobName} is already running.`);
                     busyError.code = 'JOB_LOCKED';
@@ -494,7 +511,7 @@ async function releaseFileJobLock(lockHandle) {
     if (current?.lockId && current.lockId !== lockHandle.lockId) {
         return;
     }
-    await fs.rm(lockHandle.lockPath, { force: true });
+    await fs.rm(/* turbopackIgnore: true */ lockHandle.lockPath, { force: true });
 }
 
 async function reassignFileJobLock(lockHandle, pid) {
@@ -667,7 +684,7 @@ export async function spawnDetachedNodeJob({
 
     let child = null;
     try {
-        const scriptPath = path.join(process.cwd(), scriptRelativePath);
+        const scriptPath = resolveJobScriptPath(scriptRelativePath);
         child = spawn(process.execPath, [scriptPath, ...args], {
             cwd: process.cwd(),
             detached: true,

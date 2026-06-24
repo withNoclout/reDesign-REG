@@ -141,6 +141,15 @@ export async function GET() {
         return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
+    if (!token) {
+        serverLog('WARN', 'Schedule request has an authenticated session but no REG bearer token');
+        return NextResponse.json({
+            success: false,
+            error: 'ต้องเข้าสู่ระบบด้วย REG credentials เพื่อดึงตารางเรียน',
+            code: 'REG_TOKEN_REQUIRED',
+        }, { status: 409 });
+    }
+
     if (userId) {
         const cached = scheduleCache.get(userId);
         if (cached && (Date.now() - cached.timestamp < SCHEDULE_CACHE_TTL_MS)) {

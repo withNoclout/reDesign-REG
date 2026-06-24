@@ -19,35 +19,21 @@ import {
 } from './agentMemoryStore.mjs';
 import { readJobStatus } from './agentMemoryJobs.mjs';
 
-async function collectTestFiles(rootDir) {
-    const candidateDirectories = ['scripts'];
+async function collectTestFiles() {
+    const scriptsDir = path.join(/* turbopackIgnore: true */ process.cwd(), 'scripts');
     const results = [];
 
-    for (const relativeDir of candidateDirectories) {
-        const absoluteDir = path.join(rootDir, relativeDir);
-        let entries = [];
-        try {
-            entries = await fs.readdir(absoluteDir, { withFileTypes: true });
-        } catch {
-            continue;
-        }
-
-        for (const entry of entries) {
-            if (entry.isFile() && /^test-.*\.(c?js|mjs)$/.test(entry.name)) {
-                results.push(`${relativeDir}/${entry.name}`);
-            }
-        }
-    }
-
+    let entries = [];
     try {
-        const rootEntries = await fs.readdir(rootDir, { withFileTypes: true });
-        for (const entry of rootEntries) {
-            if (entry.isFile() && /^test.*\.(c?js|mjs)$/.test(entry.name)) {
-                results.push(entry.name);
-            }
-        }
+        entries = await fs.readdir(/* turbopackIgnore: true */ scriptsDir, { withFileTypes: true });
     } catch {
         return results;
+    }
+
+    for (const entry of entries) {
+        if (entry.isFile() && /^test-.*\.(c?js|mjs)$/.test(entry.name)) {
+            results.push(`scripts/${entry.name}`);
+        }
     }
 
     return results;
@@ -133,7 +119,7 @@ export async function analyzeImpact({
             embedding,
             limit: 8,
         }),
-        collectTestFiles(process.cwd()),
+        collectTestFiles(),
     ]);
 
     const relatedMemories = dedupeById([...relationMemories, ...semanticMemories]);

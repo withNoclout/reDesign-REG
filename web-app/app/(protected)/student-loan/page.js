@@ -1,1 +1,5 @@
-export { default } from '@/app/student-loan/StudentLoanPageClient';
+import { redirectToMainMenu } from '@/app/redirectToMainMenu';
+
+export default function Page({ searchParams }) {
+    return redirectToMainMenu('loan', searchParams);
+}

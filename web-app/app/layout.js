@@ -7,6 +7,7 @@ import { GuestProvider } from './context/GuestContext';
 import { CredentialProvider } from './context/CredentialContext';
 import GlobalErrorListener from './components/GlobalErrorListener';
 import ReleaseConsistencyGuard from './components/ReleaseConsistencyGuard';
+import FireflyCursor from './components/FireflyCursor';
 
 const prompt = Prompt({
     subsets: ['thai', 'latin'],
@@ -30,10 +31,20 @@ const textMeOne = Text_Me_One({
 });
 
 const criticalShellCss = `
+  html {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
   body {
     margin: 0;
-    min-height: 100vh;
-    overflow-x: hidden;
+    width: 100%;
+    height: 100%;
+    min-height: 100dvh;
+    overflow: hidden;
+    overscroll-behavior: none;
     background: #0f172a;
     color: #ffffff;
     font-family: var(--font-prompt), 'Prompt', sans-serif;
@@ -178,6 +189,7 @@ export default function RootLayout({ children }) {
                 </a>
                 <GlobalErrorListener />
                 <ReleaseConsistencyGuard />
+                <FireflyCursor />
                 <LazyMotion features={domAnimation}>
                     <AuthProvider>
                         <GuestProvider>

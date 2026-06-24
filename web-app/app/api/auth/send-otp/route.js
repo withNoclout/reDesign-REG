@@ -13,13 +13,17 @@ if (!global.__otpRateLimit) global.__otpRateLimit = rateLimitStore;
 const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 const RATE_LIMIT_MS = 60 * 1000;      // 1 minute between sends
 
+function isProductionRuntime() {
+    return process.env.NODE_ENV === 'production';
+}
+
 // Configure Nodemailer transporter
 function getTransporter() {
     const user = process.env.GMAIL_USER;
     const pass = process.env.GMAIL_APP_PASSWORD;
 
     if (!user || !pass) {
-        console.warn('[OTP] GMAIL_USER or GMAIL_APP_PASSWORD not set. Falling back to console-only mode.');
+        console.warn('[OTP] GMAIL_USER or GMAIL_APP_PASSWORD is not configured.');
         return null;
     }
 
@@ -50,7 +54,7 @@ function buildEmailHtml(otp, userName) {
             <p style="color: rgba(255,255,255,0.3); font-size: 11px; margin: 16px 0 0;">หากคุณไม่ได้ร้องขอรหัสนี้ กรุณาเพิกเฉยอีเมลฉบับนี้</p>
         </div>
         <div style="background: rgba(255,255,255,0.03); padding: 16px 24px; text-align: center; border-top: 1px solid rgba(255,255,255,0.05);">
-            <p style="color: rgba(255,255,255,0.25); font-size: 10px; margin: 0;">Powered by REG KMUTNB · Redesigned with ❤️</p>
+            <p style="color: rgba(255,255,255,0.25); font-size: 10px; margin: 0;">REG KMUTNB</p>
         </div>
     </div>`;
 }
@@ -95,19 +99,29 @@ export async function POST(request) {
                     subject: `[REG KMUTNB] รหัสยืนยันตัวตน: ${otp}`,
                     html: buildEmailHtml(otp, userName),
                 });
-                console.log(`[OTP] ✅ Email sent to ${email}`);
+                console.log('[OTP] Email sent');
                 return NextResponse.json({
                     success: true,
                     message: `ส่งรหัส OTP ไปยังอีเมล ${email} เรียบร้อยแล้ว`,
                     sent_via: 'email',
                 });
             } catch (mailErr) {
-                console.error('[OTP] ❌ Email send failed:', mailErr.message);
-                // Fall through to console-only mode
+                console.error('[OTP] Email send failed:', mailErr.message);
             }
         }
 
-        // Fallback: Console-only mode (no Gmail configured or send failed)
+        if (isProductionRuntime()) {
+            delete otpStore[usercode];
+            delete rateLimitStore[usercode];
+
+            return NextResponse.json({
+                success: false,
+                message: 'ไม่สามารถส่ง OTP ได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง',
+                code: 'OTP_DELIVERY_UNAVAILABLE',
+            }, { status: 503 });
+        }
+
+        // Fallback: Console-only mode for local development.
         console.log(`\n=========================================`);
         console.log(`[OTP FALLBACK] Email: ${email}`);
         console.log(`[OTP FALLBACK] Code:  ${otp}`);

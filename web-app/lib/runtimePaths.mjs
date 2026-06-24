@@ -6,29 +6,35 @@ function readEnvPath(name) {
 }
 
 export function getAppRoot() {
-  return process.cwd();
+  return /* turbopackIgnore: true */ process.cwd();
 }
 
 export function getLogDir() {
-  return readEnvPath('REDESIGN_REG_LOG_DIR') ?? path.join(getAppRoot(), 'logs');
+  return readEnvPath('REDESIGN_REG_LOG_DIR') ?? path.join(/* turbopackIgnore: true */ process.cwd(), 'logs');
 }
 
 export function getLogFilePath(filename = 'app.log') {
-  return path.join(getLogDir(), filename);
+  const configuredLogDir = readEnvPath('REDESIGN_REG_LOG_DIR');
+  return configuredLogDir
+    ? path.join(configuredLogDir, filename)
+    : path.join(/* turbopackIgnore: true */ process.cwd(), 'logs', filename);
 }
 
 export function getTempDir() {
-  return readEnvPath('REDESIGN_REG_TEMP_DIR') ?? path.join(getAppRoot(), 'public', 'temp');
+  return readEnvPath('REDESIGN_REG_TEMP_DIR') ?? path.join(/* turbopackIgnore: true */ process.cwd(), 'public', 'temp');
 }
 
 export function getAgentMemoryRoot() {
-  return readEnvPath('REDESIGN_REG_AGENT_MEMORY_DIR') ?? path.join(getAppRoot(), '.agent-memory');
+  return readEnvPath('REDESIGN_REG_AGENT_MEMORY_DIR') ?? path.join(/* turbopackIgnore: true */ process.cwd(), '.agent-memory');
 }
 
 export function getDataDir() {
-  return readEnvPath('REDESIGN_REG_DATA_DIR') ?? path.join(getAppRoot(), 'data');
+  return readEnvPath('REDESIGN_REG_DATA_DIR') ?? path.join(/* turbopackIgnore: true */ process.cwd(), 'data');
 }
 
 export function getDataPath(filename) {
-  return path.join(getDataDir(), filename);
+  const configuredDataDir = readEnvPath('REDESIGN_REG_DATA_DIR');
+  return configuredDataDir
+    ? path.join(configuredDataDir, filename)
+    : path.join(/* turbopackIgnore: true */ process.cwd(), 'data', filename);
 }

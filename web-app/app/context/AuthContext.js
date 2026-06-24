@@ -107,6 +107,43 @@ function buildSsoSessionUser(statusData) {
     };
 }
 
+function buildServerSessionUser(sessionData, stored) {
+    if (!sessionData?.authenticated) return null;
+
+    if (sessionData.authProvider === 'kmutnb_sso') {
+        if (sessionData.user?.authProvider === 'kmutnb_sso') return sessionData.user;
+        return buildSsoSessionUser(sessionData);
+    }
+
+    const user = sessionData.user && typeof sessionData.user === 'object' ? sessionData.user : {};
+    const storedLegacy = stored && stored.authProvider !== 'kmutnb_sso' ? stored : {};
+    const userCode = firstNonEmpty(user.usercode, sessionData.userId, user.userid, user.username);
+    if (!userCode) return null;
+
+    return {
+        username: firstNonEmpty(user.username, userCode),
+        usernameeng: firstNonEmpty(user.usernameeng, user.nameeng, userCode),
+        name: firstNonEmpty(user.name, user.username, userCode),
+        nameeng: firstNonEmpty(user.nameeng, user.usernameeng, user.name, userCode),
+        email: firstNonEmpty(user.email, ''),
+        usercode: userCode,
+        userid: firstNonEmpty(user.userid, userCode),
+        userstatus: firstNonEmpty(user.userstatus, 'Y'),
+        userstatusdes: firstNonEmpty(user.userstatusdes, 'STUDENT'),
+        statusdes: firstNonEmpty(user.statusdes, 'student'),
+        statusdeseng: firstNonEmpty(user.statusdeseng, 'STUDENT'),
+        role: Array.isArray(user.role) ? user.role : ['student'],
+        reportdate: firstNonEmpty(user.reportdate, ''),
+        img: firstNonEmpty(user.img, storedLegacy.img, storedLegacy.originalImg) || null,
+        originalImg: firstNonEmpty(storedLegacy.originalImg, user.img) || null,
+        navimg: firstNonEmpty(user.navimg, storedLegacy.navimg) || null,
+        authProvider: 'legacy_reg',
+        authMode: 'legacy',
+        legacyRegToken: Boolean(sessionData.legacyRegToken),
+    };
+}
+
+
 export function AuthProvider({ children }) {
     const router = useRouter();
     const [user, setUser] = useState(() => readStoredSession());
@@ -119,41 +156,38 @@ export function AuthProvider({ children }) {
 
         async function bootstrapAuth() {
             const stored = readStoredSession();
-            const hasStoredLegacySession = stored && stored.authProvider !== 'kmutnb_sso';
-
-            if (hasStoredLegacySession) {
-                setUser(stored);
-                setIsAuthenticated(true);
-            }
 
             try {
-                const response = await fetch('/api/auth/sso/status', {
+                const response = await fetch('/api/auth/session/status', {
                     cache: 'no-store',
                     credentials: 'same-origin',
                 });
                 const payload = await response.json().catch(() => null);
-                const ssoUser = buildSsoSessionUser(payload?.data);
 
                 if (cancelled) return;
 
-                if (ssoUser) {
-                    setUser(ssoUser);
+                if (!response.ok || payload?.success === false) {
+                    throw new Error(payload?.error?.message || `Session check failed (${response.status})`);
+                }
+
+                const sessionUser = buildServerSessionUser(payload?.data, stored);
+                if (sessionUser) {
+                    setUser(sessionUser);
                     setIsAuthenticated(true);
-                    persistSession(ssoUser);
-                } else if (stored?.authProvider === 'kmutnb_sso') {
+                    persistSession(sessionUser);
+                    return;
+                }
+
+                clearStoredSession();
+                setUser(null);
+                setIsAuthenticated(false);
+            } catch (error) {
+                if (!cancelled) {
                     clearStoredSession();
                     setUser(null);
                     setIsAuthenticated(false);
-                } else if (!hasStoredLegacySession) {
-                    setUser(null);
-                    setIsAuthenticated(false);
                 }
-            } catch (error) {
-                if (!cancelled && !hasStoredLegacySession) {
-                    setUser(null);
-                    setIsAuthenticated(false);
-                }
-                console.warn('[Auth] Failed to bootstrap SSO status:', error.message);
+                console.warn('[Auth] Failed to verify server session:', error.message);
             } finally {
                 if (!cancelled) setLoading(false);
             }

@@ -1,1 +1,5 @@
-export { default } from '@/app/portfolio/PortfolioPageClient';
+import { redirectToMainMenu } from '@/app/redirectToMainMenu';
+
+export default function Page({ searchParams }) {
+    return redirectToMainMenu('portfolio', searchParams);
+}

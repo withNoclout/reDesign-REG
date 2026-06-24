@@ -92,6 +92,44 @@ async function readOptionalEnvFile(filePath) {
     throw error;
   }
 }
+const RELEASE_EXCLUDED_TOP_LEVELS = new Set([
+  'node_modules',
+  '.next',
+  'logs',
+  '.agent-tmp',
+  '.agent',
+  '.github',
+  'tests',
+  'docs',
+  'mock-data',
+  'storage',
+  'web-app',
+]);
+
+const RELEASE_EXCLUDED_PUBLIC_ASSETS = new Set([
+  'file.svg',
+  'globe.svg',
+  'next.svg',
+  'vercel.svg',
+  'window.svg',
+]);
+
+const RELEASE_EXCLUDED_ROOT_JSON = new Set([
+  'api_class_test.json',
+  'questions.json',
+]);
+
+const RELEASE_ROOT_DEV_SCRIPT_PATTERN = /^(?:brute-force|debug|extract|fetch-questions|find_chunks|get_payload|inspect|refactor_env|test|try-intercept)[-_]?.*\.(?:cjs|js|mjs)$/i;
+const RELEASE_SCRIPT_TEST_PATTERN = /^test[-_].*\.(?:cjs|js|mjs)$/i;
+
+function normalizeReleasePath(relativePath) {
+  return relativePath.split(path.sep).join('/');
+}
+
+function isRootReleaseFile(relativePath, fileName) {
+  return relativePath === fileName;
+}
+
 
 function topLevelSegment(relativePath) {
   return relativePath.split(path.sep)[0];
@@ -102,12 +140,46 @@ function shouldCopySource(relativePath) {
     return true;
   }
 
+  const normalizedPath = normalizeReleasePath(relativePath);
   const topLevel = topLevelSegment(relativePath);
-  if (topLevel === 'node_modules' || topLevel === '.next' || topLevel === 'logs') {
+  const fileName = path.basename(relativePath);
+  const isRootFile = isRootReleaseFile(relativePath, fileName);
+
+  if (RELEASE_EXCLUDED_TOP_LEVELS.has(topLevel)) {
     return false;
   }
 
-  if (relativePath === 'public/temp' || relativePath.startsWith(`public${path.sep}temp${path.sep}`)) {
+  if (fileName === '.env.local' || fileName.startsWith('.ngrok')) {
+    return false;
+  }
+
+  if (fileName.endsWith('.md')) {
+    return false;
+  }
+
+  if (normalizedPath === 'public/temp' || normalizedPath.startsWith('public/temp/')) {
+    return false;
+  }
+
+  if (normalizedPath === 'public/uploads' || normalizedPath.startsWith('public/uploads/')) {
+    return false;
+  }
+
+  if (normalizedPath.startsWith('public/') && RELEASE_EXCLUDED_PUBLIC_ASSETS.has(fileName)) {
+    return false;
+  }
+
+  if (normalizedPath.startsWith('scripts/') && RELEASE_SCRIPT_TEST_PATTERN.test(fileName)) {
+    return false;
+  }
+
+  if (isRootFile && (
+    RELEASE_ROOT_DEV_SCRIPT_PATTERN.test(fileName) ||
+    RELEASE_EXCLUDED_ROOT_JSON.has(fileName) ||
+    /^tmp[-_]/i.test(fileName) ||
+    fileName.endsWith('.html') ||
+    fileName.endsWith('.log')
+  )) {
     return false;
   }
 

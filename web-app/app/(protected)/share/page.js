@@ -1,1 +1,5 @@
-export { default } from '@/app/share/SharePageClient';
+import { redirectToMainMenu } from '@/app/redirectToMainMenu';
+
+export default function Page({ searchParams }) {
+    return redirectToMainMenu('share', searchParams);
+}
