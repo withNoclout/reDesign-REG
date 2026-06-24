@@ -12,65 +12,44 @@ const NAV_RIPPLE_DURATION_MS = 6200;
 const NAV_RIPPLE_RING_COUNT = 4;
 const NAV_RIPPLE_RING_DELAY_MS = 720;
 const NAV_RIPPLE_CLEANUP_MS = NAV_RIPPLE_DURATION_MS + ((NAV_RIPPLE_RING_COUNT - 1) * NAV_RIPPLE_RING_DELAY_MS) + 900;
-const NAV_RIPPLE_IMPACT_MIN_DELAY_MS = 920;
-const NAV_RIPPLE_IMPACT_MAX_DELAY_MS = 2360;
-const NAV_RIPPLE_ABSORB_SEGMENT_PX = 148;
-const NAV_RIPPLE_ABSORB_CORNER_SEGMENT_PX = 190;
+const NAV_RIPPLE_START_RADIUS = 2;
+const NAV_RIPPLE_END_RADIUS = 1320;
+const NAV_RIPPLE_PIXELS_PER_MS = (NAV_RIPPLE_END_RADIUS - NAV_RIPPLE_START_RADIUS) / NAV_RIPPLE_DURATION_MS;
 const NAV_RIPPLE_PANEL_RECT = Object.freeze({
     x: 400,
     y: 274,
     width: 1005,
     height: 600,
 });
+const NAV_RIPPLE_PANEL_LEFT_EDGE = Object.freeze({
+    edge: 'left',
+    x1: NAV_RIPPLE_PANEL_RECT.x,
+    y1: NAV_RIPPLE_PANEL_RECT.y,
+    x2: NAV_RIPPLE_PANEL_RECT.x,
+    y2: NAV_RIPPLE_PANEL_RECT.y + NAV_RIPPLE_PANEL_RECT.height,
+});
 
-function clampNumber(value, min, max) {
-    return Math.min(max, Math.max(min, value));
-}
-
-function getDistanceToRect(point, rect) {
-    const nearestX = clampNumber(point.x, rect.x, rect.x + rect.width);
-    const nearestY = clampNumber(point.y, rect.y, rect.y + rect.height);
-    const dx = nearestX - point.x;
-    const dy = nearestY - point.y;
+function getDistanceBetweenPoints(startX, startY, endX, endY) {
+    const dx = endX - startX;
+    const dy = endY - startY;
 
     return Math.sqrt((dx * dx) + (dy * dy));
 }
 
-function getNavRippleAbsorbDelay(ripple, ringIndex) {
-    const distance = getDistanceToRect(ripple, NAV_RIPPLE_PANEL_RECT);
-    const travelDelay = clampNumber(distance * 3.2, NAV_RIPPLE_IMPACT_MIN_DELAY_MS, NAV_RIPPLE_IMPACT_MAX_DELAY_MS);
-
-    return Math.round(travelDelay + (ringIndex * NAV_RIPPLE_RING_DELAY_MS));
-}
-
-function getNavRippleAbsorbSegments(ripple) {
-    const rect = NAV_RIPPLE_PANEL_RECT;
-    const segmentHalf = NAV_RIPPLE_ABSORB_SEGMENT_PX / 2;
-    const cornerLength = NAV_RIPPLE_ABSORB_CORNER_SEGMENT_PX;
-    const rectRight = rect.x + rect.width;
+function getNavRippleFullLeftEdgeDistance(ripple, rect) {
     const rectBottom = rect.y + rect.height;
+    const topDistance = getDistanceBetweenPoints(ripple.x, ripple.y, rect.x, rect.y);
+    const bottomDistance = getDistanceBetweenPoints(ripple.x, ripple.y, rect.x, rectBottom);
 
-    if (ripple.y < rect.y + segmentHalf) {
-        return [
-            { edge: 'top', x1: rect.x, y1: rect.y, x2: clampNumber(rect.x + cornerLength, rect.x, rectRight), y2: rect.y, delayOffset: 0 },
-            { edge: 'left', x1: rect.x, y1: rect.y, x2: rect.x, y2: clampNumber(rect.y + cornerLength, rect.y, rectBottom), delayOffset: 140 },
-        ];
-    }
-
-    if (ripple.y > rectBottom - segmentHalf) {
-        return [
-            { edge: 'bottom', x1: rect.x, y1: rectBottom, x2: clampNumber(rect.x + cornerLength, rect.x, rectRight), y2: rectBottom, delayOffset: 0 },
-            { edge: 'left', x1: rect.x, y1: clampNumber(rectBottom - cornerLength, rect.y, rectBottom), x2: rect.x, y2: rectBottom, delayOffset: 140 },
-        ];
-    }
-
-    const centerY = clampNumber(ripple.y, rect.y + segmentHalf, rectBottom - segmentHalf);
-
-    return [
-        { edge: 'left', x1: rect.x, y1: centerY - segmentHalf, x2: rect.x, y2: centerY + segmentHalf, delayOffset: 0 },
-    ];
+    return Math.max(topDistance, bottomDistance);
 }
 
+function getNavRippleImpactDelay(ripple, ringIndex) {
+    const distance = getNavRippleFullLeftEdgeDistance(ripple, NAV_RIPPLE_PANEL_RECT);
+    const travelDelay = Math.max(0, (distance - NAV_RIPPLE_START_RADIUS) / NAV_RIPPLE_PIXELS_PER_MS);
+
+    return Math.round(Math.min(NAV_RIPPLE_DURATION_MS, travelDelay) + (ringIndex * NAV_RIPPLE_RING_DELAY_MS));
+}
 
 const DEFAULT_NAV_ITEMS = [
     { id: 'grade', label: 'GRADE', href: '/grade', slot: 'grade' },
@@ -1026,35 +1005,20 @@ function RippleLayer({ clipIdBase, navRipples }) {
             >
                 {navRipples.flatMap((ripple) =>
                     Array.from({ length: NAV_RIPPLE_RING_COUNT }, (_, ringIndex) => {
-                        const impactDelay = getNavRippleAbsorbDelay(ripple, ringIndex);
-                        return getNavRippleAbsorbSegments(ripple).flatMap((segment, segmentIndex) => {
-                            const delay = impactDelay + segment.delayOffset;
-                            const key = `${ripple.id}-${ringIndex}-${segment.edge}-${segmentIndex}`;
-                            const style = { '--impact-delay': `${delay}ms` };
+                        const impactDelay = getNavRippleImpactDelay(ripple, ringIndex);
+                        const key = `${ripple.id}-${ringIndex}-${NAV_RIPPLE_PANEL_LEFT_EDGE.edge}`;
 
-                            return [
-                                <line
-                                    className={styles.loginTransitionNavRippleAbsorbBloom}
-                                    key={`bloom-${key}`}
-                                    pathLength="1"
-                                    style={style}
-                                    x1={segment.x1}
-                                    y1={segment.y1}
-                                    x2={segment.x2}
-                                    y2={segment.y2}
-                                />,
-                                <line
-                                    className={styles.loginTransitionNavRippleAbsorbSegment}
-                                    key={`segment-${key}`}
-                                    pathLength="1"
-                                    style={style}
-                                    x1={segment.x1}
-                                    y1={segment.y1}
-                                    x2={segment.x2}
-                                    y2={segment.y2}
-                                />,
-                            ];
-                        });
+                        return (
+                            <line
+                                className={styles.loginTransitionNavRippleImpactBorder}
+                                key={`border-${key}`}
+                                style={{ '--impact-delay': `${impactDelay}ms` }}
+                                x1={NAV_RIPPLE_PANEL_LEFT_EDGE.x1}
+                                y1={NAV_RIPPLE_PANEL_LEFT_EDGE.y1}
+                                x2={NAV_RIPPLE_PANEL_LEFT_EDGE.x2}
+                                y2={NAV_RIPPLE_PANEL_LEFT_EDGE.y2}
+                            />
+                        );
                     }),
                 )}
             </svg>
