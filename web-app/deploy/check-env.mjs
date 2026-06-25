@@ -35,32 +35,6 @@ if (process.env.NEXT_PUBLIC_BASE_URL && process.env.NEXT_PUBLIC_BASE_URL !== 'ht
   missing.push('NEXT_PUBLIC_BASE_URL: must be https://redesign-reg.kmutnb.ac.th');
 }
 
-const lineWebhookPublicUrl = typeof process.env.LINE_WEBHOOK_PUBLIC_URL === 'string'
-  ? process.env.LINE_WEBHOOK_PUBLIC_URL.trim()
-  : '';
-const lineWebhookProxySharedSecret = typeof process.env.LINE_WEBHOOK_PROXY_SHARED_SECRET === 'string'
-  ? process.env.LINE_WEBHOOK_PROXY_SHARED_SECRET.trim()
-  : '';
-
-if (lineWebhookPublicUrl) {
-  try {
-    const webhookUrl = new URL(lineWebhookPublicUrl);
-    if (webhookUrl.protocol !== 'https:') {
-      missing.push('LINE_WEBHOOK_PUBLIC_URL: must use https');
-    }
-
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ? new URL(process.env.NEXT_PUBLIC_BASE_URL) : null;
-    const usesExternalProxy = !baseUrl
-      || webhookUrl.origin !== baseUrl.origin
-      || webhookUrl.pathname !== '/api/line/webhook';
-
-    if (usesExternalProxy && !lineWebhookProxySharedSecret) {
-      missing.push('LINE_WEBHOOK_PROXY_SHARED_SECRET: required when LINE_WEBHOOK_PUBLIC_URL uses an external proxy path or host');
-    }
-  } catch {
-    missing.push('LINE_WEBHOOK_PUBLIC_URL: invalid URL');
-  }
-}
 
 const optionalSsoKeys = [
   'KMUTNB_SSO_CLIENT_ID',

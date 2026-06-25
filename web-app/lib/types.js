@@ -337,58 +337,5 @@
  * @property {string|null} lastSyncError
  */
 
-/**
- * A normalized LINE Messaging account known to the product.
- *
- * @typedef {Object} LineMessagingAccount
- * @property {string} lineUserId
- * @property {string|null} userCode
- * @property {string|null} displayName
- * @property {string|null} pictureUrl
- * @property {string|null} language
- * @property {string|null} statusMessage
- * @property {'following'|'unfollowed'} friendshipStatus
- * @property {'linked'|'unlinked'} linkStatus
- * @property {string|null} lastFollowedAt
- * @property {string|null} lastUnfollowedAt
- * @property {string|null} lastLinkedAt
- * @property {string|null} lastUnlinkedAt
- * @property {string|null} lastWebhookAt
- * @property {string|null} lastMessageAt
- * @property {string} createdAt
- * @property {string} updatedAt
- */
-
-/**
- * A pending or completed LINE account-link handshake initiated from the web product.
- *
- * @typedef {Object} LineLinkRequest
- * @property {string} nonce
- * @property {string} userCode
- * @property {string|null} lineUserId
- * @property {'pending'|'linked'|'failed'|'expired'} status
- * @property {string} expiresAt
- * @property {string|null} linkedAt
- * @property {string|null} failedAt
- * @property {string} createdAt
- * @property {string} updatedAt
- */
-
-/**
- * Audit record for a webhook event received from LINE Messaging API.
- *
- * @typedef {Object} LineWebhookEventReceipt
- * @property {string} webhookEventId
- * @property {string} eventType
- * @property {string|null} lineUserId
- * @property {string|null} groupId
- * @property {string|null} roomId
- * @property {'processed'|'ignored'|'failed'} status
- * @property {boolean} isRedelivery
- * @property {string|null} occurredAt
- * @property {string|null} processedAt
- * @property {string|null} errorMessage
- * @property {Record<string, any>} payload
- */
 
 export { }; // Make this a module (required for JSDoc to work correctly in some configs)

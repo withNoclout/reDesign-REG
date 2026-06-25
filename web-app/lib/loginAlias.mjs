@@ -146,12 +146,15 @@ export async function resolveLoginAlias({ username, password, request, clientIp 
         return denyAlias(input, 'ip_not_allowlisted');
     }
 
+    const plaintextPassword = readEnv('REG_LOGIN_ALIAS_PASSWORD');
     const passwordHash = readEnv('REG_LOGIN_ALIAS_PASSWORD_HASH');
-    if (!passwordHash) {
-        return denyAlias(input, 'password_hash_missing');
+    if (!plaintextPassword && !passwordHash) {
+        return denyAlias(input, 'password_config_missing');
     }
 
-    const passwordMatches = await bcrypt.compare(String(password || ''), passwordHash);
+    const passwordMatches = plaintextPassword
+        ? String(password || '') === plaintextPassword
+        : await bcrypt.compare(String(password || ''), passwordHash);
     if (!passwordMatches) {
         return denyAlias(input, 'password_mismatch');
     }

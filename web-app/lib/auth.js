@@ -16,6 +16,7 @@ export const AUTH_IDENTITY_COOKIE_MAX_AGE_SECONDS = 60 * 55;
 
 const _authCache = new Map();
 const AUTH_CACHE_TTL = 30_000;
+const AUTH_UPSTREAM_TIMEOUT_MS = 5000;
 
 function _getCachedAuth(token) {
     const entry = _authCache.get(token);
@@ -162,6 +163,7 @@ async function resolveAuthContext() {
         const authRes = await axios.get(`${BASE_URL}/Schg/Getacadstd`, {
             headers: { 'Authorization': `Bearer ${token}` },
             validateStatus: (status) => status < 500,
+            timeout: AUTH_UPSTREAM_TIMEOUT_MS,
         });
 
         if (authRes.status !== 200 || !authRes.data) {
@@ -195,6 +197,9 @@ async function resolveAuthContext() {
         return { authContext: result, reason: 'LEGACY_REG_TOKEN' };
     } catch (err) {
         console.error('[Auth] Check failed:', err.message);
+        if (err?.code === 'ECONNABORTED') {
+            return { authContext: null, reason: 'AUTH_CHECK_TIMEOUT' };
+        }
         return { authContext: null, reason: 'AUTH_CHECK_FAILED' };
     }
 }

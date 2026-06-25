@@ -22,6 +22,7 @@ const loginLimiter = createRateLimiter({
 
 // Skipping external IP fetch for performance optimization (saving ~300ms)
 const getServerIp = () => '';
+const REG_UPSTREAM_TIMEOUT_MS = 5000;
 
 
 function generateSecureToken() {
@@ -118,7 +119,8 @@ export async function POST(request) {
             console.log('[API] 1. Calling tokenservice...');
             console.time('Login-TokenService'); // Start timer for token service
             const tokenResponse = await axios.get(`${BASE_URL}/Validate/tokenservice`, {
-                validateStatus: status => status < 500
+                validateStatus: status => status < 500,
+                timeout: REG_UPSTREAM_TIMEOUT_MS,
             });
             console.timeEnd('Login-TokenService'); // End timer for token service
 
@@ -147,7 +149,8 @@ export async function POST(request) {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    validateStatus: status => status < 500
+                    validateStatus: status => status < 500,
+                    timeout: REG_UPSTREAM_TIMEOUT_MS,
                 }
             );
 
@@ -360,6 +363,12 @@ export async function POST(request) {
             console.error('[API] Real Integration Error:', realApiErr.message);
             if (realApiErr.response) {
                 console.error('[API] Response data:', JSON.stringify(realApiErr.response.data).substring(0, 300));
+            }
+            if (realApiErr.code === 'ECONNABORTED' || !realApiErr.response) {
+                return NextResponse.json(
+                    { success: false, message: 'ระบบทะเบียนไม่ตอบสนอง กรุณาลองใหม่อีกครั้ง', code: 'REG_UPSTREAM_TIMEOUT' },
+                    { status: 503 }
+                );
             }
             // Fall through to final error
         }

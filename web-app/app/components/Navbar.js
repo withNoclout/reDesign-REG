@@ -55,7 +55,6 @@ const MENU_ITEMS = [
         submenu: [
             { id: 'student-loan', label: 'กยศ.', href: '/student-loan' },
             { id: 'classroom-settings', label: 'Google Classroom', href: '/settings/classroom' },
-            { id: 'line-settings', label: 'LINE OA', href: '/settings/line' },
             { id: 'portfolio-settings', label: 'กำหนดการมองเห็น', href: '/portfolio' }
         ]
     }

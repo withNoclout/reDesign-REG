@@ -65,9 +65,22 @@ export function createRateLimiter({ namespace, maxAttempts, windowMs }) {
  * @returns {string}
  */
 export function getClientIp(request) {
-    return (
-        request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-        request.headers.get('x-real-ip') ||
-        'unknown'
-    );
+    const forwardedFor = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+    if (forwardedFor === '::1' || forwardedFor === '::ffff:127.0.0.1') return '127.0.0.1';
+    if (forwardedFor) return forwardedFor;
+
+    const realIp = request.headers.get('x-real-ip');
+    if (realIp === '::1' || realIp === '::ffff:127.0.0.1') return '127.0.0.1';
+    if (realIp) return realIp;
+
+    const host = request.headers.get('x-forwarded-host')
+        || request.headers.get('host')
+        || request.headers.get('origin')
+        || '';
+    const normalizedHost = String(host).toLowerCase().replace(/^https?:\/\//, '').split('/')[0].split(':')[0];
+    if (normalizedHost === '127.0.0.1' || normalizedHost === 'localhost') {
+        return '127.0.0.1';
+    }
+
+    return 'unknown';
 }

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { useGuest } from '../context/GuestContext';
 import { LOGIN_TRANSITION_NAV_ITEMS, ProductionHeroShell } from './LoginTransitionShell';
+import shellStyles from './LoginTransitionShell.module.css';
 import {
     buildUserMeta,
     getDisplayGpaxForStudent,
@@ -14,12 +15,7 @@ import {
 
 export const PORTAL_NAV_ITEMS = [
     { id: 'grade', label: 'GRADE', href: '/grade', slot: 'grade', module: 'grade' },
-    { id: 'registry', label: 'REGISTRY', href: '/registration/enroll', slot: 'registry', module: 'registration' },
-    { id: 'evaluation', label: 'EVAL', href: '/evaluation', slot: 'textPrimary', module: 'grade' },
-    { id: 'portfolio', label: 'PORT', href: '/portfolio', slot: 'portfolio', module: 'profile' },
-    { id: 'loan', label: 'LOAN', href: '/student-loan', slot: 'loan', module: 'student-loan' },
     { id: 'schedule', label: 'SCHEDULE', href: '/grade/schedule', slot: 'schedule', module: 'grade' },
-    { id: 'settings', label: 'SETTING', href: '/settings/classroom', slot: 'setting', module: 'settings' },
 ];
 
 export const MODULES = {
@@ -71,14 +67,6 @@ export const MODULES = {
         description: 'ปิด dashboard frontend เดิมแล้ว เหลือ backend connection สำหรับข้อมูลจริง',
         primaryAction: { label: 'กลับศูนย์กลาง', href: '/main' },
     },
-    line: {
-        activeMenu: 'settings',
-        module: 'settings',
-        eyebrow: 'LINE SETTINGS',
-        title: 'ตั้งค่า LINE',
-        description: 'ปิด settings frontend เดิมแล้ว ไม่แสดง navbar หรือ background เดิม',
-        primaryAction: { label: 'กลับศูนย์กลาง', href: '/main' },
-    },
     classroom: {
         activeMenu: 'settings',
         module: 'settings',
@@ -112,7 +100,6 @@ export const MODULE_ENDPOINTS = {
     evaluation: '/api/student/evaluation',
     evaluationForm: '/api/student/evaluation',
     loan: '/api/student-loan/dashboard',
-    line: '/api/line/settings',
     classroom: '/api/classroom/settings',
     portfolio: '/api/portfolio/content',
     share: null,
@@ -127,9 +114,6 @@ function getPayloadData(payload) {
     return payload?.data ?? payload;
 }
 
-function getTopLevelPayload(payload) {
-    return payload && typeof payload === 'object' ? payload : {};
-}
 
 export function extractErrorMessage(payload, fallback) {
     if (typeof payload?.message === 'string' && payload.message.trim()) return payload.message.trim();
@@ -427,6 +411,185 @@ function DataRow({ label, value }) {
     );
 }
 
+const SCHEDULE_WEEKDAY_ORDER = [2, 3, 4, 5, 6];
+const SCHEDULE_PERIOD_STARTS = ['09:00', '13:00', '16:00'];
+const SCHEDULE_CARD_WIDTH_PX = 200;
+const SCHEDULE_CARD_HEIGHT_PX = 60;
+const SCHEDULE_COLUMN_GAP_PX = 123;
+const SCHEDULE_ROW_GAP_PX = 37;
+
+function getScheduledCourses(payload) {
+    if (Array.isArray(payload?.scheduled)) return payload.scheduled;
+    const data = getPayloadData(payload);
+    if (Array.isArray(data?.scheduled)) return data.scheduled;
+    if (Array.isArray(data)) return data.filter((item) => item?.weekday != null);
+    return [];
+}
+
+function toMinutes(value) {
+    const text = readString(value);
+    if (!text || !/^\d{2}:\d{2}$/.test(text)) return null;
+    const [hours, minutes] = text.split(':').map(Number);
+    return hours * 60 + minutes;
+}
+
+function getScheduleColumnIndex(course) {
+    const fromMinutes = toMinutes(course?.timefrom);
+    if (fromMinutes == null) return -1;
+
+    const periodStarts = SCHEDULE_PERIOD_STARTS.map(toMinutes);
+    if (fromMinutes < periodStarts[1]) return 0;
+    if (fromMinutes < periodStarts[2]) return 1;
+    return 2;
+}
+
+function getScheduleSubjectDisplay(subject) {
+    const text = readString(subject);
+    const minimumTrimLength = 28;
+    const minimumVisibleLength = 12;
+
+    if (!text || text.length < minimumTrimLength) return text || subject;
+
+    const breakTokens = [' and ', ' or ', ' with ', ' for ', ' to ', ' of ', ' & ', ' / ', ' และ ', ' กับ '];
+    const normalized = text.toLowerCase();
+    const targetCenter = text.length / 2;
+    let bestCandidate = null;
+    let bestScore = Number.POSITIVE_INFINITY;
+
+    for (const token of breakTokens) {
+        const lowerToken = token.toLowerCase();
+        let searchFrom = 0;
+
+        while (searchFrom < normalized.length) {
+            const index = normalized.indexOf(lowerToken, searchFrom);
+            if (index === -1) break;
+
+            const candidate = text.slice(0, index).trimEnd();
+            if (candidate.length >= minimumVisibleLength) {
+                const score = Math.abs(candidate.length - targetCenter);
+                if (score < bestScore) {
+                    bestScore = score;
+                    bestCandidate = candidate;
+                }
+            }
+
+            searchFrom = index + token.length;
+        }
+    }
+
+    return bestCandidate || text;
+}
+
+let scheduleTextSegmenter = null;
+
+function getScheduleTextSegments(text) {
+    const value = readString(text) || '';
+    if (!value) return [];
+
+    if (typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function') {
+        scheduleTextSegmenter ||= new Intl.Segmenter(['th', 'en'], { granularity: 'grapheme' });
+        return Array.from(scheduleTextSegmenter.segment(value), ({ segment }) => segment);
+    }
+
+    return Array.from(value);
+}
+
+function renderScheduleCardText(text, variant, delay) {
+    const value = readString(text) || '';
+    const segments = getScheduleTextSegments(value);
+    const variantClassName = variant === 'room'
+        ? shellStyles.loginTransitionScheduleCardRoom
+        : shellStyles.loginTransitionScheduleCardSubject;
+
+    return (
+        <span
+            className={`${shellStyles.loginTransitionScheduleCardText} ${variantClassName}`}
+            style={{ '--schedule-text-delay': delay, '--schedule-char-count': segments.length }}
+        >
+            {segments.map((segment, index) => (
+                <span
+                    className={`${shellStyles.loginTransitionScheduleCardChar}${segment === ' ' ? ` ${shellStyles.loginTransitionScheduleCardSpace}` : ''}`}
+                    key={`${variant}-${segment}-${index}`}
+                    style={{ '--i': index }}
+                >
+                    {segment === ' ' ? '\u00a0' : segment}
+                </span>
+            ))}
+        </span>
+    );
+}
+
+function renderScheduleCardTeeth() {
+    return ['top', 'bottom'].flatMap((side) =>
+        Array.from({ length: 11 }, (_, index) => (
+            <span
+                className={`${shellStyles.loginTransitionScheduleCardTooth} ${side === 'top' ? shellStyles.isTop : shellStyles.isBottom}`}
+                key={`${side}-${index}`}
+                style={{ '--i': index, '--d': Math.abs(index - 5) }}
+            />
+        )),
+    );
+}
+
+
+
+function ScheduleCard({ subject, room, style }) {
+    const subjectText = getScheduleSubjectDisplay(subject);
+
+    return (
+        <div
+            className={shellStyles.loginTransitionScheduleCard}
+            style={style}
+        >
+            <span className={shellStyles.loginTransitionScheduleCardSurface} aria-hidden="true">
+                {renderScheduleCardTeeth()}
+            </span>
+            <span className={shellStyles.loginTransitionScheduleCardLine} aria-hidden="true" />
+            {renderScheduleCardText(subjectText, 'subject', 'calc(var(--schedule-card-delay) + 980ms)')}
+            {renderScheduleCardText(room, 'room', 'calc(var(--schedule-card-delay) + 1120ms)')}
+        </div>
+    );
+}
+
+function SchedulePanel({ state }) {
+    const courses = getScheduledCourses(state.payload).filter((course) => SCHEDULE_WEEKDAY_ORDER.includes(course?.weekday));
+    const cardsBySlot = new Map();
+
+    courses.forEach((course) => {
+        const rowIndex = SCHEDULE_WEEKDAY_ORDER.indexOf(course.weekday);
+        const columnIndex = getScheduleColumnIndex(course);
+        if (rowIndex === -1 || columnIndex === -1) return;
+
+        const subject = readString(course?.subject_name_en)
+            || readString(course?.subject_name_th)
+            || readString(course?.subject_id);
+        const room = [readString(course?.section), readString(course?.roomcode)].filter(Boolean).join(' ');
+        if (!subject || !room) return;
+
+        const slotKey = `${rowIndex}:${columnIndex}`;
+        if (cardsBySlot.has(slotKey)) return;
+
+        cardsBySlot.set(slotKey, {
+            key: `${slotKey}:${readString(course?.subject_id) || subject}`,
+            room,
+            subject,
+            style: {
+                left: `${columnIndex * (SCHEDULE_CARD_WIDTH_PX + SCHEDULE_COLUMN_GAP_PX)}px`,
+                top: `${rowIndex * (SCHEDULE_CARD_HEIGHT_PX + SCHEDULE_ROW_GAP_PX)}px`,
+                '--schedule-card-delay': `${120 + ((rowIndex * 3) + columnIndex) * 72}ms`,
+            },
+        });
+    });
+
+    return (
+        <div className={shellStyles.loginTransitionSchedulePanel}>
+            {Array.from(cardsBySlot.values()).map((card) => (
+                <ScheduleCard key={card.key} room={card.room} style={card.style} subject={card.subject} />
+            ))}
+        </div>
+    );
+}
+
 function GenericModulePanel({ config, state, rows = [] }) {
     return (
         <div className="flex min-h-full flex-col justify-between gap-10">
@@ -444,34 +607,6 @@ function GenericModulePanel({ config, state, rows = [] }) {
     );
 }
 
-function SchedulePanel({ config, state }) {
-    const payload = getTopLevelPayload(state.payload);
-    const payloadData = getPayloadData(state.payload);
-    const courses = Array.isArray(payload.data)
-        ? payload.data
-        : Array.isArray(payloadData)
-            ? payloadData
-            : [];
-    const scheduledCount = Array.isArray(payload.scheduled) ? payload.scheduled.length : payload.stats?.withSchedule;
-    const unscheduledCount = Array.isArray(payload.unscheduled) ? payload.unscheduled.length : payload.stats?.withoutSchedule;
-    const visible = courses.slice(0, 6);
-    return (
-        <GenericModulePanel
-            config={config}
-            state={state}
-            rows={[
-                { label: 'semester', value: payload.semester },
-                { label: 'courses', value: state.loading ? 'loading' : String(payload.stats?.total ?? courses.length) },
-                { label: 'scheduled', value: scheduledCount == null ? '-' : String(scheduledCount) },
-                { label: 'unscheduled', value: unscheduledCount == null ? '-' : String(unscheduledCount) },
-                ...visible.map((course, index) => ({
-                    label: `class ${index + 1}`,
-                    value: `${readString(course.subject_id) || '-'} ${readString(course.subject_name_en) || readString(course.subject_name_th) || ''}`.trim(),
-                })),
-            ]}
-        />
-    );
-}
 
 function RegistryPanel({ config, state }) {
     const data = getRegistrationData(state);
@@ -687,11 +822,11 @@ export function isModuleAllowed(moduleKey, isGuest, allowedModules) {
 
 export function ModuleContent({ config, moduleId, state }) {
     if (moduleId === 'grade') return null;
-    if (moduleId === 'schedule') return <SchedulePanel config={config} state={state} />;
+    if (moduleId === 'schedule') return <SchedulePanel state={state} />;
     if (moduleId === 'registry') return <RegistryPanel config={config} state={state} />;
     if (moduleId === 'evaluation' || moduleId === 'evaluationForm') return <EvaluationPanel config={config} state={state} />;
     if (moduleId === 'loan') return <LoanPanel config={config} state={state} />;
-    if (moduleId === 'line' || moduleId === 'classroom') return <SettingsPanel config={config} state={state} />;
+    if (moduleId === 'classroom') return <SettingsPanel config={config} state={state} />;
     if (moduleId === 'portfolio') return <PortfolioPanel config={config} state={state} />;
     if (moduleId === 'share') return <SharePanel config={config} state={state} />;
 

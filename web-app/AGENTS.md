@@ -118,6 +118,18 @@ This is how we reduce Technical Debt incrementally without requiring a big-bang 
 
 ---
 
+## 🖥️ Local Dev Server Policy
+
+> **"For this project, prefer reusing an already-running local dev server over starting and stopping servers repeatedly."**
+
+- Before starting a new local dev server, check whether the target port is already in use.
+- If a project dev server is already running and healthy, reuse it for verification instead of spawning another one.
+- Do **not** stop long-running local dev servers after verification unless the user explicitly asks.
+- Restart a local dev server only when it is crashed, unhealthy, blocked by stale state, or a configuration/runtime change requires a fresh process.
+- Prefer validating changes against the existing local instance ("dev on production" in local-only workflow) to preserve cookies, sessions, and faster iteration.
+
+---
+
 ## 🗄️ Database Context & Static Files
 
 > **"Explicit data sourcing paths for local and external assets."**

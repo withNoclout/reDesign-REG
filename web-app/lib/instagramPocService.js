@@ -6,7 +6,7 @@ import { sanitizeReturnTo } from './kmutnbSso.js';
 const INSTAGRAM_POC_NAMESPACE = 'instagramPoc';
 export const INSTAGRAM_POC_FLOW_COOKIE_NAME = 'reg_instagram_poc_flow';
 const INSTAGRAM_POC_FLOW_MAX_AGE_SECONDS = 10 * 60;
-const INSTAGRAM_POC_DEFAULT_RETURN_TO = '/settings/line';
+const INSTAGRAM_POC_DEFAULT_RETURN_TO = '/settings/classroom';
 const INSTAGRAM_POC_DEFAULT_SCOPE = 'instagram_business_basic';
 
 function readString(value) {

@@ -14,7 +14,7 @@ import { sanitizeReturnTo } from '@/lib/kmutnbSso';
 export const runtime = 'nodejs';
 
 function buildRedirectResponse(request, returnTo, params = {}) {
-    const redirectTarget = new URL(sanitizeReturnTo(returnTo || '/settings/line'), request.nextUrl.origin);
+    const redirectTarget = new URL(sanitizeReturnTo(returnTo || '/settings/classroom'), request.nextUrl.origin);
     Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null && value !== '') {
             redirectTarget.searchParams.set(key, String(value));

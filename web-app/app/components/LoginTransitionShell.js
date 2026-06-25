@@ -8,23 +8,14 @@ const DEFAULT_LOGIN_FORM_ID = 'production-login-form';
 const DESKTOP_CANVAS_BREAKPOINT = 901;
 const LOGIN_CANVAS_WIDTH = 1440;
 const LOGIN_CANVAS_HEIGHT = 1024;
-const NAV_RIPPLE_DURATION_MS = 2200;
-const NAV_RIPPLE_RING_COUNT = 2;
-const NAV_RIPPLE_RING_DELAY_MS = 180;
-const NAV_RIPPLE_CLEANUP_MS = NAV_RIPPLE_DURATION_MS + ((NAV_RIPPLE_RING_COUNT - 1) * NAV_RIPPLE_RING_DELAY_MS) + 320;
-const NAV_WATER_WAVE_LAYERS = Object.freeze([
-    { id: 'crest', className: 'isCrest', delayOffset: 0 },
-    { id: 'swell', className: 'isSwell', delayOffset: 70 },
-    { id: 'wake', className: 'isWake', delayOffset: 140 },
-]);
+const NAV_RIPPLE_DURATION_MS = 2400;
+const NAV_RIPPLE_RING_COUNT = 3;
+const NAV_RIPPLE_RING_DELAY_MS = 280;
+const NAV_RIPPLE_CLEANUP_MS = 3400;
+const PANEL_IMPACT_DURATION_MS = 860;
 const DEFAULT_NAV_ITEMS = [
     { id: 'grade', label: 'GRADE', href: '/grade', slot: 'grade' },
-    { id: 'registry', label: 'REGISTRY', href: '/registration/enroll', slot: 'registry' },
-    { id: 'evaluation', label: 'EVAL', href: '/evaluation', slot: 'textPrimary' },
-    { id: 'portfolio', label: 'PORT', href: '/portfolio', slot: 'portfolio' },
-    { id: 'loan', label: 'LOAN', href: '/student-loan', slot: 'loan' },
     { id: 'schedule', label: 'SCHEDULE', href: '/grade/schedule', slot: 'schedule' },
-    { id: 'settings', label: 'SETTING', href: '/settings/classroom', slot: 'setting' },
 ];
 
 const navSlotClassName = {
@@ -307,11 +298,13 @@ function useMenuTransition(state, onMenuCommit, activeMenuId = 'grade') {
     const [activeMenu, setActiveMenu] = useState(activeMenuId);
     const [isMenuTransitioning, setIsMenuTransitioning] = useState(false);
     const [isMenuTransitionPending, setIsMenuTransitionPending] = useState(false);
+    const [isPanelImpacting, setIsPanelImpacting] = useState(false);
     const [navRipples, setNavRipples] = useState([]);
     const menuRippleTimerRef = useRef(null);
     const menuCommitTimerRef = useRef(null);
     const menuStressTimersRef = useRef([]);
     const rippleCleanupTimerRef = useRef(null);
+    const panelImpactTimerRef = useRef(null);
     const rippleIdRef = useRef(0);
 
     const clearMenuTimer = useCallback(() => {
@@ -330,6 +323,13 @@ function useMenuTransition(state, onMenuCommit, activeMenuId = 'grade') {
         if (rippleCleanupTimerRef.current !== null) {
             window.clearTimeout(rippleCleanupTimerRef.current);
             rippleCleanupTimerRef.current = null;
+        }
+    }, []);
+
+    const clearPanelImpactTimer = useCallback(() => {
+        if (panelImpactTimerRef.current !== null) {
+            window.clearTimeout(panelImpactTimerRef.current);
+            panelImpactTimerRef.current = null;
         }
     }, []);
 
@@ -370,14 +370,28 @@ function useMenuTransition(state, onMenuCommit, activeMenuId = 'grade') {
         onBlur: (event) => clearMenuStress(event.currentTarget),
     }), [clearMenuStress, startMenuStress]);
 
+    const triggerPanelImpact = useCallback(() => {
+        clearPanelImpactTimer();
+        setIsPanelImpacting(false);
+        window.requestAnimationFrame(() => {
+            setIsPanelImpacting(true);
+            panelImpactTimerRef.current = window.setTimeout(() => {
+                setIsPanelImpacting(false);
+                panelImpactTimerRef.current = null;
+            }, PANEL_IMPACT_DURATION_MS);
+        });
+    }, [clearPanelImpactTimer]);
+
     const resetMenuTransitions = useCallback(() => {
         clearMenuTimer();
         clearRippleCleanupTimer();
+        clearPanelImpactTimer();
         clearAllMenuStress();
         setNavRipples([]);
         setIsMenuTransitioning(false);
         setIsMenuTransitionPending(false);
-    }, [clearAllMenuStress, clearMenuTimer, clearRippleCleanupTimer]);
+        setIsPanelImpacting(false);
+    }, [clearAllMenuStress, clearMenuTimer, clearPanelImpactTimer, clearRippleCleanupTimer]);
 
     const triggerMenuRipple = useCallback((element, point) => {
         const stageElement = element.closest('[data-login-transition-stage="true"]');
@@ -425,6 +439,7 @@ function useMenuTransition(state, onMenuCommit, activeMenuId = 'grade') {
         setIsMenuTransitionPending(true);
         clearMenuStress(element);
         triggerMenuRipple(element, point);
+        triggerPanelImpact();
         clearMenuTimer();
         menuRippleTimerRef.current = window.setTimeout(() => startMenuTransition(item), 220);
     }, [activeMenu, clearMenuStress, clearMenuTimer, isMenuTransitionPending, isMenuTransitioning, startMenuTransition, state, triggerMenuRipple]);
@@ -448,14 +463,16 @@ function useMenuTransition(state, onMenuCommit, activeMenuId = 'grade') {
     useEffect(() => () => {
         clearMenuTimer();
         clearRippleCleanupTimer();
+        clearPanelImpactTimer();
         clearAllMenuStress();
-    }, [clearAllMenuStress, clearMenuTimer, clearRippleCleanupTimer]);
+    }, [clearAllMenuStress, clearMenuTimer, clearPanelImpactTimer, clearRippleCleanupTimer]);
 
     return {
         activeMenu,
         activateMenu,
         isMenuTransitioning,
         isMenuTransitionPending,
+        isPanelImpacting,
         menuStressHandlers,
         navRipples,
         resetMenuTransitions,
@@ -932,32 +949,18 @@ function HeroPanel({ activeMenu, children, grade, onGradeWheel }) {
 function RippleLayer({ clipIdBase, navRipples }) {
     const navClipId = `${clipIdBase}-nav`;
     const mainClipId = `${clipIdBase}-main`;
-    const waterFilterId = `${clipIdBase}-water-displace`;
 
-    const renderWaterWaves = (ripple, toneClassName, scope) => (
-        <g
-            className={styles.loginTransitionNavWaterWaveSet}
-            filter={`url(#${waterFilterId})`}
-            key={`${scope}-${ripple.id}`}
-        >
-            {Array.from({ length: NAV_RIPPLE_RING_COUNT }, (_, ringIndex) =>
-                NAV_WATER_WAVE_LAYERS.map((layer) => (
-                    <circle
-                        className={classNames(
-                            styles.loginTransitionNavWaterWave,
-                            toneClassName,
-                            styles[layer.className],
-                        )}
-                        cx={ripple.x}
-                        cy={ripple.y}
-                        key={`${scope}-${ripple.id}-${ringIndex}-${layer.id}`}
-                        r="2"
-                        style={{ '--wave-delay': `${(ringIndex * NAV_RIPPLE_RING_DELAY_MS) + layer.delayOffset}ms` }}
-                    />
-                ))
-            )}
-        </g>
-    );
+    const renderRippleRings = (ripple, toneClassName, scope) =>
+        Array.from({ length: NAV_RIPPLE_RING_COUNT }, (_, ringIndex) => (
+            <circle
+                className={classNames(styles.loginTransitionNavRippleRing, toneClassName)}
+                cx={ripple.x}
+                cy={ripple.y}
+                key={`${scope}-${ripple.id}-${ringIndex}`}
+                r="2"
+                style={{ animationDelay: `${ringIndex * NAV_RIPPLE_RING_DELAY_MS}ms` }}
+            />
+        ));
 
     return (
         <svg
@@ -973,38 +976,12 @@ function RippleLayer({ clipIdBase, navRipples }) {
                 <clipPath id={mainClipId}>
                     <rect x="389" y="0" width="1051" height="1024" />
                 </clipPath>
-                <filter
-                    id={waterFilterId}
-                    filterUnits="userSpaceOnUse"
-                    x="-96"
-                    y="-96"
-                    width="1632"
-                    height="1216"
-                    colorInterpolationFilters="sRGB"
-                >
-                    <feTurbulence
-                        type="fractalNoise"
-                        baseFrequency="0.011 0.028"
-                        numOctaves="2"
-                        seed="17"
-                        result="waterNoise"
-                    />
-                    <feDisplacementMap
-                        in="SourceGraphic"
-                        in2="waterNoise"
-                        scale="12"
-                        xChannelSelector="R"
-                        yChannelSelector="G"
-                        result="waterWarp"
-                    />
-                    <feGaussianBlur in="waterWarp" stdDeviation="0.12" />
-                </filter>
             </defs>
             <g clipPath={`url(#${navClipId})`}>
-                {navRipples.map((ripple) => renderWaterWaves(ripple, styles.isNav, 'nav'))}
+                {navRipples.flatMap((ripple) => renderRippleRings(ripple, styles.isNav, 'nav'))}
             </g>
             <g clipPath={`url(#${mainClipId})`}>
-                {navRipples.map((ripple) => renderWaterWaves(ripple, styles.isMain, 'main'))}
+                {navRipples.flatMap((ripple) => renderRippleRings(ripple, styles.isMain, 'main'))}
             </g>
         </svg>
     );
@@ -1258,6 +1235,7 @@ function StageFrame({
         styles.loginTransitionStage,
         stateClassName[state],
         menu.isMenuTransitioning ? styles.isMenuTransitioning : null,
+        menu.isPanelImpacting ? styles.isPanelImpacting : null,
         revealNavText ? styles.isNavTextRevealing : null,
         grade.isTeleporting ? styles.isGradeTeleporting : null,
         grade.isWheeling ? styles.isGradeWheeling : null,

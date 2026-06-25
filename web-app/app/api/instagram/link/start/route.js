@@ -26,7 +26,7 @@ export async function GET(request) {
         return unauthorized();
     }
 
-    const returnTo = request.nextUrl.searchParams.get('returnTo') || '/settings/line';
+    const returnTo = request.nextUrl.searchParams.get('returnTo') || '/settings/classroom';
     const flow = createInstagramPocFlow(String(authContext.userId), returnTo);
     const response = NextResponse.redirect(buildInstagramAuthorizeUrl(flow, origin));
     applyInstagramPocFlowCookie(response, flow.cookieValue);
