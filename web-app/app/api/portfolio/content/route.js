@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import axios from 'axios';
 import sharp from 'sharp';
 import fs from 'fs/promises';
 import path from 'path';
@@ -8,13 +6,18 @@ import { getServiceSupabase } from '@/lib/supabase';
 import { getAuthUser } from '@/lib/auth';
 import { sanitizeStudentCodes } from '@/lib/sanitize';
 
-const BASE_URL = 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
 
-// BASE_DIR: Root directory for web-app (consistent across all upload-related files)
-const BASE_DIR = process.cwd(); // = web-app/
-console.log('[Portfolio API] BASE_DIR:', BASE_DIR);
+function getPortfolioTempDir() {
+    return typeof process.env.REDESIGN_REG_TEMP_DIR === 'string' && process.env.REDESIGN_REG_TEMP_DIR.trim()
+        ? path.resolve(process.env.REDESIGN_REG_TEMP_DIR.trim())
+        : path.join(/* turbopackIgnore: true */ process.cwd(), 'public', 'temp');
+}
 
-export async function GET(request) {
+
+const TEMP_DIR = getPortfolioTempDir();
+console.log('[Portfolio API] TEMP_DIR:', TEMP_DIR);
+
+export async function GET(_request) {
     try {
         const userId = await getAuthUser();
 
@@ -181,12 +184,11 @@ export async function POST(request) {
                 // Generate unique filename
                 const tempFileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.webp`;
 
-                // Ensure temp directory exists using BASE_DIR
-                const tempDir = path.join(BASE_DIR, 'public', 'temp');
+                const tempDir = TEMP_DIR;
                 await fs.mkdir(tempDir, { recursive: true });
 
-                // Store ABSOLUTE path using BASE_DIR for consistency
-                tempFilePath = path.join(BASE_DIR, 'public', 'temp', tempFileName);
+                // Store ABSOLUTE path in the shared temp directory for cross-release retries
+                tempFilePath = path.join(tempDir, tempFileName);
 
                 console.log('[Portfolio API] Temp file path (absolute):', tempFilePath);
                 console.log('[Portfolio API] Temp filename:', tempFileName);
@@ -233,7 +235,7 @@ export async function POST(request) {
         if (collaboratorsJson && data && data[0]?.id) {
             try {
                 const codes = JSON.parse(collaboratorsJson);
-                const { valid, sanitized, error: valErr } = sanitizeStudentCodes(codes);
+                const { valid, sanitized } = sanitizeStudentCodes(codes);
 
                 if (valid && sanitized.length > 0) {
                     // Filter out self-tagging

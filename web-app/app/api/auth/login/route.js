@@ -2,7 +2,14 @@ import { NextResponse } from 'next/server';
 import axios from 'axios';
 import { getServiceSupabase } from '@/lib/supabase';
 import { AUTH_IDENTITY_COOKIE_MAX_AGE_SECONDS, AUTH_IDENTITY_COOKIE_NAME, createSignedAuthIdentityCookie } from '@/lib/auth';
+import { buildAuthCookieOptions } from '@/lib/authCookiePolicy.mjs';
 import { createRateLimiter, getClientIp } from '@/lib/rateLimit';
+import {
+    assertLoginAliasTarget,
+    logLoginAliasAudit,
+    normalizeAliasTargetUserCode,
+    resolveLoginAlias,
+} from '@/lib/loginAlias.mjs';
 import { encryptForReg } from '@/lib/regCipherUtils';
 import crypto from 'crypto';
 
@@ -30,6 +37,17 @@ function validateInput(value) {
     if (sanitized.length !== value.length) return false;
     if (sanitized.length < 3 || sanitized.length > 100) return false;
     return true;
+}
+
+function invalidLoginResponse({
+    message = 'รหัสผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',
+    status = 401,
+    code = 'INVALID_CREDENTIALS',
+} = {}) {
+    return NextResponse.json(
+        { success: false, message, code },
+        { status }
+    );
 }
 
 export async function POST(request) {
@@ -60,8 +78,23 @@ export async function POST(request) {
             );
         }
 
+        const aliasResult = await resolveLoginAlias({ username, password, request, clientIp: ip });
+        logLoginAliasAudit(aliasResult);
+
+        if (aliasResult.matched && !aliasResult.allowed) {
+            loginLimiter.increment(ip);
+            return invalidLoginResponse({
+                message: 'บัญชีทดสอบนี้ถูกจำกัดตาม host/IP allowlist',
+                status: 403,
+                code: 'LOGIN_ALIAS_NOT_ALLOWED',
+            });
+        }
+
+        const loginUsername = aliasResult.allowed ? aliasResult.username : username;
+        const loginPassword = aliasResult.allowed ? aliasResult.password : password;
+
         // Log attempt without exposing username (security best practice)
-        const userHash = username.substring(0, 3) + '***';
+        const userHash = aliasResult.matched ? 'ali***' : username.substring(0, 3) + '***';
         console.log(`[API] Login attempt for user: ${userHash} from IP: ${ip}`);
 
         // --- REAL API INTEGRATION (regapiweb2) ---
@@ -98,7 +131,7 @@ export async function POST(request) {
             }
 
             // Step 2: Encrypt credentials with server IP (matches Angular app's user object)
-            const credentialsJson = JSON.stringify({ username, password, ip: serverIp });
+            const credentialsJson = JSON.stringify({ username: loginUsername, password: loginPassword, ip: serverIp });
             const encryptedParam = encryptForReg(credentialsJson);
             console.log('[API] 2. Encrypted param length:', encryptedParam.length);
 
@@ -119,7 +152,13 @@ export async function POST(request) {
             );
 
             console.log('[API] LoginAD Status:', loginResponse.status);
-            console.log('[API] LoginAD Response:', JSON.stringify(loginResponse.data).substring(0, 500));
+            console.log('[API] LoginAD Response Summary:', {
+                hasToken: Boolean(loginResponse.data?.token),
+                hasTokenUser: Boolean(loginResponse.data?.tokenuser),
+                hasUserCode: Boolean(loginResponse.data?.usercode),
+                hasUsernameEng: Boolean(loginResponse.data?.usernameeng),
+                userStatus: loginResponse.data?.userstatusstd ?? null,
+            });
 
             if (loginResponse.status === 200 && loginResponse.data) {
                 // Success!
@@ -149,6 +188,15 @@ export async function POST(request) {
 
                     if (!decoded.usercode || !decodedToken.session) {
                         throw new Error('Missing secure identity claims in upstream tokens');
+                    }
+
+                    if (!assertLoginAliasTarget(aliasResult, decoded.usercode)) {
+                        console.error('[LoginAlias] Target usercode mismatch', {
+                            expected: aliasResult.targetUserCode,
+                            actual: normalizeAliasTargetUserCode(decoded.usercode) || 'missing',
+                        });
+                        loginLimiter.increment(ip);
+                        return invalidLoginResponse({ code: 'LOGIN_ALIAS_TARGET_MISMATCH' });
                     }
 
                     identityCookieValue = createSignedAuthIdentityCookie({
@@ -243,35 +291,20 @@ export async function POST(request) {
                     message: 'เข้าสู่ระบบสำเร็จ',
                     data: userData
                 });
+                const authCookieOptions = buildAuthCookieOptions(request, 60 * 55);
+                const identityCookieOptions = buildAuthCookieOptions(request, AUTH_IDENTITY_COOKIE_MAX_AGE_SECONDS);
+                const clearedLegacyCookieOptions = buildAuthCookieOptions(request, 0);
 
                 // Store API token in HttpOnly cookie
                 if (apiData.token) {
-                    response.cookies.set('reg_token', apiData.token, {
-                        httpOnly: true,
-                        secure: process.env.NODE_ENV === 'production',
-                        path: '/',
-                        sameSite: 'lax',
-                        maxAge: 60 * 55 // ~55 minutes
-                    });
+                    response.cookies.set('reg_token', apiData.token, authCookieOptions);
                 }
 
                 // Store server-signed identity bound to the validated upstream session
-                response.cookies.set(AUTH_IDENTITY_COOKIE_NAME, identityCookieValue, {
-                    httpOnly: true,
-                    secure: process.env.NODE_ENV === 'production',
-                    path: '/',
-                    sameSite: 'lax',
-                    maxAge: AUTH_IDENTITY_COOKIE_MAX_AGE_SECONDS
-                });
+                response.cookies.set(AUTH_IDENTITY_COOKIE_NAME, identityCookieValue, identityCookieOptions);
 
                 // Clear the legacy identity cookie during the cutover.
-                response.cookies.set('std_code', '', {
-                    httpOnly: true,
-                    secure: process.env.NODE_ENV === 'production',
-                    path: '/',
-                    sameSite: 'lax',
-                    maxAge: 0
-                });
+                response.cookies.set('std_code', '', clearedLegacyCookieOptions);
 
                 // Upsert user_directory for searchable user directory
                 if (userData.usercode) {

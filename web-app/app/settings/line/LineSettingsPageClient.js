@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Navbar from '@/app/components/Navbar';
 import GlowingBackground from '@/app/components/GlowingBackground';
@@ -59,6 +59,14 @@ const EMPTY_STATE = {
             addFriendUrl: null,
             openChatUrl: null,
         },
+    },
+    instagram: {
+        configured: false,
+        missingConfig: [],
+        connected: false,
+        connectUrl: '/api/instagram/link/start?returnTo=%2Fsettings%2Fline',
+        connection: null,
+        mode: 'oauth-profile-poc',
     },
 };
 
@@ -133,12 +141,14 @@ async function readJson(response) {
 
 export default function LineSettingsPageClient() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { isAuthenticated, loading: authLoading, logout: handleLogout } = useAuth();
     const [settings, setSettings] = useState(EMPTY_STATE);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [creatingCode, setCreatingCode] = useState(false);
     const [unlinking, setUnlinking] = useState(false);
+    const [unlinkingInstagram, setUnlinkingInstagram] = useState(false);
     const [flash, setFlash] = useState({ type: '', message: '' });
 
     useEffect(() => {
@@ -148,12 +158,37 @@ export default function LineSettingsPageClient() {
         }
     }, [authLoading, isAuthenticated, handleLogout, router]);
 
+    useEffect(() => {
+        const instagramConnected = searchParams.get('instagramConnected');
+        const instagramError = searchParams.get('instagramError');
+        if (!instagramConnected && !instagramError) return;
+
+        if (instagramConnected === '1') {
+            setFlash({ type: 'success', message: 'เชื่อม Instagram แล้ว' });
+        } else {
+            const message = instagramError === 'user-mismatch'
+                ? 'บัญชีที่ใช้เชื่อม Instagram ไม่ตรงกับผู้ใช้ปัจจุบัน'
+                : instagramError === 'auth'
+                    ? 'กรุณาเข้าสู่ระบบใหม่ก่อนเชื่อม Instagram'
+                    : 'เชื่อม Instagram ไม่สำเร็จ';
+            setFlash({ type: 'error', message });
+        }
+        router.replace('/settings/line');
+    }, [router, searchParams]);
+
     const loadSettings = useCallback(async ({ silent = false } = {}) => {
         if (!silent) setLoading(true);
         setRefreshing(silent);
         try {
             const next = await readJson(await fetch('/api/line/settings', { cache: 'no-store' }));
-            setSettings({ ...EMPTY_STATE, ...next });
+            setSettings({
+                ...EMPTY_STATE,
+                ...next,
+                instagram: {
+                    ...EMPTY_STATE.instagram,
+                    ...(next?.instagram || {}),
+                },
+            });
         } catch (error) {
             console.error('Failed to load LINE settings:', error);
             setFlash({ type: 'error', message: error.message || 'Failed to load LINE settings' });
@@ -183,6 +218,11 @@ export default function LineSettingsPageClient() {
     );
     const addFriendUrl = settings.instructions?.quickActions?.addFriendUrl || null;
     const openChatUrl = settings.instructions?.quickActions?.openChatUrl || null;
+    const instagram = settings.instagram || EMPTY_STATE.instagram;
+    const instagramConnected = Boolean(instagram.connected && instagram.connection);
+    const instagramConnection = instagram.connection || null;
+    const instagramConnectUrl = instagram.connectUrl || EMPTY_STATE.instagram.connectUrl;
+    const instagramMissingConfig = Array.isArray(instagram.missingConfig) ? instagram.missingConfig : [];
 
     const handleCreateCode = useCallback(async () => {
         setCreatingCode(true);
@@ -220,6 +260,23 @@ export default function LineSettingsPageClient() {
             setFlash({ type: 'error', message: error.message || 'Failed to unlink LINE account' });
         } finally {
             setUnlinking(false);
+        }
+    }, [loadSettings]);
+
+    const handleInstagramUnlink = useCallback(async () => {
+        setUnlinkingInstagram(true);
+        try {
+            await readJson(await fetch('/api/instagram/link/unlink', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            }));
+            setFlash({ type: 'success', message: 'ยกเลิกการเชื่อม Instagram แล้ว' });
+            await loadSettings({ silent: true });
+        } catch (error) {
+            console.error('Failed to unlink Instagram profile:', error);
+            setFlash({ type: 'error', message: error.message || 'Failed to unlink Instagram profile' });
+        } finally {
+            setUnlinkingInstagram(false);
         }
     }, [loadSettings]);
 
@@ -583,6 +640,88 @@ export default function LineSettingsPageClient() {
                                     ยังไม่พบบัญชี LINE ที่เชื่อมกับบัญชีนี้
                                 </div>
                             )}
+                        </section>
+
+                        <section className="rounded-[28px] border border-white/10 bg-[rgba(15,23,42,0.72)] p-6 backdrop-blur-xl">
+                            <div className="flex items-center gap-3">
+                                <div className={`flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.06] ${instagramConnected ? 'text-pink-300' : 'text-white/75'}`}>
+                                    {instagramConnected ? <CheckCircleIcon size={18} /> : <LinkIcon size={18} />}
+                                </div>
+                                <div>
+                                    <p className="text-sm uppercase tracking-[0.16em] text-white/45 font-montserrat">Instagram POC</p>
+                                    <h2 className="text-xl font-bold text-white font-prompt">เชื่อมบัญชี Instagram</h2>
+                                </div>
+                            </div>
+
+                            <div className="mt-5 space-y-4 text-sm text-white/65 font-prompt">
+                                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                                    <p className="font-semibold text-white">
+                                        {instagramConnected ? 'เชื่อม Instagram แล้ว' : 'ยังไม่ได้เชื่อม Instagram'}
+                                    </p>
+                                    <p className="mt-2">
+                                        POC นี้ใช้สำหรับเชื่อมโปรไฟล์ Instagram ของบัญชีปัจจุบันจากหน้า LINE settings โดยยังไม่ดึงโพสต์หรือ feed เข้าระบบนี้
+                                    </p>
+                                    {instagramConnected && instagramConnection ? (
+                                        <div className="mt-3 space-y-1">
+                                            <p>บัญชี: <span className="text-white/90">{instagramConnection.displayName || `@${instagramConnection.username}`}</span></p>
+                                            <p>Username: <span className="text-white/90">@{instagramConnection.username}</span></p>
+                                            <p>เชื่อมล่าสุด: <span className="text-white/90">{formatDateTime(instagramConnection.connectedAt)}</span></p>
+                                        </div>
+                                    ) : null}
+                                </div>
+
+                                <div className="flex flex-wrap gap-2">
+                                    {instagram.configured ? (
+                                        <a
+                                            href={instagramConnectUrl}
+                                            className="inline-flex items-center gap-2 rounded-xl border border-pink-400/30 bg-pink-500/15 px-4 py-2.5 text-pink-100 hover:bg-pink-500/20"
+                                        >
+                                            <LinkIcon size={16} />
+                                            {instagramConnected ? 'เชื่อม Instagram อีกครั้ง' : 'เชื่อม Instagram'}
+                                        </a>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            disabled
+                                            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-white/45"
+                                        >
+                                            <AlertTriangleIcon size={16} />
+                                            Instagram ยังไม่พร้อมใช้งาน
+                                        </button>
+                                    )}
+
+                                    {instagramConnected && instagramConnection?.profileUrl ? (
+                                        <a
+                                            href={instagramConnection.profileUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-white/80 hover:bg-white/[0.08]"
+                                        >
+                                            <FileTextIcon size={16} />
+                                            เปิดโปรไฟล์ Instagram
+                                        </a>
+                                    ) : null}
+
+                                    {instagramConnected ? (
+                                        <button
+                                            type="button"
+                                            onClick={handleInstagramUnlink}
+                                            disabled={unlinkingInstagram}
+                                            className="inline-flex items-center gap-2 rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-2.5 text-red-100 hover:bg-red-500/15 disabled:opacity-60"
+                                        >
+                                            <XIcon size={16} />
+                                            ยกเลิกการเชื่อม Instagram
+                                        </button>
+                                    ) : null}
+                                </div>
+
+                                {!instagram.configured && instagramMissingConfig.length > 0 ? (
+                                    <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 p-4 text-amber-100">
+                                        <p className="font-semibold">Instagram POC ยังไม่ได้ตั้งค่า</p>
+                                        <p className="mt-1 text-amber-100/80">Missing config: {instagramMissingConfig.join(', ')}</p>
+                                    </div>
+                                ) : null}
+                            </div>
                         </section>
                     </div>
                 </div>

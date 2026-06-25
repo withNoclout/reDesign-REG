@@ -1,4 +1,4 @@
-import { getServiceSupabase } from './supabase';
+import { getServiceSupabase } from './supabase.js';
 
 /**
  * Retrieves a cached student profile from the Supabase database.

@@ -1,0 +1,11 @@
+[Unit]
+Description=Run redesign-reg graphify refresh every 15 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=15min
+Unit=redesign-reg-agent-memory-refresh.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target

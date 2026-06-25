@@ -1,8 +1,7 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { verifyShareToken } from '../../utils/jwt';
 
 const GuestContext = createContext(null);
 
@@ -20,47 +19,78 @@ export function GuestProvider({ children }) {
 
     const initialGuestState = useMemo(() => {
         if (typeof window === 'undefined') {
-            return { isGuest: false, allowedModules: [], guestName: '' };
+            return { token: '', isGuest: false, allowedModules: [], guestName: '', loading: false };
         }
-        const params = new URLSearchParams(window.location.search);
-        const token = params.get('t');
-        if (token) {
-            const decoded = verifyShareToken(token);
-            if (decoded) {
-                console.log('Guest mode activated:', decoded.guestName);
-                return {
-                    isGuest: true,
-                    allowedModules: decoded.permissions || [],
-                    guestName: decoded.guestName || 'Guest'
-                };
-            }
-        }
-        return { isGuest: false, allowedModules: [], guestName: '' };
+
+        const token = new URLSearchParams(window.location.search).get('t') || '';
+        return {
+            token,
+            isGuest: false,
+            allowedModules: [],
+            guestName: '',
+            loading: Boolean(token),
+        };
     }, []);
 
+    const [shareToken, setShareToken] = useState(initialGuestState.token);
     const [isGuest, setIsGuest] = useState(initialGuestState.isGuest);
     const [allowedModules, setAllowedModules] = useState(initialGuestState.allowedModules);
     const [guestName, setGuestName] = useState(initialGuestState.guestName);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(initialGuestState.loading);
 
     useEffect(() => {
-        // Just handle invalid token redirect here if needed
-        if (typeof window !== 'undefined') {
-            const params = new URLSearchParams(window.location.search);
-            const token = params.get('t');
-            if (token && !isGuest) {
-                console.error('Invalid or expired share token');
-                router.push('/');
-            }
+        if (typeof window === 'undefined') return undefined;
+
+        const token = new URLSearchParams(window.location.search).get('t') || '';
+        setShareToken(token);
+
+        if (!token) {
+            setIsGuest(false);
+            setAllowedModules([]);
+            setGuestName('');
+            setLoading(false);
+            return undefined;
         }
-    }, [router, isGuest]);
+
+        const controller = new AbortController();
+        setLoading(true);
+
+        fetch(`/api/share/verify?t=${encodeURIComponent(token)}`, {
+            cache: 'no-store',
+            signal: controller.signal,
+        })
+            .then(async (response) => {
+                const payload = await response.json().catch(() => null);
+                if (!response.ok || payload?.success === false) {
+                    throw new Error(payload?.error || 'Invalid or expired share token');
+                }
+
+                setIsGuest(true);
+                setAllowedModules(Array.isArray(payload.permissions) ? payload.permissions : []);
+                setGuestName(typeof payload.guestName === 'string' && payload.guestName.trim() ? payload.guestName.trim() : 'Guest');
+            })
+            .catch((error) => {
+                if (controller.signal.aborted) return;
+                console.error('Invalid or expired share token:', error.message);
+                setIsGuest(false);
+                setAllowedModules([]);
+                setGuestName('');
+                router.push('/');
+            })
+            .finally(() => {
+                if (!controller.signal.aborted) setLoading(false);
+            });
+
+        return () => controller.abort();
+    }, [router]);
 
     const value = useMemo(() => ({
         isGuest,
         allowedModules,
         guestName,
-        loading
-    }), [isGuest, allowedModules, guestName, loading]);
+        loading,
+        shareToken,
+    }), [isGuest, allowedModules, guestName, loading, shareToken]);
 
     return (
         <GuestContext.Provider value={value}>

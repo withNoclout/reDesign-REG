@@ -1,0 +1,108 @@
+.fireflyCursor {
+    position: fixed;
+    inset: 0;
+    z-index: 2147483000;
+    pointer-events: none;
+    contain: strict;
+    isolation: isolate;
+    opacity: 0;
+    transition: opacity 140ms cubic-bezier(0.16, 1, 0.3, 1);
+    mix-blend-mode: normal;
+}
+
+.fireflyCursor[data-enabled='false'] {
+    display: none;
+}
+
+.fireflyCursor[data-visible='true'] {
+    opacity: 1;
+}
+
+.trailLayer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    overflow: hidden;
+}
+
+.dot,
+.halo {
+    position: absolute;
+    top: 0;
+    left: 0;
+    border-radius: 999px;
+    will-change: transform, opacity;
+    transform: translate3d(-120px, -120px, 0) translate(-50%, -50%);
+}
+
+.dot {
+    width: 6px;
+    height: 6px;
+    background: rgba(2, 6, 23, 0.99);
+    box-shadow:
+        0 0 0 1px rgba(2, 6, 23, 0.42),
+        0 0 8px rgba(2, 6, 23, 0.46),
+        0 0 22px rgba(2, 6, 23, 0.24);
+    transition:
+        width 150ms cubic-bezier(0.16, 1, 0.3, 1),
+        height 150ms cubic-bezier(0.16, 1, 0.3, 1),
+        border-radius 150ms cubic-bezier(0.16, 1, 0.3, 1),
+        background 150ms ease,
+        box-shadow 150ms ease,
+        opacity 120ms ease;
+}
+
+.halo {
+    width: 36px;
+    height: 36px;
+    background:
+        radial-gradient(circle,
+            rgba(2, 6, 23, 0.28) 0%,
+            rgba(2, 6, 23, 0.16) 24%,
+            rgba(2, 6, 23, 0.07) 48%,
+            rgba(2, 6, 23, 0) 74%);
+    filter: blur(0.7px);
+    opacity: 0.74;
+    transition:
+        width 150ms cubic-bezier(0.16, 1, 0.3, 1),
+        height 150ms cubic-bezier(0.16, 1, 0.3, 1),
+        opacity 140ms ease;
+}
+
+.fireflyCursor[data-interactive='true'] .dot {
+    width: 7px;
+    height: 7px;
+}
+
+.fireflyCursor[data-interactive='true'] .halo {
+    opacity: 0.9;
+}
+
+.fireflyCursor[data-text-input='true'] .dot {
+    width: 2px;
+    height: 25px;
+    border-radius: 999px;
+    background: rgba(2, 6, 23, 0.98);
+    box-shadow:
+        0 0 0 1px rgba(2, 6, 23, 0.34),
+        0 0 10px rgba(2, 6, 23, 0.36);
+    opacity: 0.98;
+}
+
+.fireflyCursor[data-text-input='true'] .halo {
+    width: 16px;
+    height: 30px;
+    opacity: 0;
+}
+
+.fireflyCursor[data-text-input='true'] .trailLayer {
+    opacity: 0.72;
+}
+
+@media (prefers-reduced-motion: reduce), (pointer: coarse) {
+    .fireflyCursor {
+        display: none;
+    }
+}

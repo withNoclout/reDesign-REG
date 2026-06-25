@@ -1,0 +1,17 @@
+{
+    "name": "exam-seat-data",
+    "version": "1.0.0",
+    "description": "KMUTNB Exam Seat Data Scraper",
+    "main": "index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [
+        "kmutnb",
+        "scraper",
+        "exam"
+    ],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {}
+}

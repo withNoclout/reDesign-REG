@@ -1,0 +1,82 @@
+
+import { useState, useEffect, useCallback } from 'react';
+
+export function usePortfolioSettings() {
+    const [settings, setSettings] = useState({
+        mode: 'fixed',
+        fixedConfig: {
+            columnCount: 3,
+            gapSize: 'normal'
+        },
+        customLayout: [],
+        maxItemsPerPage: 12,
+        sortMode: 'auto',
+        customItemOrder: [],
+    });
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Load settings on mount
+    useEffect(() => {
+        async function loadSettings() {
+            try {
+                const res = await fetch('/api/user/settings');
+                const json = await res.json();
+                if (json.success) {
+                    const loadedConfig = json.config || {};
+                    // Enforce Default Configuration to 3-Columns if missing
+                    if (!loadedConfig.fixedConfig || typeof loadedConfig.fixedConfig.columnCount !== 'number') {
+                        loadedConfig.fixedConfig = {
+                            ...(loadedConfig.fixedConfig || {}),
+                            columnCount: 3,
+                            gapSize: loadedConfig.fixedConfig?.gapSize || 'normal'
+                        };
+                    }
+                    setSettings(prev => ({ ...prev, ...loadedConfig }));
+                }
+            } catch (error) {
+                console.error('Failed to load settings:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+        loadSettings();
+    }, []);
+
+    // Save settings
+    const saveSettings = useCallback(async (newSettings) => {
+        setIsSaving(true);
+        try {
+            const res = await fetch('/api/user/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ config: newSettings }),
+            });
+            const json = await res.json();
+            if (!json.success) throw new Error(json.message);
+
+            // Update local state to confirm save (though real-time update already did)
+            setSettings(newSettings);
+            return true;
+        } catch (error) {
+            console.error('Failed to save settings:', error);
+            alert('Failed to save settings');
+            return false;
+        } finally {
+            setIsSaving(false);
+        }
+    }, []);
+
+    const updateSetting = (key, value) => {
+        setSettings(prev => ({ ...prev, [key]: value }));
+    };
+
+    return {
+        settings,
+        isLoading,
+        isSaving,
+        setIsLoading,
+        updateSetting,
+        saveSettings
+    };
+}

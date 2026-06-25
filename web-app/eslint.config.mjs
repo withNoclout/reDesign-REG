@@ -1,0 +1,45 @@
+import nextCoreWebVitals from 'eslint-config-next/core-web-vitals';
+
+export default [
+  ...nextCoreWebVitals,
+  {
+    ignores: [
+      '.next/**',
+      'out/**',
+      'build/**',
+      'coverage/**',
+      'node_modules/**',
+      'public/temp/**',
+      'next-env.d.ts',
+    ],
+  },
+  {
+    files: ['**/*.{js,jsx,mjs,ts,tsx,mts,cts}'],
+    rules: {
+      'react/react-in-jsx-scope': 'off',
+      'react/jsx-uses-react': 'off',
+      'react/prop-types': 'warn',
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+      'react-hooks/immutability': 'warn',
+      'react-hooks/preserve-manual-memoization': 'warn',
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/static-components': 'warn',
+      'no-undef': 'error',
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'no-debugger': 'error',
+      'no-alert': 'warn',
+      'prefer-const': 'warn',
+      'no-var': 'error',
+      eqeqeq: ['warn', 'always'],
+      curly: ['warn', 'all'],
+      '@next/next/no-html-link-for-pages': 'warn',
+      'no-eval': 'error',
+      'no-implied-eval': 'error',
+      'no-new-func': 'error',
+      'no-return-await': 'warn',
+      'require-await': 'warn',
+    },
+  },
+];

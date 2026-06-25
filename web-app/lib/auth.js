@@ -1,15 +1,21 @@
 import { cookies } from 'next/headers';
 import axios from 'axios';
 import jwt from 'jsonwebtoken';
+import {
+    isKmutnbSsoLoginEnabled,
+    KMUTNB_SSO_SESSION_COOKIE_NAME,
+    normalizeKmutnbSsoUserInfo,
+    verifyKmutnbSsoSessionCookie,
+} from '@/lib/kmutnbSso';
+import { getKmutnbSsoSession } from '@/lib/kmutnbSsoSessionStore';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://reg4.kmutnb.ac.th/regapiweb2/api/th';
 
 export const AUTH_IDENTITY_COOKIE_NAME = 'reg_identity';
 export const AUTH_IDENTITY_COOKIE_MAX_AGE_SECONDS = 60 * 55;
 
-// In-memory cache for token validation (avoids hitting external API on every request)
 const _authCache = new Map();
-const AUTH_CACHE_TTL = 30_000; // 30 seconds — safe because REG tokens expire in ~55 min
+const AUTH_CACHE_TTL = 30_000;
 
 function _getCachedAuth(token) {
     const entry = _authCache.get(token);
@@ -21,8 +27,8 @@ function _setCachedAuth(token, result) {
     _authCache.set(token, { result, time: Date.now() });
     if (_authCache.size > 200) {
         const now = Date.now();
-        for (const [k, v] of _authCache) {
-            if (now - v.time > AUTH_CACHE_TTL) _authCache.delete(k);
+        for (const [key, value] of _authCache) {
+            if (now - value.time > AUTH_CACHE_TTL) _authCache.delete(key);
         }
     }
 }
@@ -61,6 +67,59 @@ function verifyIdentityCookie(identityCookie, tokenSession) {
     }
 }
 
+function buildSsoAuthContext(session) {
+    const ssoUser = normalizeKmutnbSsoUserInfo(session?.userInfo || {});
+    const userId = normalizeUserId(ssoUser.userCode);
+    if (!userId) {
+        console.warn('[Auth] KMUTNB SSO session was missing a usable student code');
+        return null;
+    }
+
+    return {
+        token: null,
+        userId,
+        tokenPayload: null,
+        upstream: ssoUser.raw,
+        authProvider: 'kmutnb_sso',
+        ssoSession: {
+            sessionId: session.sessionId,
+            subject: session.subject,
+            userCode: session.userCode,
+            scope: session.scope,
+            accessTokenExpiresAt: session.accessTokenExpiresAt,
+        },
+        ssoUser,
+        providerToken: session.accessToken || null,
+    };
+}
+
+async function getSsoAuthContext(cookieStore) {
+    if (!isKmutnbSsoLoginEnabled()) return null;
+
+    const sessionCookie = cookieStore.get(KMUTNB_SSO_SESSION_COOKIE_NAME)?.value;
+    if (!sessionCookie) return null;
+
+    let cookiePayload;
+    try {
+        cookiePayload = verifyKmutnbSsoSessionCookie(sessionCookie);
+    } catch {
+        console.warn('[Auth] KMUTNB SSO session cookie is invalid');
+        return null;
+    }
+
+    try {
+        const session = await getKmutnbSsoSession(cookiePayload.sessionId);
+        if (!session) {
+            console.warn('[Auth] KMUTNB SSO session row was not found');
+            return null;
+        }
+        return buildSsoAuthContext(session);
+    } catch (error) {
+        console.error('[Auth] Failed to restore KMUTNB SSO session:', error.message);
+        return null;
+    }
+}
+
 export function createSignedAuthIdentityCookie({ userCode, session }) {
     const normalizedUserId = normalizeUserId(userCode);
     if (!normalizedUserId || !session) {
@@ -77,35 +136,38 @@ export function createSignedAuthIdentityCookie({ userCode, session }) {
     );
 }
 
-/**
- * Validates the upstream session token and returns the authenticated identity.
- *
- * Source of truth order:
- * 1. Validated upstream response (`Getacadstd`) when it exposes a student code.
- * 2. Server-signed identity cookie bound to the validated token session.
- */
-export async function getAuthContext() {
+async function resolveAuthContext() {
     const cookieStore = await cookies();
     const token = cookieStore.get('reg_token')?.value;
 
     if (!token) {
+        const ssoAuthContext = await getSsoAuthContext(cookieStore);
+        if (ssoAuthContext) {
+            return { authContext: ssoAuthContext, reason: 'SSO_SESSION' };
+        }
+
         console.log('[Auth] No token found in cookies');
-        return null;
+        return { authContext: null, reason: 'TOKEN_MISSING' };
     }
 
     const cached = _getCachedAuth(token);
-    if (cached !== undefined) return cached;
+    if (cached !== undefined) {
+        return {
+            authContext: cached,
+            reason: cached ? 'CACHE_HIT' : 'TOKEN_REJECTED_CACHED',
+        };
+    }
 
     try {
         const authRes = await axios.get(`${BASE_URL}/Schg/Getacadstd`, {
             headers: { 'Authorization': `Bearer ${token}` },
-            validateStatus: status => status < 500
+            validateStatus: (status) => status < 500,
         });
 
         if (authRes.status !== 200 || !authRes.data) {
             console.log(`[Auth] External API rejected token. Status: ${authRes.status}`);
             _setCachedAuth(token, null);
-            return null;
+            return { authContext: null, reason: 'TOKEN_REJECTED' };
         }
 
         const tokenPayload = decodeJwtPayload(token);
@@ -118,23 +180,32 @@ export async function getAuthContext() {
         if (upstreamUserId && signedUserId && upstreamUserId !== signedUserId) {
             console.warn('[Auth] Identity mismatch between upstream response and signed cookie');
             _setCachedAuth(token, null);
-            return null;
+            return { authContext: null, reason: 'IDENTITY_MISMATCH' };
         }
 
         const userId = upstreamUserId || signedUserId;
         if (!userId) {
             console.warn('[Auth] Token validated but no trusted identity was available');
             _setCachedAuth(token, null);
-            return null;
+            return { authContext: null, reason: 'IDENTITY_MISSING' };
         }
 
-        const result = { token, userId, tokenPayload, upstream: authRes.data };
+        const result = { token, userId, tokenPayload, upstream: authRes.data, authProvider: 'legacy_reg' };
         _setCachedAuth(token, result);
-        return result;
+        return { authContext: result, reason: 'LEGACY_REG_TOKEN' };
     } catch (err) {
         console.error('[Auth] Check failed:', err.message);
-        return null;
+        return { authContext: null, reason: 'AUTH_CHECK_FAILED' };
     }
+}
+
+export async function getAuthContextStatus() {
+    return resolveAuthContext();
+}
+
+export async function getAuthContext() {
+    const { authContext } = await resolveAuthContext();
+    return authContext;
 }
 
 export async function getAuthUser() {

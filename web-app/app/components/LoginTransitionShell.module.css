@@ -1,0 +1,4185 @@
+.loginTransitionStage {
+  --login-cover-red: #5c2626;
+  --login-nav-gray: #e8e7e7;
+  --login-middle-gray: #f3f3f3;
+  --login-white: #ffffff;
+  --login-backdrop: #070707;
+  --login-menu-transition-dark: #141414;
+  --login-nav-width: 365px;
+  --login-tab-width: 667px;
+  --login-button-duration: 720ms;
+  --login-form-collapse-delay: 1080ms;
+  --login-text-collapse-duration: 620ms;
+  --login-form-collapse-duration: 860ms;
+  --login-logout-button-duration: 720ms;
+  --login-grade-cell-out-duration: 620ms;
+  --login-logo-duration: 2100ms;
+  --login-tab-delay: 2820ms;
+  --login-transition-duration: 1200ms;
+  --login-canvas-edge-shadow: 0 0 0 1px rgb(255 255 255 / 0.06);
+  --login-canvas-background: var(--login-white);
+}
+
+.loginTransitionStage {
+  position: relative;
+  display: grid;
+  place-items: start center;
+  width: 100%;
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background:
+    radial-gradient(circle at 50% 0%, rgb(255 255 255 / 0.08), transparent 34%),
+    var(--login-backdrop);
+}
+
+.loginTransitionStage.isIdle,
+.loginTransitionStage.isRunning,
+.loginTransitionStage.isLoggingOut {
+  --login-canvas-edge-shadow: -1px 0 0 0 var(--login-cover-red);
+  --login-canvas-background: var(--login-cover-red);
+}
+
+@media (min-width: 901px) {
+  .loginTransitionStage.isIdle::after,
+  .loginTransitionStage.isRunning::after,
+  .loginTransitionStage.isLoggingOut::after {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc((100vw - (1440px * var(--login-canvas-scale, min(1, calc(100vw / 1440), calc(100dvh / 1024))))) / 2 - 1px);
+    z-index: 6;
+    width: 4px;
+    content: "";
+    background: var(--login-cover-red);
+    pointer-events: none;
+  }
+}
+
+.loginTransitionCanvas {
+  position: relative;
+  width: 100%;
+  min-height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: var(--login-canvas-background);
+}
+
+@media (min-width: 901px) {
+  .loginTransitionStage {
+    min-height: 0;
+    place-items: start center;
+  }
+
+  .loginTransitionCanvas {
+    width: 1440px;
+    height: 1024px;
+    min-height: 0;
+    flex: 0 0 auto;
+    transform: scale(var(--login-canvas-scale, min(1, calc(100vw / 1440px), calc(100dvh / 1024px))));
+    transform-origin: top center;
+    box-shadow:
+      -36px 0 96px rgb(0 0 0 / 0.46),
+      36px 0 96px rgb(0 0 0 / 0.46),
+      var(--login-canvas-edge-shadow);
+  }
+}
+
+.loginTransitionHero {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: var(--login-nav-width) 1fr;
+}
+
+.loginTransitionNavRippleLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.loginTransitionNavWaterWaveSet {
+  pointer-events: none;
+}
+
+.loginTransitionNavWaterWave {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  transform-box: fill-box;
+  transform-origin: center;
+  will-change: r, stroke-width, opacity, stroke-dashoffset;
+  animation: loginWaterWaveExpand 2200ms cubic-bezier(0.16, 1, 0.3, 1) var(--wave-delay, 0ms) both;
+}
+
+.loginTransitionNavWaterWave.isNav {
+  stroke: var(--login-white);
+}
+
+.loginTransitionNavWaterWave.isMain {
+  stroke: var(--login-menu-transition-dark);
+}
+
+.loginTransitionNavWaterWave.isCrest {
+  animation-name: loginWaterWaveExpand;
+}
+
+.loginTransitionNavWaterWave.isSwell {
+  animation-name: loginWaterWaveSwell;
+}
+
+.loginTransitionNavWaterWave.isWake {
+  animation-name: loginWaterWaveWake;
+}
+
+.loginTransitionNav {
+  position: relative;
+  background: var(--login-nav-gray);
+}
+
+.loginTransitionUserName {
+  position: absolute;
+  left: 50%;
+  top: calc(274 / 1024 * 100%);
+  width: 193px;
+  height: calc(24 / 1024 * 100%);
+  --hero-char-count: 17;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateX(-50%);
+  color: #000;
+  font-family: var(--font-text-me-one), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(10px, 1.953125vh, 20px);
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.loginTransitionUserMeta {
+  position: absolute;
+  left: 50%;
+  top: calc(304 / 1024 * 100%);
+  width: 144px;
+  height: calc(22 / 1024 * 100%);
+  --hero-char-count: 16;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateX(-50%);
+  color: #000;
+  font-family: var(--font-text-me-one), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(9px, 1.7578125vh, 18px);
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.loginTransitionNavGrade {
+  position: absolute;
+  left: 50%;
+  top: calc(391 / 1024 * 100%);
+  width: 55px;
+  height: calc(26 / 1024 * 100%);
+  --hero-char-count: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateX(-50%);
+  color: #000;
+  font-family: var(--font-text-me-one), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(10px, 1.953125vh, 20px);
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.loginTransitionNavRegistry {
+  position: absolute;
+  left: 50%;
+  top: calc(447 / 1024 * 100%);
+  width: 76px;
+  height: calc(24 / 1024 * 100%);
+  --hero-char-count: 8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateX(-50%);
+  color: #000;
+  font-family: var(--font-text-me-one), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(10px, 1.953125vh, 20px);
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.loginTransitionNavTextPrimary {
+  position: absolute;
+  left: 50%;
+  top: calc(495 / 1024 * 100%);
+  width: 40px;
+  height: calc(24 / 1024 * 100%);
+  --hero-char-count: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateX(-50%);
+  color: #000;
+  font-family: var(--font-text-me-one), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(10px, 1.953125vh, 20px);
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.loginTransitionNavTextSecondary,
+.loginTransitionNavPortfolio {
+  position: absolute;
+  left: 50%;
+  top: calc(549 / 1024 * 100%);
+  width: 49px;
+  height: calc(24 / 1024 * 100%);
+  --hero-char-count: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateX(-50%);
+  color: #000;
+  font-family: var(--font-text-me-one), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(10px, 1.953125vh, 20px);
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.loginTransitionNavLoan {
+  position: absolute;
+  left: 50%;
+  top: calc(603 / 1024 * 100%);
+  width: 45px;
+  height: calc(24 / 1024 * 100%);
+  --hero-char-count: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateX(-50%);
+  color: #000;
+  font-family: var(--font-text-me-one), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(10px, 1.953125vh, 20px);
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.loginTransitionNavSchedule {
+  position: absolute;
+  left: 50%;
+  top: calc(657 / 1024 * 100%);
+  width: 87px;
+  height: calc(24 / 1024 * 100%);
+  --hero-char-count: 8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateX(-50%);
+  color: #000;
+  font-family: var(--font-text-me-one), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(10px, 1.953125vh, 20px);
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.loginTransitionNavSetting {
+  position: absolute;
+  left: 50%;
+  bottom: calc(45 / 1024 * 100%);
+  width: 69px;
+  height: calc(24 / 1024 * 100%);
+  --hero-char-count: 7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateX(-50%);
+  color: #000;
+  font-family: var(--font-text-me-one), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(10px, 1.953125vh, 20px);
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.loginTransitionUserName,
+.loginTransitionUserMeta,
+.loginTransitionNavGrade,
+.loginTransitionNavRegistry,
+.loginTransitionNavTextPrimary,
+.loginTransitionNavTextSecondary,
+.loginTransitionNavPortfolio,
+.loginTransitionNavLoan,
+.loginTransitionNavSchedule,
+.loginTransitionNavSetting {
+  z-index: 4;
+  opacity: 0;
+  transform-origin: center;
+}
+
+.loginTransitionStage.isComplete .loginTransitionUserName,
+.loginTransitionStage.isComplete .loginTransitionUserMeta,
+.loginTransitionStage.isComplete .loginTransitionNavGrade,
+.loginTransitionStage.isComplete .loginTransitionNavRegistry,
+.loginTransitionStage.isComplete .loginTransitionNavTextPrimary,
+.loginTransitionStage.isComplete .loginTransitionNavTextSecondary,
+.loginTransitionStage.isComplete .loginTransitionNavPortfolio,
+.loginTransitionStage.isComplete .loginTransitionNavLoan,
+.loginTransitionStage.isComplete .loginTransitionNavSchedule,
+.loginTransitionStage.isComplete .loginTransitionNavSetting {
+  opacity: 1;
+}
+
+.loginTransitionStage.isComplete .loginTransitionUserName {
+  --hero-line-delay: 0ms;
+}
+
+.loginTransitionStage.isComplete .loginTransitionUserMeta {
+  --hero-line-delay: 80ms;
+}
+
+.loginTransitionStage.isComplete .loginTransitionNavGrade {
+  --hero-line-delay: 180ms;
+}
+
+.loginTransitionStage.isComplete .loginTransitionNavRegistry {
+  --hero-line-delay: 260ms;
+}
+
+.loginTransitionStage.isComplete .loginTransitionNavTextPrimary {
+  --hero-line-delay: 340ms;
+}
+
+.loginTransitionStage.isComplete .loginTransitionNavTextSecondary,
+.loginTransitionStage.isComplete .loginTransitionNavPortfolio {
+  --hero-line-delay: 420ms;
+}
+
+.loginTransitionStage.isComplete .loginTransitionNavLoan {
+  --hero-line-delay: 500ms;
+}
+
+.loginTransitionStage.isComplete .loginTransitionNavSchedule {
+  --hero-line-delay: 580ms;
+}
+
+.loginTransitionStage.isComplete .loginTransitionNavSetting {
+  --hero-line-delay: 760ms;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionUserName,
+.loginTransitionStage.isLoggingOut .loginTransitionUserMeta,
+.loginTransitionStage.isLoggingOut .loginTransitionNavGrade,
+.loginTransitionStage.isLoggingOut .loginTransitionNavRegistry,
+.loginTransitionStage.isLoggingOut .loginTransitionNavTextPrimary,
+.loginTransitionStage.isLoggingOut .loginTransitionNavTextSecondary,
+.loginTransitionStage.isLoggingOut .loginTransitionNavPortfolio,
+.loginTransitionStage.isLoggingOut .loginTransitionNavLoan,
+.loginTransitionStage.isLoggingOut .loginTransitionNavSchedule,
+.loginTransitionStage.isLoggingOut .loginTransitionNavSetting {
+  opacity: 1;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionNavSetting {
+  --hero-line-delay: 0ms;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionNavSchedule {
+  --hero-line-delay: 45ms;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionNavLoan {
+  --hero-line-delay: 90ms;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionNavTextSecondary,
+.loginTransitionStage.isLoggingOut .loginTransitionNavPortfolio {
+  --hero-line-delay: 135ms;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionNavTextPrimary {
+  --hero-line-delay: 180ms;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionNavRegistry {
+  --hero-line-delay: 225ms;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionNavGrade {
+  --hero-line-delay: 270ms;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionUserMeta {
+  --hero-line-delay: 315ms;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionUserName {
+  --hero-line-delay: 360ms;
+}
+
+.loginTransitionHeroTextChar {
+  position: relative;
+  display: inline-block;
+  opacity: 0;
+  transform-origin: center;
+}
+
+.loginTransitionHeroTextSpace {
+  width: 0.36em;
+}
+
+.loginTransitionHeroTextChar::after {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  content: "";
+  background: currentColor;
+  opacity: 0;
+  transform: translateY(-50%) scaleX(0);
+  transform-origin: center;
+}
+
+.loginTransitionStage.isComplete .loginTransitionHeroTextChar {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
+.loginTransitionStage.isComplete .loginTransitionHeroTextChar::after {
+  animation: none;
+  opacity: 0;
+  transform: translateY(-50%) scaleX(0);
+}
+
+.loginTransitionStage.isComplete.isNavTextRevealing .loginTransitionHeroTextChar {
+  animation: loginHeroCharTvOpen 300ms cubic-bezier(0.76, 0, 0.24, 1)
+    calc(var(--hero-line-delay) + ((var(--hero-char-count) - 1 - var(--i)) * 24ms))
+    both;
+}
+
+.loginTransitionStage.isComplete.isNavTextRevealing .loginTransitionHeroTextChar::after {
+  animation: loginHeroCharLineOpen 300ms cubic-bezier(0.76, 0, 0.24, 1)
+    calc(var(--hero-line-delay) + ((var(--hero-char-count) - 1 - var(--i)) * 24ms))
+    both;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionHeroTextChar {
+  animation: loginHeroCharTvCloseRight 300ms cubic-bezier(0.76, 0, 0.24, 1)
+    calc(var(--hero-line-delay) + (var(--i) * 18ms)) both;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionHeroTextChar::after {
+  animation: loginHeroCharLineClose 300ms cubic-bezier(0.76, 0, 0.24, 1)
+    calc(var(--hero-line-delay) + (var(--i) * 18ms)) both;
+}
+
+.loginTransitionMain {
+  position: relative;
+  min-width: 0;
+  background: var(--login-white);
+}
+.productionHeroStage .loginTransitionMain {
+  isolation: isolate;
+  background: transparent;
+}
+
+.productionHeroStage .loginTransitionMain::before {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  content: "";
+  background:
+    radial-gradient(circle at 0% 0%, rgb(255 255 255 / 0.92), transparent 26%),
+    linear-gradient(135deg, rgb(255 255 255 / 0.68), rgb(243 243 243 / 0.44));
+  box-shadow: inset 1px 0 0 rgb(255 255 255 / 0.42);
+  backdrop-filter: blur(22px) saturate(155%);
+  -webkit-backdrop-filter: blur(22px) saturate(155%);
+  pointer-events: none;
+}
+
+
+.loginTransitionHeroPanel {
+  position: absolute;
+  right: 35px;
+  bottom: 150px;
+  width: 1005px;
+  height: 600px;
+  z-index: 4;
+  --hero-panel-line-delay: 760ms;
+  --hero-panel-surface-delay: 1860ms;
+  background: transparent;
+  border: 1px solid #ffffff;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.loginTransitionHeroPanel::before {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  z-index: 2;
+  width: 50%;
+  height: 1px;
+  content: "";
+  background: var(--login-nav-gray);
+  transform: translateY(-50%) scaleX(0);
+  transform-origin: right center;
+}
+
+.loginTransitionStage.isComplete .loginTransitionHeroPanel,
+.loginTransitionStage.isLoggingOut .loginTransitionHeroPanel {
+  opacity: 1;
+}
+
+.loginTransitionStage.isComplete .loginTransitionHeroPanel {
+  pointer-events: auto;
+}
+
+.loginTransitionStage.isComplete .loginTransitionHeroPanel::before {
+  animation: loginHeroPanelLineIn 260ms cubic-bezier(0.76, 0, 0.24, 1)
+    var(--hero-panel-line-delay) both;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionHeroPanel::before {
+  animation: loginHeroPanelLineOut 220ms cubic-bezier(0.76, 0, 0.24, 1)
+    640ms both;
+}
+
+.loginTransitionHeroPanelSurface,
+.loginTransitionHeroPanelRevealLayer {
+  position: absolute;
+  inset: 0;
+}
+
+.loginTransitionHeroPanelSurface {
+  z-index: 0;
+  background: var(--login-nav-gray);
+  opacity: 0;
+}
+
+.productionHeroStage .loginTransitionHeroPanel {
+  isolation: isolate;
+  border-color: rgb(255 255 255 / 0.44);
+  box-shadow: 0 28px 120px rgb(7 7 7 / 0.16);
+}
+
+.productionHeroStage .loginTransitionHeroPanelSurface {
+  background:
+    radial-gradient(circle at 18% 12%, rgb(255 255 255 / 0.94), transparent 34%),
+    linear-gradient(145deg, rgb(255 255 255 / 0.9), rgb(242 242 242 / 0.84));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.68),
+    inset 0 -1px 0 rgb(255 255 255 / 0.22);
+  backdrop-filter: blur(36px) saturate(165%);
+  -webkit-backdrop-filter: blur(36px) saturate(165%);
+}
+
+.loginTransitionHeroPanelRevealLayer {
+  z-index: 1;
+  opacity: 0;
+}
+
+.loginTransitionHeroPanelContent {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: auto;
+  padding: clamp(24px, 4vw, 56px);
+  color: var(--login-menu-transition-dark);
+  font-family: var(--font-prompt), ui-sans-serif, system-ui, sans-serif;
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 360ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 360ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: calc(var(--hero-panel-surface-delay) + 160ms);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(20, 20, 20, 0.28) transparent;
+}
+
+.loginTransitionHeroPanelContent::-webkit-scrollbar {
+  width: 8px;
+}
+
+.loginTransitionHeroPanelContent::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.loginTransitionHeroPanelContent::-webkit-scrollbar-thumb {
+  background: rgba(20, 20, 20, 0.24);
+}
+
+.loginTransitionStage.isComplete .loginTransitionHeroPanelContent {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionHeroPanelContent,
+.loginTransitionStage.isMenuTransitioning .loginTransitionHeroPanelContent {
+  opacity: 0;
+  transform: translateY(10px);
+  transition-delay: 0ms;
+}
+
+.loginTransitionStage.isComplete .loginTransitionHeroPanelSurface {
+  animation: loginHeroPanelSurfaceIn 90ms linear var(--hero-panel-surface-delay) both;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionHeroPanelSurface {
+  opacity: 0;
+}
+
+.loginTransitionStage.isComplete .loginTransitionHeroPanelRevealLayer {
+  animation: loginHeroPanelOverlayOut 90ms linear var(--hero-panel-surface-delay) both;
+  opacity: 1;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionHeroPanelRevealLayer {
+  opacity: 1;
+}
+
+.loginTransitionHeroPanelTooth {
+  position: absolute;
+  left: calc(var(--i) * 100% / 24);
+  width: calc(100% / 24 + 1px);
+  height: 50%;
+  background: var(--login-nav-gray);
+  transform: scaleY(0);
+  will-change: transform;
+}
+
+.loginTransitionHeroPanelTooth.isTop {
+  bottom: 50%;
+  transform-origin: center bottom;
+}
+
+.loginTransitionHeroPanelTooth.isBottom {
+  top: 50%;
+  transform-origin: center top;
+}
+
+.loginTransitionStage.isComplete .loginTransitionHeroPanelTooth {
+  animation: loginHeroPanelToothIn 360ms cubic-bezier(0.76, 0, 0.24, 1)
+    calc(var(--hero-panel-line-delay) + 220ms + ((23 - var(--i)) * 22ms)) both;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionHeroPanelTooth {
+  animation: loginHeroPanelToothOut 280ms cubic-bezier(0.76, 0, 0.24, 1)
+    calc(var(--i) * 18ms) both;
+}
+
+
+.loginTransitionGradeTerm {
+  position: absolute;
+  z-index: 3;
+  width: 94px;
+  height: 24px;
+  display: grid;
+  grid-template-columns: 15px 9px repeat(4, 15px);
+  column-gap: 1.5px;
+  align-items: center;
+  justify-content: start;
+  justify-items: center;
+  color: #000;
+  font-family: var(--font-text-me-one), ui-sans-serif, system-ui, sans-serif;
+  font-size: 20px;
+  line-height: 1;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  white-space: nowrap;
+  will-change: color, opacity, transform;
+  --grade-cell-duration: var(--grade-term-duration);
+  --grade-cell-delay: calc(var(--grade-render-base-delay, var(--hero-panel-surface-delay)) + 120ms);
+  --grade-cell-out-delay: 0ms;
+  --grade-cell-text-height: 1em;
+  --grade-cell-line-offset: calc(1em + 2px);
+  padding-right: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.loginTransitionGradeTermChar {
+  display: block;
+  width: 100%;
+  line-height: 1;
+  text-align: center;
+}
+
+.loginTransitionGradeTerm.isTerm1 {
+  left: 53px;
+  top: 251px;
+  --grade-term-duration: 1040ms;
+}
+
+.loginTransitionGradeTerm.isTerm2 {
+  left: 53px;
+  top: 288px;
+  --grade-term-duration: 900ms;
+  --grade-cell-out-delay: 45ms;
+}
+
+.loginTransitionGradeTerm.isTerm3 {
+  left: 53px;
+  top: 325px;
+  --grade-term-duration: 760ms;
+  --grade-cell-out-delay: 90ms;
+}
+
+.loginTransitionStage.isGradeInitialRendering[data-active-menu="grade"] .loginTransitionGradeTerm {
+  animation: loginGradeCellTextIn var(--grade-term-duration) cubic-bezier(0.76, 0, 0.24, 1)
+    calc(var(--grade-render-base-delay, var(--hero-panel-surface-delay)) + 120ms) both;
+}
+
+.loginTransitionStage.isGradeMenuRendering {
+  --grade-render-base-delay: 0ms;
+}
+
+.loginTransitionStage.isComplete[data-active-menu="grade"]:not(.isMenuTransitioning):not(.isLoggingOut):not(.isGradeInitialRendering) .loginTransitionGradeTerm {
+  opacity: 1;
+}
+
+.loginTransitionStage.isMenuTransitioning .loginTransitionGradeTerm,
+.loginTransitionStage.isLoggingOut .loginTransitionGradeTerm,
+.loginTransitionStage:not([data-active-menu="grade"]) .loginTransitionGradeTerm {
+  opacity: 0;
+}
+
+.loginTransitionGradeSubject {
+  position: absolute;
+  left: 200px;
+  top: var(--subject-top);
+  z-index: 3;
+  width: min(480px, calc(100% - 540px));
+  height: var(--subject-height);
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  column-gap: 14px;
+  align-items: start;
+  color: #000;
+  font-family: var(--font-text-me-one), ui-sans-serif, system-ui, sans-serif;
+  font-size: 20px;
+  line-height: 1;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  white-space: nowrap;
+  will-change: color, opacity, transform;
+  --grade-cell-duration: var(--subject-duration);
+  --grade-cell-delay: calc(var(--grade-render-base-delay, var(--hero-panel-surface-delay)) + 190ms);
+  --grade-cell-out-delay: 60ms;
+  --grade-cell-text-height: 1em;
+  --grade-cell-line-offset: calc(1em + 2px);
+  padding-right: 4px;
+}
+
+.loginTransitionGradeCode {
+  display: grid;
+  grid-template-columns: repeat(9, 13.55px);
+  column-gap: 1.15px;
+  justify-content: start;
+  justify-items: center;
+  width: 132px;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: 0.015em;
+}
+
+.loginTransitionGradeCodeChar {
+  display: block;
+  width: 100%;
+  line-height: 1;
+  text-align: center;
+}
+
+.loginTransitionGradeCourseName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.loginTransitionGradeCourseName:first-child {
+  grid-column: 1 / -1;
+}
+
+.loginTransitionStage.isGradeInitialRendering[data-active-menu="grade"] .loginTransitionGradeSubject {
+  animation: loginGradeCellTextIn var(--subject-duration) cubic-bezier(0.76, 0, 0.24, 1)
+    calc(var(--grade-render-base-delay, var(--hero-panel-surface-delay)) + 190ms) both;
+}
+
+.loginTransitionStage.isComplete[data-active-menu="grade"]:not(.isMenuTransitioning):not(.isLoggingOut):not(.isGradeInitialRendering) .loginTransitionGradeSubject {
+  opacity: 1;
+}
+
+.loginTransitionStage.isMenuTransitioning .loginTransitionGradeSubject,
+.loginTransitionStage.isLoggingOut .loginTransitionGradeSubject,
+.loginTransitionStage:not([data-active-menu="grade"]) .loginTransitionGradeSubject {
+  opacity: 0;
+}
+
+.loginTransitionGradeUnit {
+  position: absolute;
+  left: 695px;
+  top: var(--unit-top);
+  z-index: 3;
+  width: 100px;
+  height: var(--unit-height);
+  display: block;
+  color: #000;
+  font-family: var(--font-text-me-one), ui-sans-serif, system-ui, sans-serif;
+  font-size: 20px;
+  line-height: 1;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  will-change: color, opacity, transform;
+  --grade-cell-duration: var(--unit-duration);
+  --grade-cell-delay: calc(var(--grade-render-base-delay, var(--hero-panel-surface-delay)) + 250ms);
+  --grade-cell-out-delay: 105ms;
+  --grade-cell-text-height: 1em;
+  --grade-cell-line-offset: calc(1em + 2px);
+  padding-right: 4px;
+}
+
+.loginTransitionStage.isGradeInitialRendering[data-active-menu="grade"] .loginTransitionGradeUnit {
+  animation: loginGradeCellTextIn var(--unit-duration) cubic-bezier(0.76, 0, 0.24, 1)
+    calc(var(--grade-render-base-delay, var(--hero-panel-surface-delay)) + 250ms) both;
+}
+
+.loginTransitionStage.isComplete[data-active-menu="grade"]:not(.isMenuTransitioning):not(.isLoggingOut):not(.isGradeInitialRendering) .loginTransitionGradeUnit {
+  opacity: 1;
+}
+
+.loginTransitionStage.isMenuTransitioning .loginTransitionGradeUnit,
+.loginTransitionStage.isLoggingOut .loginTransitionGradeUnit,
+.loginTransitionStage:not([data-active-menu="grade"]) .loginTransitionGradeUnit {
+  opacity: 0;
+}
+
+.loginTransitionGradeScore {
+  position: absolute;
+  left: 864px;
+  top: var(--grade-score-top);
+  z-index: 3;
+  width: 100px;
+  height: var(--grade-score-height);
+  display: block;
+  color: #000;
+  font-family: var(--font-text-me-one), ui-sans-serif, system-ui, sans-serif;
+  font-size: 20px;
+  line-height: 1;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  will-change: color, opacity, transform;
+  --grade-cell-duration: var(--grade-score-duration);
+  --grade-cell-delay: calc(var(--grade-render-base-delay, var(--hero-panel-surface-delay)) + 310ms);
+  --grade-cell-out-delay: 150ms;
+  --grade-cell-text-height: 1em;
+  --grade-cell-line-offset: calc(1em + 2px);
+  padding-right: 4px;
+}
+
+.loginTransitionStage.isGradeInitialRendering[data-active-menu="grade"] .loginTransitionGradeScore {
+  animation: loginGradeCellTextIn var(--grade-score-duration) cubic-bezier(0.76, 0, 0.24, 1)
+    calc(var(--grade-render-base-delay, var(--hero-panel-surface-delay)) + 310ms) both;
+}
+
+.loginTransitionStage.isComplete[data-active-menu="grade"]:not(.isMenuTransitioning):not(.isLoggingOut):not(.isGradeInitialRendering) .loginTransitionGradeScore {
+  opacity: 1;
+}
+
+.loginTransitionStage.isMenuTransitioning .loginTransitionGradeScore,
+.loginTransitionStage.isLoggingOut .loginTransitionGradeScore,
+.loginTransitionStage:not([data-active-menu="grade"]) .loginTransitionGradeScore {
+  opacity: 0;
+}
+
+.loginTransitionGradeTerm::before,
+.loginTransitionGradeSubject::before,
+.loginTransitionGradeUnit::before,
+.loginTransitionGradeScore::before {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--grade-cell-line-offset, calc(1em + 2px));
+  bottom: auto;
+  z-index: 1;
+  height: 1px;
+  content: "";
+  background: #000;
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: left center;
+  pointer-events: none;
+}
+
+.loginTransitionGradeTerm::after,
+.loginTransitionGradeSubject::after,
+.loginTransitionGradeUnit::after,
+.loginTransitionGradeScore::after {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: var(--grade-cell-text-height, 1em);
+  z-index: 2;
+  content: "";
+  background: repeating-linear-gradient(
+    90deg,
+    #000 0 calc(12.5% - 1px),
+    transparent calc(12.5% - 1px) 12.5%
+  );
+  opacity: 0;
+  transform: scaleY(0);
+  transform-origin: center bottom;
+  pointer-events: none;
+}
+
+.loginTransitionStage.isGradeInitialRendering[data-active-menu="grade"] .loginTransitionGradeTerm::before,
+.loginTransitionStage.isGradeInitialRendering[data-active-menu="grade"] .loginTransitionGradeSubject::before,
+.loginTransitionStage.isGradeInitialRendering[data-active-menu="grade"] .loginTransitionGradeUnit::before,
+.loginTransitionStage.isGradeInitialRendering[data-active-menu="grade"] .loginTransitionGradeScore::before {
+  animation: loginGradeCellLineIn var(--grade-cell-duration, 920ms)
+    cubic-bezier(0.76, 0, 0.24, 1) var(--grade-cell-delay, 0ms) both;
+}
+
+.loginTransitionStage.isGradeInitialRendering[data-active-menu="grade"] .loginTransitionGradeTerm::after,
+.loginTransitionStage.isGradeInitialRendering[data-active-menu="grade"] .loginTransitionGradeSubject::after,
+.loginTransitionStage.isGradeInitialRendering[data-active-menu="grade"] .loginTransitionGradeUnit::after,
+.loginTransitionStage.isGradeInitialRendering[data-active-menu="grade"] .loginTransitionGradeScore::after {
+  animation: loginGradeCellTeethIn var(--grade-cell-duration, 920ms)
+    cubic-bezier(0.76, 0, 0.24, 1) var(--grade-cell-delay, 0ms) both;
+}
+
+.loginTransitionStage.isLoggingOut[data-active-menu="grade"] .loginTransitionGradeTerm,
+.loginTransitionStage.isLoggingOut[data-active-menu="grade"] .loginTransitionGradeSubject,
+.loginTransitionStage.isLoggingOut[data-active-menu="grade"] .loginTransitionGradeUnit,
+.loginTransitionStage.isLoggingOut[data-active-menu="grade"] .loginTransitionGradeScore {
+  z-index: 4;
+  opacity: 1;
+  animation: loginGradeCellTextOut var(--login-grade-cell-out-duration)
+    cubic-bezier(0.76, 0, 0.24, 1) var(--grade-cell-out-delay, 0ms) both;
+}
+
+.loginTransitionStage.isLoggingOut[data-active-menu="grade"] .loginTransitionGradeTerm::before,
+.loginTransitionStage.isLoggingOut[data-active-menu="grade"] .loginTransitionGradeSubject::before,
+.loginTransitionStage.isLoggingOut[data-active-menu="grade"] .loginTransitionGradeUnit::before,
+.loginTransitionStage.isLoggingOut[data-active-menu="grade"] .loginTransitionGradeScore::before {
+  animation: loginGradeCellLineOut var(--login-grade-cell-out-duration)
+    cubic-bezier(0.76, 0, 0.24, 1) var(--grade-cell-out-delay, 0ms) both;
+}
+
+.loginTransitionStage.isLoggingOut[data-active-menu="grade"] .loginTransitionGradeTerm::after,
+.loginTransitionStage.isLoggingOut[data-active-menu="grade"] .loginTransitionGradeSubject::after,
+.loginTransitionStage.isLoggingOut[data-active-menu="grade"] .loginTransitionGradeUnit::after,
+.loginTransitionStage.isLoggingOut[data-active-menu="grade"] .loginTransitionGradeScore::after {
+  animation: loginGradeCellTeethOut var(--login-grade-cell-out-duration)
+    cubic-bezier(0.76, 0, 0.24, 1) var(--grade-cell-out-delay, 0ms) both;
+}
+
+.loginTransitionStage.isComplete.isGradeWheeling[data-active-menu="grade"] .loginTransitionGradeTerm,
+.loginTransitionStage.isComplete.isGradeWheeling[data-active-menu="grade"] .loginTransitionGradeSubject,
+.loginTransitionStage.isComplete.isGradeWheeling[data-active-menu="grade"] .loginTransitionGradeUnit,
+.loginTransitionStage.isComplete.isGradeWheeling[data-active-menu="grade"] .loginTransitionGradeScore {
+  opacity: 0.94;
+  filter: blur(0.34px);
+  transform: translateY(0);
+  transition: filter 120ms linear, opacity 120ms linear;
+}
+
+.loginTransitionStage.isComplete:is(.isGradeFragmentCoarse, .isGradeFragmentMid, .isGradeFragmentFine)[data-active-menu="grade"] .loginTransitionGradeTerm,
+.loginTransitionStage.isComplete:is(.isGradeFragmentCoarse, .isGradeFragmentMid, .isGradeFragmentFine)[data-active-menu="grade"] .loginTransitionGradeSubject,
+.loginTransitionStage.isComplete:is(.isGradeFragmentCoarse, .isGradeFragmentMid, .isGradeFragmentFine)[data-active-menu="grade"] .loginTransitionGradeUnit,
+.loginTransitionStage.isComplete:is(.isGradeFragmentCoarse, .isGradeFragmentMid, .isGradeFragmentFine)[data-active-menu="grade"] .loginTransitionGradeScore {
+  color: rgba(0, 0, 0, 0.58);
+  text-shadow: 1px 0 0 rgba(0, 0, 0, 0.2), -1px 0 0 rgba(0, 0, 0, 0.12);
+}
+
+.loginTransitionStage.isComplete:is(.isGradeFragmentCoarse, .isGradeFragmentMid, .isGradeFragmentFine)[data-active-menu="grade"] .loginTransitionGradeTerm::before,
+.loginTransitionStage.isComplete:is(.isGradeFragmentCoarse, .isGradeFragmentMid, .isGradeFragmentFine)[data-active-menu="grade"] .loginTransitionGradeSubject::before,
+.loginTransitionStage.isComplete:is(.isGradeFragmentCoarse, .isGradeFragmentMid, .isGradeFragmentFine)[data-active-menu="grade"] .loginTransitionGradeUnit::before,
+.loginTransitionStage.isComplete:is(.isGradeFragmentCoarse, .isGradeFragmentMid, .isGradeFragmentFine)[data-active-menu="grade"] .loginTransitionGradeScore::before,
+.loginTransitionStage.isComplete:is(.isGradeFragmentCoarse, .isGradeFragmentMid, .isGradeFragmentFine)[data-active-menu="grade"] .loginTransitionGradeTerm::after,
+.loginTransitionStage.isComplete:is(.isGradeFragmentCoarse, .isGradeFragmentMid, .isGradeFragmentFine)[data-active-menu="grade"] .loginTransitionGradeSubject::after,
+.loginTransitionStage.isComplete:is(.isGradeFragmentCoarse, .isGradeFragmentMid, .isGradeFragmentFine)[data-active-menu="grade"] .loginTransitionGradeUnit::after,
+.loginTransitionStage.isComplete:is(.isGradeFragmentCoarse, .isGradeFragmentMid, .isGradeFragmentFine)[data-active-menu="grade"] .loginTransitionGradeScore::after {
+  inset: 0 auto auto 0;
+  z-index: 4;
+  width: max-content;
+  min-width: 100%;
+  height: 1em;
+  content: attr(aria-label);
+  background: transparent;
+  color: #000;
+  font: inherit;
+  line-height: 1;
+  opacity: 0.42;
+  transform: translate(1px, -1px);
+  transform-origin: center;
+  animation: none;
+  -webkit-mask-image: repeating-linear-gradient(to bottom, #000 0 8px, transparent 8px 13px);
+  mask-image: repeating-linear-gradient(to bottom, #000 0 8px, transparent 8px 13px);
+}
+
+.loginTransitionStage.isComplete:is(.isGradeFragmentCoarse, .isGradeFragmentMid, .isGradeFragmentFine)[data-active-menu="grade"] .loginTransitionGradeTerm::after,
+.loginTransitionStage.isComplete:is(.isGradeFragmentCoarse, .isGradeFragmentMid, .isGradeFragmentFine)[data-active-menu="grade"] .loginTransitionGradeSubject::after,
+.loginTransitionStage.isComplete:is(.isGradeFragmentCoarse, .isGradeFragmentMid, .isGradeFragmentFine)[data-active-menu="grade"] .loginTransitionGradeUnit::after,
+.loginTransitionStage.isComplete:is(.isGradeFragmentCoarse, .isGradeFragmentMid, .isGradeFragmentFine)[data-active-menu="grade"] .loginTransitionGradeScore::after {
+  opacity: 0.28;
+  transform: translate(-1px, 1px);
+  -webkit-mask-image: repeating-linear-gradient(to right, #000 0 9px, transparent 9px 16px);
+  mask-image: repeating-linear-gradient(to right, #000 0 9px, transparent 9px 16px);
+}
+
+.loginTransitionStage.isComplete.isGradeFragmentMid[data-active-menu="grade"] .loginTransitionGradeTerm,
+.loginTransitionStage.isComplete.isGradeFragmentMid[data-active-menu="grade"] .loginTransitionGradeSubject,
+.loginTransitionStage.isComplete.isGradeFragmentMid[data-active-menu="grade"] .loginTransitionGradeUnit,
+.loginTransitionStage.isComplete.isGradeFragmentMid[data-active-menu="grade"] .loginTransitionGradeScore {
+  color: rgba(0, 0, 0, 0.46);
+  filter: blur(0.56px);
+}
+
+.loginTransitionStage.isComplete.isGradeFragmentMid[data-active-menu="grade"] .loginTransitionGradeTerm::before,
+.loginTransitionStage.isComplete.isGradeFragmentMid[data-active-menu="grade"] .loginTransitionGradeSubject::before,
+.loginTransitionStage.isComplete.isGradeFragmentMid[data-active-menu="grade"] .loginTransitionGradeUnit::before,
+.loginTransitionStage.isComplete.isGradeFragmentMid[data-active-menu="grade"] .loginTransitionGradeScore::before {
+  opacity: 0.58;
+  transform: translate(2px, -2px);
+  -webkit-mask-image: repeating-linear-gradient(to bottom, #000 0 5px, transparent 5px 8px);
+  mask-image: repeating-linear-gradient(to bottom, #000 0 5px, transparent 5px 8px);
+}
+
+.loginTransitionStage.isComplete.isGradeFragmentMid[data-active-menu="grade"] .loginTransitionGradeTerm::after,
+.loginTransitionStage.isComplete.isGradeFragmentMid[data-active-menu="grade"] .loginTransitionGradeSubject::after,
+.loginTransitionStage.isComplete.isGradeFragmentMid[data-active-menu="grade"] .loginTransitionGradeUnit::after,
+.loginTransitionStage.isComplete.isGradeFragmentMid[data-active-menu="grade"] .loginTransitionGradeScore::after {
+  opacity: 0.48;
+  transform: translate(-2px, 2px);
+  -webkit-mask-image: repeating-linear-gradient(to right, #000 0 6px, transparent 6px 10px);
+  mask-image: repeating-linear-gradient(to right, #000 0 6px, transparent 6px 10px);
+}
+
+.loginTransitionStage.isComplete.isGradeFragmentFine[data-active-menu="grade"] .loginTransitionGradeTerm,
+.loginTransitionStage.isComplete.isGradeFragmentFine[data-active-menu="grade"] .loginTransitionGradeSubject,
+.loginTransitionStage.isComplete.isGradeFragmentFine[data-active-menu="grade"] .loginTransitionGradeUnit,
+.loginTransitionStage.isComplete.isGradeFragmentFine[data-active-menu="grade"] .loginTransitionGradeScore {
+  color: rgba(0, 0, 0, 0.34);
+  filter: blur(0.9px);
+}
+
+.loginTransitionStage.isComplete.isGradeFragmentFine[data-active-menu="grade"] .loginTransitionGradeTerm::before,
+.loginTransitionStage.isComplete.isGradeFragmentFine[data-active-menu="grade"] .loginTransitionGradeSubject::before,
+.loginTransitionStage.isComplete.isGradeFragmentFine[data-active-menu="grade"] .loginTransitionGradeUnit::before,
+.loginTransitionStage.isComplete.isGradeFragmentFine[data-active-menu="grade"] .loginTransitionGradeScore::before {
+  opacity: 0.74;
+  filter: blur(0.18px);
+  transform: translate(3px, -2px);
+  -webkit-mask-image: repeating-linear-gradient(to bottom, #000 0 2px, transparent 2px 4px);
+  mask-image: repeating-linear-gradient(to bottom, #000 0 2px, transparent 2px 4px);
+}
+
+.loginTransitionStage.isComplete.isGradeFragmentFine[data-active-menu="grade"] .loginTransitionGradeTerm::after,
+.loginTransitionStage.isComplete.isGradeFragmentFine[data-active-menu="grade"] .loginTransitionGradeSubject::after,
+.loginTransitionStage.isComplete.isGradeFragmentFine[data-active-menu="grade"] .loginTransitionGradeUnit::after,
+.loginTransitionStage.isComplete.isGradeFragmentFine[data-active-menu="grade"] .loginTransitionGradeScore::after {
+  opacity: 0.64;
+  filter: blur(0.2px);
+  transform: translate(-3px, 2px);
+  -webkit-mask-image: repeating-linear-gradient(to right, #000 0 3px, transparent 3px 6px);
+  mask-image: repeating-linear-gradient(to right, #000 0 3px, transparent 3px 6px);
+}
+
+.loginTransitionStage.isComplete.isGradePreparing[data-active-menu="grade"] .loginTransitionGradeTerm,
+.loginTransitionStage.isComplete.isGradePreparing[data-active-menu="grade"] .loginTransitionGradeSubject,
+.loginTransitionStage.isComplete.isGradePreparing[data-active-menu="grade"] .loginTransitionGradeUnit,
+.loginTransitionStage.isComplete.isGradePreparing[data-active-menu="grade"] .loginTransitionGradeScore {
+  opacity: 0.66;
+  filter: blur(0.82px);
+  transform: translateY(0) scaleX(1.035) scaleY(0.92);
+  letter-spacing: 0.035em;
+  transition: filter 100ms linear, opacity 100ms linear, transform 100ms linear, letter-spacing 100ms linear;
+}
+
+.loginTransitionStage.isGradeTeleporting[data-active-menu="grade"] .loginTransitionGradeTerm,
+.loginTransitionStage.isGradeTeleporting[data-active-menu="grade"] .loginTransitionGradeSubject,
+.loginTransitionStage.isGradeTeleporting[data-active-menu="grade"] .loginTransitionGradeUnit,
+.loginTransitionStage.isGradeTeleporting[data-active-menu="grade"] .loginTransitionGradeScore {
+  color: #000;
+  animation-duration: 100ms;
+  animation-timing-function: cubic-bezier(0.76, 0, 0.24, 1);
+  animation-fill-mode: both;
+}
+
+.loginTransitionStage.isGradeTeleporting[data-grade-swap-phase="out"][data-grade-direction="down"][data-active-menu="grade"] .loginTransitionGradeTerm,
+.loginTransitionStage.isGradeTeleporting[data-grade-swap-phase="out"][data-grade-direction="down"][data-active-menu="grade"] .loginTransitionGradeSubject,
+.loginTransitionStage.isGradeTeleporting[data-grade-swap-phase="out"][data-grade-direction="down"][data-active-menu="grade"] .loginTransitionGradeUnit,
+.loginTransitionStage.isGradeTeleporting[data-grade-swap-phase="out"][data-grade-direction="down"][data-active-menu="grade"] .loginTransitionGradeScore {
+  animation-name: loginGradeSwapOutUp;
+}
+
+.loginTransitionStage.isGradeTeleporting[data-grade-swap-phase="out"][data-grade-direction="up"][data-active-menu="grade"] .loginTransitionGradeTerm,
+.loginTransitionStage.isGradeTeleporting[data-grade-swap-phase="out"][data-grade-direction="up"][data-active-menu="grade"] .loginTransitionGradeSubject,
+.loginTransitionStage.isGradeTeleporting[data-grade-swap-phase="out"][data-grade-direction="up"][data-active-menu="grade"] .loginTransitionGradeUnit,
+.loginTransitionStage.isGradeTeleporting[data-grade-swap-phase="out"][data-grade-direction="up"][data-active-menu="grade"] .loginTransitionGradeScore {
+  animation-name: loginGradeSwapOutDown;
+}
+
+.loginTransitionStage.isGradeTeleporting[data-grade-swap-phase="in"][data-grade-direction="down"][data-active-menu="grade"] .loginTransitionGradeTerm,
+.loginTransitionStage.isGradeTeleporting[data-grade-swap-phase="in"][data-grade-direction="down"][data-active-menu="grade"] .loginTransitionGradeSubject,
+.loginTransitionStage.isGradeTeleporting[data-grade-swap-phase="in"][data-grade-direction="down"][data-active-menu="grade"] .loginTransitionGradeUnit,
+.loginTransitionStage.isGradeTeleporting[data-grade-swap-phase="in"][data-grade-direction="down"][data-active-menu="grade"] .loginTransitionGradeScore {
+  animation-name: loginGradeSwapInUp;
+}
+
+.loginTransitionStage.isGradeTeleporting[data-grade-swap-phase="in"][data-grade-direction="up"][data-active-menu="grade"] .loginTransitionGradeTerm,
+.loginTransitionStage.isGradeTeleporting[data-grade-swap-phase="in"][data-grade-direction="up"][data-active-menu="grade"] .loginTransitionGradeSubject,
+.loginTransitionStage.isGradeTeleporting[data-grade-swap-phase="in"][data-grade-direction="up"][data-active-menu="grade"] .loginTransitionGradeUnit,
+.loginTransitionStage.isGradeTeleporting[data-grade-swap-phase="in"][data-grade-direction="up"][data-active-menu="grade"] .loginTransitionGradeScore {
+  animation-name: loginGradeSwapInDown;
+}
+
+.loginTransitionStage.isGradeTeleporting[data-active-menu="grade"] .loginTransitionGradeTerm::before,
+.loginTransitionStage.isGradeTeleporting[data-active-menu="grade"] .loginTransitionGradeSubject::before,
+.loginTransitionStage.isGradeTeleporting[data-active-menu="grade"] .loginTransitionGradeUnit::before,
+.loginTransitionStage.isGradeTeleporting[data-active-menu="grade"] .loginTransitionGradeScore::before,
+.loginTransitionStage.isGradeTeleporting[data-active-menu="grade"] .loginTransitionGradeTerm::after,
+.loginTransitionStage.isGradeTeleporting[data-active-menu="grade"] .loginTransitionGradeSubject::after,
+.loginTransitionStage.isGradeTeleporting[data-active-menu="grade"] .loginTransitionGradeUnit::after,
+.loginTransitionStage.isGradeTeleporting[data-active-menu="grade"] .loginTransitionGradeScore::after {
+  opacity: 0;
+  animation: none;
+}
+
+
+.loginTransitionHeroTitle {
+  margin: 0;
+  color: var(--login-menu-transition-dark);
+  font-family: var(--font-text-me-one), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(30px, 6vw, 80px);
+  font-weight: 400;
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+}
+.loginTransitionStage.isComplete .loginTransitionMenuItem {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.loginTransitionStage.isComplete .loginTransitionMenuItem:is(.isStress1, .isStress2, .isStress3, .isStress4) .loginTransitionHeroTextChar,
+.loginTransitionStage.isComplete .loginTransitionMenuItem:hover .loginTransitionHeroTextChar,
+.loginTransitionStage.isComplete .loginTransitionMenuItem:focus-visible .loginTransitionHeroTextChar {
+  animation: loginHeroMenuImpactShiver var(--menu-stress-speed, 180ms) steps(2, end) infinite;
+  filter: blur(var(--menu-stress-blur, 0.16px));
+  opacity: 1;
+}
+
+.loginTransitionStage.isComplete .loginTransitionMenuItem.isStress1 {
+  --menu-stress-speed: 180ms;
+  --menu-stress-x: 0.38px;
+  --menu-stress-y: 0.2px;
+  --menu-stress-blur: 0.12px;
+  --menu-stress-scale: 0.01;
+  --menu-tick-speed: 260ms;
+  --menu-tick-opacity: 0.34;
+}
+
+.loginTransitionStage.isComplete .loginTransitionMenuItem.isStress2 {
+  --menu-stress-speed: 126ms;
+  --menu-stress-x: 0.58px;
+  --menu-stress-y: 0.3px;
+  --menu-stress-blur: 0.2px;
+  --menu-stress-scale: 0.016;
+  --menu-tick-speed: 190ms;
+  --menu-tick-opacity: 0.46;
+}
+
+.loginTransitionStage.isComplete .loginTransitionMenuItem.isStress3 {
+  --menu-stress-speed: 86ms;
+  --menu-stress-x: 0.82px;
+  --menu-stress-y: 0.42px;
+  --menu-stress-blur: 0.28px;
+  --menu-stress-scale: 0.022;
+  --menu-tick-speed: 132ms;
+  --menu-tick-opacity: 0.58;
+}
+
+.loginTransitionStage.isComplete .loginTransitionMenuItem.isStress4 {
+  --menu-stress-speed: 52ms;
+  --menu-stress-x: 1.08px;
+  --menu-stress-y: 0.52px;
+  --menu-stress-blur: 0.34px;
+  --menu-stress-scale: 0.028;
+  --menu-tick-speed: 82ms;
+  --menu-tick-opacity: 0.72;
+}
+
+.loginTransitionStage.isComplete .loginTransitionMenuItem:active .loginTransitionHeroTextChar,
+.loginTransitionStage.isMenuTransitioning .loginTransitionMenuItem .loginTransitionHeroTextChar {
+  filter: none;
+  transform: translateY(0.7px) scaleY(0.94);
+}
+
+.loginTransitionStage.isComplete .loginTransitionMenuItem::before,
+.loginTransitionStage.isComplete .loginTransitionMenuItem::after {
+  position: absolute;
+  left: 50%;
+  width: 1px;
+  height: 8px;
+  content: "";
+  background: currentColor;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) scaleY(0.42);
+  transform-origin: center;
+}
+
+.loginTransitionStage.isComplete .loginTransitionMenuItem::before {
+  top: -11px;
+}
+
+.loginTransitionStage.isComplete .loginTransitionMenuItem::after {
+  bottom: -11px;
+}
+
+.loginTransitionStage.isComplete .loginTransitionMenuItem:is(.isStress1, .isStress2, .isStress3, .isStress4)::before,
+.loginTransitionStage.isComplete .loginTransitionMenuItem:hover::before,
+.loginTransitionStage.isComplete .loginTransitionMenuItem:focus-visible::before {
+  animation: loginHeroMenuImpactTickTop var(--menu-tick-speed, 118ms) steps(2, end) infinite;
+}
+
+.loginTransitionStage.isComplete .loginTransitionMenuItem:is(.isStress1, .isStress2, .isStress3, .isStress4)::after,
+.loginTransitionStage.isComplete .loginTransitionMenuItem:hover::after,
+.loginTransitionStage.isComplete .loginTransitionMenuItem:focus-visible::after {
+  animation: loginHeroMenuImpactTickBottom var(--menu-tick-speed, 118ms) steps(2, end) infinite;
+}
+
+.loginTransitionStage.isMenuTransitioning .loginTransitionMenuItem {
+  pointer-events: none;
+}
+
+.loginTransitionMenuOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loginTransitionStage.isMenuTransitioning .loginTransitionMenuOverlay,
+.productionHeroStage.isProductionInitialRendering .loginTransitionMenuOverlay {
+  animation: loginMenuOverlaySettle 220ms linear 1540ms both;
+}
+
+.loginTransitionMenuLine {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  z-index: 5;
+  width: 100%;
+  height: 1px;
+  transform: translateY(-50%) scaleX(0);
+  transform-origin: right center;
+}
+
+.loginTransitionMenuLine.isBlack {
+  background: var(--login-menu-transition-dark);
+}
+
+.loginTransitionMenuLine.isNext {
+  background: var(--login-nav-gray);
+}
+
+.loginTransitionStage.isMenuTransitioning .loginTransitionMenuLine.isBlack,
+.productionHeroStage.isProductionInitialRendering .loginTransitionMenuLine.isBlack {
+  animation: loginMenuLineBlackHold 620ms cubic-bezier(0.76, 0, 0.24, 1) both;
+}
+
+.loginTransitionStage.isMenuTransitioning .loginTransitionMenuLine.isNext,
+.productionHeroStage.isProductionInitialRendering .loginTransitionMenuLine.isNext {
+  animation: loginMenuLineNextHold 620ms cubic-bezier(0.76, 0, 0.24, 1) 360ms both;
+}
+
+.loginTransitionMenuLayer {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
+.loginTransitionMenuLayer.isBlack {
+  z-index: 1;
+}
+
+.loginTransitionMenuLayer.isBlack::before {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  content: "";
+  background: var(--login-menu-transition-dark);
+  opacity: 0;
+}
+
+.loginTransitionMenuLayer.isNext {
+  z-index: 2;
+}
+
+.loginTransitionMenuLayer.isNext::before {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  content: "";
+  background: var(--login-nav-gray);
+  opacity: 0;
+}
+
+.loginTransitionStage.isMenuTransitioning .loginTransitionMenuLayer.isBlack,
+.loginTransitionStage.isMenuTransitioning .loginTransitionMenuLayer.isNext,
+.productionHeroStage.isProductionInitialRendering .loginTransitionMenuLayer.isBlack,
+.productionHeroStage.isProductionInitialRendering .loginTransitionMenuLayer.isNext {
+  opacity: 1;
+}
+
+.loginTransitionMenuTooth {
+  position: absolute;
+  z-index: 1;
+  left: calc(var(--i) * 100% / 24);
+  width: calc(100% / 24 + 2px);
+  height: 50%;
+  transform: scaleY(0);
+  will-change: transform;
+}
+
+.loginTransitionStage.isMenuTransitioning .loginTransitionMenuLayer.isNext::before,
+.productionHeroStage.isProductionInitialRendering .loginTransitionMenuLayer.isNext::before {
+  animation: loginMenuNextSurfaceCommit 140ms linear 1250ms both;
+}
+
+.loginTransitionStage.isMenuTransitioning .loginTransitionMenuLayer.isBlack::before,
+.productionHeroStage.isProductionInitialRendering .loginTransitionMenuLayer.isBlack::before {
+  animation: loginMenuBlackSurfaceCommit 80ms linear 860ms both;
+}
+
+.loginTransitionMenuLayer.isBlack .loginTransitionMenuTooth {
+  background: var(--login-menu-transition-dark);
+}
+
+.loginTransitionMenuLayer.isNext .loginTransitionMenuTooth {
+  background: var(--login-nav-gray);
+}
+
+.loginTransitionMenuTooth.isTop {
+  bottom: 50%;
+  transform-origin: center bottom;
+}
+
+.loginTransitionMenuTooth.isBottom {
+  top: 50%;
+  transform-origin: center top;
+}
+
+.loginTransitionStage.isMenuTransitioning .loginTransitionMenuLayer.isBlack .loginTransitionMenuTooth,
+.productionHeroStage.isProductionInitialRendering .loginTransitionMenuLayer.isBlack .loginTransitionMenuTooth {
+  animation: loginMenuToothOpen 360ms cubic-bezier(0.76, 0, 0.24, 1)
+    calc(300ms + (var(--d) * 22ms)) both;
+}
+
+.loginTransitionStage.isMenuTransitioning .loginTransitionMenuLayer.isNext .loginTransitionMenuTooth,
+.productionHeroStage.isProductionInitialRendering .loginTransitionMenuLayer.isNext .loginTransitionMenuTooth {
+  animation: loginMenuToothOpen 360ms cubic-bezier(0.76, 0, 0.24, 1)
+    calc(660ms + (var(--d) * 22ms)) both;
+}
+
+
+.loginTransitionLogout {
+  position: absolute;
+  top: 35px;
+  right: 35px;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  width: 35px;
+  height: 35px;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  overflow: hidden;
+  background: transparent;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loginTransitionLogout::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: var(--login-cover-red);
+  transform: scaleX(0);
+  transform-origin: right center;
+}
+
+.loginTransitionLogoutIcon {
+  position: relative;
+  z-index: 1;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  overflow: visible;
+  stroke: #ffffff;
+  stroke-width: 2;
+}
+
+.loginTransitionLogoutIconCircle {
+  transform: rotate(-90deg);
+  transform-origin: 10px 10px;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+.loginTransitionLogoutIconLine {
+  stroke-linecap: butt;
+  transform: scaleY(0);
+  transform-origin: 10px -3px;
+}
+
+.loginTransitionLogoutIconMask {
+  fill: var(--login-cover-red);
+  stroke: none;
+  transform: scaleY(0);
+  transform-origin: 10px 0;
+}
+
+.loginTransitionLayers,
+.loginTransitionRed,
+.loginTransitionMiddle,
+.loginTransitionFront {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.loginTransitionRed,
+.loginTransitionMiddle,
+.loginTransitionFront {
+  inset: auto auto auto auto;
+  top: 0;
+  height: 100%;
+  will-change: transform, width;
+}
+
+.loginTransitionRed {
+  left: 0;
+  width: 100%;
+  background: var(--login-cover-red);
+}
+
+.loginTransitionMiddle {
+  right: 0;
+  width: var(--login-tab-width);
+  background: var(--login-middle-gray);
+}
+
+.loginTransitionFront {
+  right: 0;
+  width: var(--login-tab-width);
+  background: var(--login-white);
+  z-index: 2;
+}
+
+.loginTransitionRegMotion {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.loginTransitionRegLogo {
+  position: absolute;
+  left: calc(848 / 1440 * 100%);
+  top: calc(223 / 1024 * 100%);
+  width: calc(136 / 1440 * 100%);
+  height: auto;
+  overflow: visible;
+}
+
+.loginTransitionRegPath {
+  fill: none;
+  stroke: #000000;
+  stroke-width: 4;
+  stroke-miterlimit: 10;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+
+.loginTransitionRegOrigin {
+  opacity: 0;
+  fill: #000000;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.loginTransitionSsoButton {
+  position: absolute;
+  left: calc(848 / 1440 * 100%);
+  top: calc(314 / 1024 * 100%);
+  z-index: 4;
+  width: calc(238 / 1440 * 100%);
+  height: calc(41 / 1024 * 100%);
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  appearance: none;
+  background: #e9e9e9;
+  cursor: pointer;
+}
+
+.loginTransitionSsoLabel {
+  position: absolute;
+  left: calc(952 / 1440 * 100%);
+  top: calc(323 / 1024 * 100%);
+  z-index: 5;
+  width: calc(29 / 1440 * 100%);
+  height: calc(24 / 1024 * 100%);
+  pointer-events: none;
+}
+
+.loginTransitionSsoLabel svg {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(26 / 29 * 100%);
+  height: calc(11 / 24 * 100%);
+  transform: translate(-50%, -50%);
+}
+
+.loginTransitionSsoDivider {
+  position: absolute;
+  left: calc(848 / 1440 * 100%);
+  top: calc(374 / 1024 * 100%);
+  z-index: 4;
+  width: calc(237 / 1440 * 100%);
+  height: calc(16 / 1024 * 100%);
+  pointer-events: none;
+}
+
+.loginTransitionSsoDivider::before,
+.loginTransitionSsoDivider::after {
+  content: "";
+  position: absolute;
+  bottom: calc(1 / 16 * 100%);
+  z-index: 2;
+  height: 1px;
+  background: #000000;
+  opacity: 0;
+  transform: scaleX(1);
+}
+
+.loginTransitionSsoDivider::before {
+  left: 0;
+  width: calc(108 / 237 * 100%);
+  transform-origin: left center;
+}
+
+.loginTransitionSsoDivider::after {
+  left: calc(132 / 237 * 100%);
+  width: calc(105 / 237 * 100%);
+  transform-origin: left center;
+}
+
+.loginTransitionSsoDivider svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.loginTransitionUsernameInput {
+  position: absolute;
+  left: calc(848 / 1440 * 100%);
+  top: calc(413 / 1024 * 100%);
+  z-index: 4;
+  width: calc(238 / 1440 * 100%);
+  height: calc(41 / 1024 * 100%);
+  border: 0;
+  border-radius: 0;
+  padding: 0 calc(18 / 1440 * 100%);
+  appearance: none;
+  background: #e9e9e9;
+  color: #989797;
+  caret-color: #989797;
+  font-family: var(--font-text-me-one), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(10px, 1.953125vh, 20px);
+  line-height: 1;
+  text-align: center;
+  outline: none;
+}
+
+.loginTransitionInputVisual {
+  position: absolute;
+  z-index: 5;
+  width: calc(238 / 1440 * 100%);
+  height: calc(41 / 1024 * 100%);
+  padding: 0 calc(18 / 1440 * 100%);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  pointer-events: none;
+  color: #989797;
+  font-family: var(--font-text-me-one), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(10px, 1.953125vh, 20px);
+  line-height: 1;
+  opacity: 0;
+}
+
+.loginTransitionInputVisual.hasValue,
+.loginTransitionInputVisual.isFocused {
+  opacity: 1;
+}
+
+.loginTransitionInputVisual.isOverflowing {
+  justify-content: flex-end;
+}
+
+.loginTransitionPasswordVisual.isOverflowing {
+  justify-content: center;
+}
+
+.loginTransitionInputVisualText {
+  flex: 0 0 auto;
+  max-width: none;
+  white-space: nowrap;
+}
+
+.loginTransitionInputVisualText.isShifting {
+  animation: loginTransitionPasswordStarsShift 180ms ease-out;
+}
+
+.loginTransitionInputVisualCaret {
+  width: 1px;
+  height: calc(20 / 41 * 100%);
+  background: #989797;
+  animation: loginTransitionInputCaretBlink 1s steps(2, start) infinite;
+}
+
+.loginTransitionInputVisual.hasValue .loginTransitionInputVisualCaret {
+  margin-left: 2px;
+}
+
+.loginTransitionInputVisual:not(.isFocused) .loginTransitionInputVisualCaret {
+  display: none;
+}
+
+.loginTransitionInputVisual:not(.hasValue) .loginTransitionInputVisualText {
+  display: none;
+}
+
+.loginTransitionUsernameVisual {
+  left: calc(848 / 1440 * 100%);
+  top: calc(413 / 1024 * 100%);
+  display: none;
+}
+
+.loginTransitionUsernameVisual.isOverflowing .loginTransitionInputVisualText {
+  flex: 0 1 auto;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  text-align: right;
+}
+
+.loginTransitionUsernameLabel {
+  position: absolute;
+  left: calc(952 / 1440 * 100%);
+  top: calc(422 / 1024 * 100%);
+  z-index: 5;
+  width: calc(35 / 1440 * 100%);
+  height: calc(24 / 1024 * 100%);
+  color: #989797;
+  pointer-events: none;
+}
+
+.loginTransitionUsernameLabel svg {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 100%;
+  height: 100%;
+  transform: translateY(-50%);
+}
+
+.loginTransitionUsernameLabel.isHidden,
+.loginTransitionPasswordLabel.isHidden {
+  opacity: 0;
+}
+
+.loginTransitionUsernameInput:focus ~ .loginTransitionUsernameLabel,
+.loginTransitionUsernameInput:not(:placeholder-shown) ~ .loginTransitionUsernameLabel,
+.loginTransitionUsernameInput:-webkit-autofill ~ .loginTransitionUsernameLabel,
+.loginTransitionPasswordInput:focus ~ .loginTransitionPasswordLabel,
+.loginTransitionPasswordInput:not(:placeholder-shown) ~ .loginTransitionPasswordLabel,
+.loginTransitionPasswordInput:-webkit-autofill ~ .loginTransitionPasswordLabel {
+  opacity: 0;
+}
+
+.loginTransitionContractLink {
+  position: absolute;
+  left: calc(923 / 1440 * 100%);
+  bottom: calc(49 / 1024 * 100%);
+  z-index: 4;
+  width: calc(89 / 1440 * 100%);
+  height: calc(24 / 1024 * 100%);
+  pointer-events: none;
+}
+
+.loginTransitionContractText {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  height: 100%;
+  color: #000;
+  font-family: var(--font-text-me-one), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(10px, 1.953125vh, 20px);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.loginTransitionContractChar {
+  position: relative;
+  display: inline-block;
+  transform-origin: center center;
+  will-change: transform, opacity;
+}
+
+.loginTransitionContractChar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: currentColor;
+  opacity: 0;
+  transform: translateY(-50%) scaleX(0);
+  transform-origin: center center;
+}
+
+.loginTransitionContractSpace {
+  width: 0.35em;
+}
+
+.loginTransitionContractLink svg {
+  display: none;
+  width: calc(86 / 89 * 100%);
+  height: calc(15 / 24 * 100%);
+}
+
+.loginTransitionPasswordInput {
+  position: absolute;
+  left: calc(848 / 1440 * 100%);
+  top: calc(457 / 1024 * 100%);
+  z-index: 4;
+  width: calc(238 / 1440 * 100%);
+  height: calc(41 / 1024 * 100%);
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  appearance: none;
+  background: #e9e9e9;
+  color: transparent;
+  caret-color: transparent;
+  font-family: var(--font-text-me-one), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(10px, 1.953125vh, 20px);
+  line-height: 1;
+  outline: none;
+}
+
+.loginTransitionPasswordVisual {
+  left: calc(848 / 1440 * 100%);
+  top: calc(457 / 1024 * 100%);
+}
+
+.loginTransitionPasswordLabel {
+  position: absolute;
+  left: calc(950 / 1440 * 100%);
+  top: calc(466 / 1024 * 100%);
+  z-index: 5;
+  width: calc(39 / 1440 * 100%);
+  height: calc(24 / 1024 * 100%);
+  pointer-events: none;
+}
+
+.loginTransitionPasswordLabel svg {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(37 / 39 * 100%);
+  height: calc(16 / 24 * 100%);
+  transform: translate(-50%, -50%);
+}
+
+.loginTransitionButton {
+  position: absolute;
+  left: calc(848 / 1440 * 100%);
+  top: calc(509 / 1024 * 100%);
+  z-index: 5;
+  width: calc(238 / 1440 * 100%);
+  height: calc(41 / 1024 * 100%);
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  appearance: none;
+  background: #000000;
+  color: #ffffff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+  cursor: pointer;
+  overflow: hidden;
+  transform-origin: left center;
+  z-index: 4;
+}
+
+.loginTransitionButtonBorderSvg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.loginTransitionButtonBorderTop,
+.loginTransitionButtonBorderBottom,
+.loginTransitionButtonBorderTopReverse,
+.loginTransitionButtonBorderBottomReverse {
+  stroke: #ffffff;
+  stroke-width: 1;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  opacity: 0;
+}
+
+.loginTransitionArrow {
+  position: absolute;
+  left: calc(111 / 238 * 100%);
+  top: calc(21 / 41 * 100%);
+  width: calc(19 / 238 * 100%);
+  height: calc(15 / 41 * 100%);
+  transform: translateY(-50%);
+}
+
+.loginTransitionArrow span {
+  position: absolute;
+  display: block;
+  height: calc(2 / 15 * 100%);
+  background: #ffffff;
+  transform-origin: right center;
+}
+
+.loginTransitionArrowLine {
+  left: 0;
+  top: calc(6.5 / 15 * 100%);
+  width: calc(17 / 19 * 100%);
+}
+
+.loginTransitionArrowHeadTop,
+.loginTransitionArrowHeadBottom {
+  right: 0;
+  top: calc(6.5 / 15 * 100%);
+  width: calc(9 / 19 * 100%);
+}
+
+.loginTransitionArrowHeadTop {
+  transform: rotate(45deg);
+}
+
+.loginTransitionArrowHeadBottom {
+  transform: rotate(-45deg);
+}
+
+.loginTransitionStage.isRunning .loginTransitionRed {
+  animation: loginRedCover var(--login-transition-duration)
+    cubic-bezier(0.76, 0, 0.24, 1) var(--login-tab-delay) both;
+}
+
+.loginTransitionStage.isRunning .loginTransitionMiddle {
+  animation: loginMiddleWipe var(--login-transition-duration)
+    cubic-bezier(0.76, 0, 0.24, 1) var(--login-tab-delay) both;
+}
+
+.loginTransitionStage.isRunning .loginTransitionFront {
+  animation: loginFrontWipe var(--login-transition-duration)
+    cubic-bezier(0.72, 0, 0.18, 1) var(--login-tab-delay) both;
+}
+
+.loginTransitionStage.isRunning .loginTransitionButton {
+  animation: loginButtonCollapse var(--login-form-collapse-duration)
+    cubic-bezier(0.76, 0, 0.24, 1) var(--login-form-collapse-delay) both;
+  pointer-events: none;
+}
+
+.loginTransitionStage.isRunning .loginTransitionSsoButton,
+.loginTransitionStage.isRunning .loginTransitionUsernameInput,
+.loginTransitionStage.isRunning .loginTransitionPasswordInput {
+  animation: loginFormSurfaceCollapse var(--login-form-collapse-duration)
+    cubic-bezier(0.76, 0, 0.24, 1) var(--login-form-collapse-delay) both;
+  transform-origin: left center;
+  pointer-events: none;
+}
+
+.loginTransitionStage.isRunning .loginTransitionUsernameInput {
+  color: transparent;
+  caret-color: transparent;
+}
+
+.loginTransitionStage.isRunning .loginTransitionUsernameVisual {
+  display: flex;
+}
+
+.loginTransitionStage.isRunning .loginTransitionSsoLabel,
+.loginTransitionStage.isRunning .loginTransitionUsernameVisual,
+.loginTransitionStage.isRunning .loginTransitionUsernameLabel,
+.loginTransitionStage.isRunning .loginTransitionPasswordVisual,
+.loginTransitionStage.isRunning .loginTransitionPasswordLabel {
+  animation: loginFormContentCollapse var(--login-form-collapse-duration)
+    cubic-bezier(0.76, 0, 0.24, 1) var(--login-form-collapse-delay) both;
+}
+
+.loginTransitionStage.isRunning .loginTransitionUsernameLabel.isHidden,
+.loginTransitionStage.isRunning .loginTransitionPasswordLabel.isHidden {
+  animation: none;
+  opacity: 0;
+}
+
+.loginTransitionStage.isRunning .loginTransitionSsoDivider svg {
+  animation: loginDividerOriginalFade 140ms linear var(--login-button-duration) both;
+}
+
+.loginTransitionStage.isRunning .loginTransitionSsoDivider::after {
+  animation: loginDividerRightRetract 520ms cubic-bezier(0.76, 0, 0.24, 1)
+    var(--login-button-duration) both;
+}
+
+.loginTransitionStage.isRunning .loginTransitionSsoDivider::before {
+  animation: loginDividerLeftRetract 520ms cubic-bezier(0.76, 0, 0.24, 1)
+    calc(var(--login-button-duration) + 420ms) both;
+}
+
+.loginTransitionStage.isRunning .loginTransitionSsoLabel svg {
+  animation: loginTextCollapseCentered var(--login-text-collapse-duration)
+    cubic-bezier(0.76, 0, 0.24, 1) var(--login-button-duration) both;
+}
+
+.loginTransitionStage.isRunning .loginTransitionUsernameLabel svg {
+  animation: loginTextCollapseLeftY var(--login-text-collapse-duration)
+    cubic-bezier(0.76, 0, 0.24, 1) var(--login-button-duration) both;
+}
+
+.loginTransitionStage.isRunning .loginTransitionPasswordLabel svg {
+  animation: loginTextCollapseCentered var(--login-text-collapse-duration)
+    cubic-bezier(0.76, 0, 0.24, 1) var(--login-button-duration) both;
+}
+
+.loginTransitionStage.isRunning .loginTransitionInputVisualText {
+  animation: loginTextCollapseInline var(--login-text-collapse-duration)
+    cubic-bezier(0.76, 0, 0.24, 1) var(--login-button-duration) both;
+}
+
+.loginTransitionButton:hover .loginTransitionButtonBorderTop,
+.loginTransitionButton:hover .loginTransitionButtonBorderBottom {
+  animation: loginButtonBorderIdleForward 1400ms cubic-bezier(0.76, 0, 0.24, 1)
+    420ms infinite both;
+}
+
+.loginTransitionButton:hover .loginTransitionButtonBorderTopReverse,
+.loginTransitionButton:hover .loginTransitionButtonBorderBottomReverse {
+  animation: loginButtonBorderIdleReverse 1400ms cubic-bezier(0.76, 0, 0.24, 1)
+    420ms infinite both;
+}
+
+.loginTransitionStage.isRunning .loginTransitionButtonBorderTop,
+.loginTransitionStage.isRunning .loginTransitionButtonBorderBottom {
+  animation: loginButtonBorderDraw var(--login-button-duration)
+    cubic-bezier(0.76, 0, 0.24, 1) both;
+}
+
+.loginTransitionStage.isRunning .loginTransitionButtonBorderTopReverse,
+.loginTransitionStage.isRunning .loginTransitionButtonBorderBottomReverse {
+  animation: none;
+  opacity: 0;
+}
+
+.loginTransitionButton:hover .loginTransitionArrowLine,
+.loginTransitionStage.isRunning .loginTransitionArrowLine {
+  animation: loginArrowLineRun var(--login-button-duration)
+    cubic-bezier(0.76, 0, 0.24, 1) both;
+}
+
+.loginTransitionButton:hover .loginTransitionArrowHeadTop,
+.loginTransitionStage.isRunning .loginTransitionArrowHeadTop {
+  animation: loginArrowHeadTopCollapse var(--login-button-duration)
+    cubic-bezier(0.76, 0, 0.24, 1) both;
+}
+
+.loginTransitionButton:hover .loginTransitionArrowHeadBottom,
+.loginTransitionStage.isRunning .loginTransitionArrowHeadBottom {
+  animation: loginArrowHeadBottomCollapse var(--login-button-duration)
+    cubic-bezier(0.76, 0, 0.24, 1) both;
+}
+
+.loginTransitionStage.isRunning .loginTransitionRegPath {
+  animation: loginRegCollapse var(--login-logo-duration)
+    cubic-bezier(0.76, 0, 0.24, 1) var(--login-button-duration) both;
+}
+
+.loginTransitionStage.isRunning .loginTransitionRegOrigin {
+  animation: loginRegOriginLeftStay var(--login-logo-duration)
+    cubic-bezier(0.76, 0, 0.24, 1) var(--login-button-duration) both;
+}
+
+.loginTransitionStage.isRunning .loginTransitionRegOrigin:nth-of-type(2) {
+  animation-name: loginRegOriginMiddleLeft;
+}
+
+.loginTransitionStage.isRunning .loginTransitionRegOrigin:nth-of-type(3) {
+  animation-name: loginRegOriginRightLeft;
+}
+
+.loginTransitionStage.isComplete .loginTransitionButton {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loginTransitionStage.isComplete .loginTransitionSsoButton,
+.loginTransitionStage.isComplete .loginTransitionSsoLabel,
+.loginTransitionStage.isComplete .loginTransitionSsoDivider,
+.loginTransitionStage.isComplete .loginTransitionUsernameInput,
+.loginTransitionStage.isComplete .loginTransitionUsernameVisual,
+.loginTransitionStage.isComplete .loginTransitionUsernameLabel,
+.loginTransitionStage.isComplete .loginTransitionContractLink,
+.loginTransitionStage.isComplete .loginTransitionPasswordInput,
+.loginTransitionStage.isComplete .loginTransitionPasswordVisual,
+.loginTransitionStage.isComplete .loginTransitionPasswordLabel {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loginTransitionStage.isRunning .loginTransitionContractChar {
+  animation: loginContractCharTvClose 300ms cubic-bezier(0.76, 0, 0.24, 1) both;
+}
+
+.loginTransitionStage.isRunning .loginTransitionContractChar::after {
+  animation: loginContractLineFlash 300ms cubic-bezier(0.76, 0, 0.24, 1) both;
+}
+
+.loginTransitionStage.isRunning .loginTransitionContractChar:nth-child(10),
+.loginTransitionStage.isRunning .loginTransitionContractChar:nth-child(10)::after {
+  animation-delay: 0ms;
+}
+
+.loginTransitionStage.isRunning .loginTransitionContractChar:nth-child(9),
+.loginTransitionStage.isRunning .loginTransitionContractChar:nth-child(9)::after {
+  animation-delay: 34ms;
+}
+
+.loginTransitionStage.isRunning .loginTransitionContractChar:nth-child(8),
+.loginTransitionStage.isRunning .loginTransitionContractChar:nth-child(8)::after {
+  animation-delay: 68ms;
+}
+
+.loginTransitionStage.isRunning .loginTransitionContractChar:nth-child(7),
+.loginTransitionStage.isRunning .loginTransitionContractChar:nth-child(7)::after {
+  animation-delay: 102ms;
+}
+
+.loginTransitionStage.isRunning .loginTransitionContractChar:nth-child(6),
+.loginTransitionStage.isRunning .loginTransitionContractChar:nth-child(6)::after {
+  animation-delay: 136ms;
+}
+
+.loginTransitionStage.isRunning .loginTransitionContractChar:nth-child(5),
+.loginTransitionStage.isRunning .loginTransitionContractChar:nth-child(5)::after {
+  animation-delay: 170ms;
+}
+
+.loginTransitionStage.isRunning .loginTransitionContractChar:nth-child(4),
+.loginTransitionStage.isRunning .loginTransitionContractChar:nth-child(4)::after {
+  animation-delay: 204ms;
+}
+
+.loginTransitionStage.isRunning .loginTransitionContractChar:nth-child(3),
+.loginTransitionStage.isRunning .loginTransitionContractChar:nth-child(3)::after {
+  animation-delay: 238ms;
+}
+
+.loginTransitionStage.isRunning .loginTransitionContractChar:nth-child(2),
+.loginTransitionStage.isRunning .loginTransitionContractChar:nth-child(2)::after {
+  animation-delay: 272ms;
+}
+
+.loginTransitionStage.isRunning .loginTransitionContractChar:nth-child(1),
+.loginTransitionStage.isRunning .loginTransitionContractChar:nth-child(1)::after {
+  animation-delay: 306ms;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionContractLink {
+  opacity: 1;
+  pointer-events: none;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionContractChar {
+  animation: loginContractCharTvOpen 300ms cubic-bezier(0.76, 0, 0.24, 1)
+    calc(var(--login-logout-button-duration) + 1060ms) both;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionContractChar::after {
+  animation: loginContractLineOpen 300ms cubic-bezier(0.76, 0, 0.24, 1)
+    calc(var(--login-logout-button-duration) + 1060ms) both;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionContractChar:nth-child(1),
+.loginTransitionStage.isLoggingOut .loginTransitionContractChar:nth-child(1)::after {
+  animation-delay: calc(var(--login-logout-button-duration) + 1060ms);
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionContractChar:nth-child(2),
+.loginTransitionStage.isLoggingOut .loginTransitionContractChar:nth-child(2)::after {
+  animation-delay: calc(var(--login-logout-button-duration) + 1094ms);
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionContractChar:nth-child(3),
+.loginTransitionStage.isLoggingOut .loginTransitionContractChar:nth-child(3)::after {
+  animation-delay: calc(var(--login-logout-button-duration) + 1128ms);
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionContractChar:nth-child(4),
+.loginTransitionStage.isLoggingOut .loginTransitionContractChar:nth-child(4)::after {
+  animation-delay: calc(var(--login-logout-button-duration) + 1162ms);
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionContractChar:nth-child(5),
+.loginTransitionStage.isLoggingOut .loginTransitionContractChar:nth-child(5)::after {
+  animation-delay: calc(var(--login-logout-button-duration) + 1196ms);
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionContractChar:nth-child(6),
+.loginTransitionStage.isLoggingOut .loginTransitionContractChar:nth-child(6)::after {
+  animation-delay: calc(var(--login-logout-button-duration) + 1230ms);
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionContractChar:nth-child(7),
+.loginTransitionStage.isLoggingOut .loginTransitionContractChar:nth-child(7)::after {
+  animation-delay: calc(var(--login-logout-button-duration) + 1264ms);
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionContractChar:nth-child(8),
+.loginTransitionStage.isLoggingOut .loginTransitionContractChar:nth-child(8)::after {
+  animation-delay: calc(var(--login-logout-button-duration) + 1298ms);
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionContractChar:nth-child(9),
+.loginTransitionStage.isLoggingOut .loginTransitionContractChar:nth-child(9)::after {
+  animation-delay: calc(var(--login-logout-button-duration) + 1332ms);
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionContractChar:nth-child(10),
+.loginTransitionStage.isLoggingOut .loginTransitionContractChar:nth-child(10)::after {
+  animation-delay: calc(var(--login-logout-button-duration) + 1366ms);
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionSsoButton,
+.loginTransitionStage.isLoggingOut .loginTransitionUsernameInput,
+.loginTransitionStage.isLoggingOut .loginTransitionPasswordInput {
+  animation: loginFormSurfaceReveal 560ms cubic-bezier(0.76, 0, 0.24, 1)
+    calc(var(--login-logout-button-duration) + 560ms) both;
+  transform-origin: left center;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionSsoLabel,
+.loginTransitionStage.isLoggingOut .loginTransitionUsernameVisual,
+.loginTransitionStage.isLoggingOut .loginTransitionUsernameLabel,
+.loginTransitionStage.isLoggingOut .loginTransitionPasswordVisual,
+.loginTransitionStage.isLoggingOut .loginTransitionPasswordLabel {
+  animation: loginFormContentReveal 520ms cubic-bezier(0.76, 0, 0.24, 1)
+    calc(var(--login-logout-button-duration) + 680ms) both;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionSsoDivider svg {
+  opacity: 0;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionSsoDivider::before {
+  animation: loginDividerLeftReveal 860ms cubic-bezier(0.76, 0, 0.24, 1)
+    calc(var(--login-logout-button-duration) + 820ms) both;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionSsoDivider::after {
+  animation: loginDividerRightReveal 860ms cubic-bezier(0.76, 0, 0.24, 1)
+    calc(var(--login-logout-button-duration) + 1500ms) both;
+}
+
+.loginTransitionStage.isComplete .loginTransitionRegMotion {
+  opacity: 0;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionRegMotion {
+  opacity: 1;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionRegPath {
+  animation: loginRegReveal 760ms cubic-bezier(0.76, 0, 0.24, 1)
+    calc(var(--login-logout-button-duration) + 680ms) both;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionRegOrigin {
+  animation: loginRegOriginLeftReveal 760ms cubic-bezier(0.76, 0, 0.24, 1)
+    calc(var(--login-logout-button-duration) + 560ms) both;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionRegOrigin:nth-of-type(2) {
+  animation-name: loginRegOriginMiddleReveal;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionRegOrigin:nth-of-type(3) {
+  animation-name: loginRegOriginRightReveal;
+}
+
+.loginTransitionStage.isComplete .loginTransitionLogout {
+  animation: loginLogoutButtonReveal 620ms cubic-bezier(0.76, 0, 0.24, 1) both;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.loginTransitionStage.isComplete .loginTransitionLogout::before {
+  animation: loginLogoutCoverGenerate 260ms cubic-bezier(0.76, 0, 0.24, 1) both;
+}
+
+.loginTransitionStage.isComplete .loginTransitionLogoutIconCircle {
+  animation: loginLogoutCircleSweep 420ms cubic-bezier(0.76, 0, 0.24, 1) 170ms both;
+}
+
+.loginTransitionStage.isComplete .loginTransitionLogoutIconMask {
+  animation: loginLogoutMaskDrop 260ms cubic-bezier(0.76, 0, 0.24, 1) 470ms both;
+}
+
+.loginTransitionStage.isComplete .loginTransitionLogoutIconLine {
+  animation: loginLogoutLineDrop 260ms cubic-bezier(0.76, 0, 0.24, 1) 590ms both;
+}
+
+.loginTransitionStage.isComplete .loginTransitionRed {
+  transform: translateX(-100%);
+}
+
+.loginTransitionStage.isComplete .loginTransitionMiddle,
+.loginTransitionStage.isComplete .loginTransitionFront {
+  width: 100vw;
+  transform: translateX(-100vw);
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionButton {
+  animation: loginButtonReveal 560ms cubic-bezier(0.76, 0, 0.24, 1)
+    calc(var(--login-logout-button-duration) + 760ms) both;
+  pointer-events: none;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionButtonBorderTop,
+.loginTransitionStage.isLoggingOut .loginTransitionButtonBorderBottom {
+  animation: loginButtonBorderReveal 520ms cubic-bezier(0.76, 0, 0.24, 1)
+    calc(var(--login-logout-button-duration) + 980ms) both;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionButtonBorderTopReverse,
+.loginTransitionStage.isLoggingOut .loginTransitionButtonBorderBottomReverse {
+  animation: none;
+  opacity: 0;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionArrowLine {
+  animation: loginArrowLineReveal 420ms cubic-bezier(0.76, 0, 0.24, 1)
+    calc(var(--login-logout-button-duration) + 920ms) both;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionArrowHeadTop {
+  animation: loginArrowHeadTopReveal 420ms cubic-bezier(0.76, 0, 0.24, 1)
+    calc(var(--login-logout-button-duration) + 980ms) both;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionArrowHeadBottom {
+  animation: loginArrowHeadBottomReveal 420ms cubic-bezier(0.76, 0, 0.24, 1)
+    calc(var(--login-logout-button-duration) + 980ms) both;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionLogout {
+  animation: loginLogoutButtonHide 720ms cubic-bezier(0.76, 0, 0.24, 1) both;
+  pointer-events: none;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionLogout::before {
+  animation: loginLogoutCoverRelease 300ms cubic-bezier(0.76, 0, 0.24, 1) 390ms both;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionLogoutIconCircle {
+  animation: loginLogoutCircleUnsweep 360ms cubic-bezier(0.76, 0, 0.24, 1) 230ms both;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionLogoutIconMask {
+  animation: loginLogoutMaskLift 220ms cubic-bezier(0.76, 0, 0.24, 1) 120ms both;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionLogoutIconLine {
+  animation: loginLogoutLineLift 180ms cubic-bezier(0.76, 0, 0.24, 1) both;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionRed {
+  animation: loginRedCoverReverse var(--login-transition-duration)
+    cubic-bezier(0.76, 0, 0.24, 1) var(--login-logout-button-duration) both;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionMiddle {
+  animation: loginMiddleWipeReverse var(--login-transition-duration)
+    cubic-bezier(0.76, 0, 0.24, 1) var(--login-logout-button-duration) both;
+}
+
+.loginTransitionStage.isLoggingOut .loginTransitionFront {
+  animation: loginFrontWipeReverse var(--login-transition-duration)
+    cubic-bezier(0.72, 0, 0.18, 1) var(--login-logout-button-duration) both;
+}
+
+@keyframes loginFrontWipe {
+  0% {
+    width: var(--login-tab-width);
+    transform: translateX(0);
+  }
+  18%,
+  50% {
+    width: 100vw;
+    transform: translateX(0);
+  }
+  100% {
+    width: 100vw;
+    transform: translateX(-100vw);
+  }
+}
+
+@keyframes loginMiddleWipe {
+  0% {
+    width: var(--login-tab-width);
+    transform: translateX(0);
+  }
+  42%,
+  62% {
+    width: 100vw;
+    transform: translateX(0);
+  }
+  100% {
+    width: 100vw;
+    transform: translateX(-100vw);
+  }
+}
+
+@keyframes loginRedCover {
+  0%,
+  48% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes loginFrontWipeReverse {
+  0% {
+    width: 100vw;
+    transform: translateX(-100vw);
+  }
+  45%,
+  70% {
+    width: 100vw;
+    transform: translateX(0);
+  }
+  100% {
+    width: var(--login-tab-width);
+    transform: translateX(0);
+  }
+}
+
+@keyframes loginMiddleWipeReverse {
+  0% {
+    width: 100vw;
+    transform: translateX(-100vw);
+  }
+  30%,
+  64% {
+    width: 100vw;
+    transform: translateX(0);
+  }
+  100% {
+    width: var(--login-tab-width);
+    transform: translateX(0);
+  }
+}
+
+@keyframes loginRedCoverReverse {
+  0%,
+  38% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes loginArrowHeadTopCollapse {
+  0% {
+    transform: rotate(45deg);
+    opacity: 1;
+  }
+  28% {
+    transform: rotate(0deg);
+    opacity: 1;
+  }
+  48%,
+  100% {
+    transform: rotate(0deg) translateX(1144%);
+    opacity: 0;
+  }
+}
+
+@keyframes loginArrowHeadBottomCollapse {
+  0% {
+    transform: rotate(-45deg);
+    opacity: 1;
+  }
+  28% {
+    transform: rotate(0deg);
+    opacity: 1;
+  }
+  48%,
+  100% {
+    transform: rotate(0deg) translateX(1144%);
+    opacity: 0;
+  }
+}
+
+@keyframes loginArrowLineRun {
+  0%,
+  28% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  52% {
+    transform: translateX(606%);
+    opacity: 1;
+  }
+  60%,
+  100% {
+    transform: translateX(606%);
+    opacity: 0;
+  }
+}
+
+@keyframes loginArrowLineReveal {
+  0% {
+    transform: translateX(606%) scaleX(0.08);
+    opacity: 0;
+  }
+  44% {
+    transform: translateX(606%) scaleX(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0) scaleX(1);
+    opacity: 1;
+  }
+}
+
+@keyframes loginArrowHeadTopReveal {
+  0%,
+  44% {
+    transform: rotate(0deg) translateX(1144%);
+    opacity: 0;
+  }
+  70% {
+    transform: rotate(0deg) translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(45deg) translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes loginArrowHeadBottomReveal {
+  0%,
+  44% {
+    transform: rotate(0deg) translateX(1144%);
+    opacity: 0;
+  }
+  70% {
+    transform: rotate(0deg) translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(-45deg) translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes loginButtonBorderDraw {
+  0%,
+  48% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+  62% {
+    stroke-dashoffset: 0.62;
+    opacity: 1;
+  }
+  82%,
+  96% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+@keyframes loginButtonBorderReveal {
+  0%,
+  18% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+  36% {
+    opacity: 1;
+  }
+  68% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  84% {
+    stroke-dashoffset: -0.46;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: -1;
+    opacity: 0;
+  }
+}
+
+@keyframes loginButtonBorderIdleForward {
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  42% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  48%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+@keyframes loginButtonBorderIdleReverse {
+  0%,
+  50% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+  58% {
+    opacity: 1;
+  }
+  92% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  98%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+@keyframes loginButtonCollapse {
+  0% {
+    width: calc(238 / 1440 * 100%);
+    transform: translateX(0);
+    opacity: 1;
+  }
+  72% {
+    width: 1px;
+    transform: translateX(0);
+    opacity: 1;
+  }
+  100% {
+    width: 1px;
+    transform: translateX(-18px);
+    opacity: 0;
+  }
+}
+
+@keyframes loginButtonReveal {
+  0% {
+    width: 1px;
+    transform: translateX(-18px);
+    opacity: 0;
+  }
+  28% {
+    width: 1px;
+    transform: translateX(0);
+    opacity: 1;
+  }
+  100% {
+    width: calc(238 / 1440 * 100%);
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes loginFormSurfaceCollapse {
+  0% {
+    width: calc(238 / 1440 * 100%);
+    transform: translateX(0);
+    opacity: 1;
+  }
+  72% {
+    width: 1px;
+    transform: translateX(0);
+    opacity: 1;
+  }
+  100% {
+    width: 1px;
+    transform: translateX(-18px);
+    opacity: 0;
+  }
+}
+
+@keyframes loginFormSurfaceReveal {
+  0% {
+    width: 1px;
+    transform: translateX(-18px);
+    opacity: 0;
+  }
+  28% {
+    width: 1px;
+    transform: translateX(0);
+    opacity: 1;
+  }
+  100% {
+    width: calc(238 / 1440 * 100%);
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes loginFormContentCollapse {
+  0%,
+  24% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  72% {
+    transform: translateX(-18px);
+    opacity: 0.26;
+  }
+  100% {
+    transform: translateX(-24px);
+    opacity: 0;
+  }
+}
+
+@keyframes loginFormContentReveal {
+  0% {
+    transform: translate(-24px, 0.72em) scaleX(0.05) scaleY(0.16);
+    opacity: 0;
+  }
+  40% {
+    transform: translate(-18px, 0) scaleX(0.05) scaleY(0.16);
+    opacity: 0.62;
+  }
+  100% {
+    transform: translate(0, 0) scaleX(1) scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes loginFormDividerCollapse {
+  0% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  72% {
+    transform: scaleX(0.006);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleX(0.006) translateX(-18px);
+    opacity: 0;
+  }
+}
+
+@keyframes loginDividerOriginalFade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes loginDividerOriginalReveal {
+  0% {
+    opacity: 0;
+    clip-path: inset(0 50% 0 50%);
+  }
+  52% {
+    opacity: 1;
+    clip-path: inset(0 0 0 50%);
+  }
+  100% {
+    opacity: 1;
+    clip-path: inset(0);
+  }
+}
+
+@keyframes loginDividerLeftReveal {
+  0% {
+    width: 0;
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  84%,
+  100% {
+    width: calc(108 / 237 * 100%);
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes loginDividerRightReveal {
+  0% {
+    width: 0;
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  84%,
+  100% {
+    width: calc(105 / 237 * 100%);
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes loginDividerRightRetract {
+  0% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  82% {
+    opacity: 1;
+    transform: scaleX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+}
+
+@keyframes loginDividerLeftRetract {
+  0% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  82% {
+    opacity: 1;
+    transform: scaleX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+}
+
+@keyframes loginTextCollapseCentered {
+  0%,
+  22% {
+    transform: translate(-50%, -50%) scaleX(1) scaleY(1);
+    opacity: 1;
+  }
+  58% {
+    transform: translate(-50%, -50%) scaleX(0.05) scaleY(0.16);
+    opacity: 1;
+  }
+  78% {
+    transform: translate(-50%, calc(-50% + 0.48em)) scaleX(0.05) scaleY(0.16);
+    opacity: 0.64;
+  }
+  100% {
+    transform: translate(-50%, calc(-50% + 0.72em)) scaleX(0.05) scaleY(0.16);
+    opacity: 0;
+  }
+}
+
+@keyframes loginTextCollapseLeftY {
+  0%,
+  22% {
+    transform: translateY(-50%) scaleX(1) scaleY(1);
+    transform-origin: left center;
+    opacity: 1;
+  }
+  58% {
+    transform: translateY(-50%) scaleX(0.05) scaleY(0.16);
+    transform-origin: left center;
+    opacity: 1;
+  }
+  78% {
+    transform: translateY(calc(-50% + 0.48em)) scaleX(0.05) scaleY(0.16);
+    transform-origin: left center;
+    opacity: 0.64;
+  }
+  100% {
+    transform: translateY(calc(-50% + 0.72em)) scaleX(0.05) scaleY(0.16);
+    transform-origin: left center;
+    opacity: 0;
+  }
+}
+
+@keyframes loginTextCollapseInline {
+  0%,
+  22% {
+    transform: translateX(0) scaleX(1) scaleY(1);
+    transform-origin: left center;
+    opacity: 1;
+  }
+  58% {
+    transform: translateX(-0.24em) scaleX(0.05) scaleY(0.16);
+    transform-origin: left center;
+    opacity: 1;
+  }
+  78% {
+    transform: translate(-0.24em, 0.48em) scaleX(0.05) scaleY(0.16);
+    transform-origin: left center;
+    opacity: 0.64;
+  }
+  100% {
+    transform: translate(-0.24em, 0.72em) scaleX(0.05) scaleY(0.16);
+    transform-origin: left center;
+    opacity: 0;
+  }
+}
+
+@keyframes loginContractCharTvClose {
+  0% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+  72% {
+    opacity: 1;
+    transform: scaleY(0.08);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleY(0.02);
+  }
+}
+
+@keyframes loginContractLineFlash {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) scaleX(0);
+  }
+  46% {
+    opacity: 0;
+    transform: translateY(-50%) scaleX(0.25);
+  }
+  72% {
+    opacity: 1;
+    transform: translateY(-50%) scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-50%) scaleX(0.15);
+  }
+}
+
+@keyframes loginContractCharTvOpen {
+  0% {
+    opacity: 0;
+    transform: scaleY(0.02);
+  }
+  28% {
+    opacity: 1;
+    transform: scaleY(0.08);
+  }
+  100% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@keyframes loginContractLineOpen {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) scaleX(0.12);
+  }
+  28% {
+    opacity: 1;
+    transform: translateY(-50%) scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-50%) scaleX(0);
+  }
+}
+
+@keyframes loginHeroCharTvOpen {
+  0% {
+    opacity: 0;
+    transform: scaleY(0.02);
+  }
+  28% {
+    opacity: 1;
+    transform: scaleY(0.08);
+  }
+  100% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@keyframes loginHeroCharLineOpen {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) scaleX(0.12);
+  }
+  28% {
+    opacity: 1;
+    transform: translateY(-50%) scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-50%) scaleX(0);
+  }
+}
+
+@keyframes loginHeroCharTvCloseRight {
+  0% {
+    opacity: 1;
+    transform: translateX(0) scaleY(1);
+  }
+  72% {
+    opacity: 1;
+    transform: translateX(0) scaleY(0.08);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(0.32em) scaleY(0.02);
+  }
+}
+
+@keyframes loginHeroCharLineClose {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) scaleX(0);
+  }
+  46% {
+    opacity: 0;
+    transform: translateY(-50%) scaleX(0.25);
+  }
+  72% {
+    opacity: 1;
+    transform: translateY(-50%) scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-50%) scaleX(0.15);
+  }
+}
+
+
+@keyframes loginGradeCellLineIn {
+  0% {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+  14% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  72% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes loginGradeCellTeethIn {
+  0%,
+  16% {
+    opacity: 0;
+    background: repeating-linear-gradient(
+      90deg,
+      #000 0 calc(12.5% - 1px),
+      transparent calc(12.5% - 1px) 12.5%
+    );
+    transform: scaleY(0);
+    transform-origin: center bottom;
+  }
+  42% {
+    opacity: 1;
+    background: repeating-linear-gradient(
+      90deg,
+      #000 0 calc(12.5% - 1px),
+      transparent calc(12.5% - 1px) 12.5%
+    );
+    transform: scaleY(1);
+    transform-origin: center bottom;
+  }
+  43% {
+    opacity: 1;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--login-nav-gray) 0 calc(12.5% - 1px),
+      transparent calc(12.5% - 1px) 12.5%
+    );
+    transform: scaleY(0);
+    transform-origin: center bottom;
+  }
+  76% {
+    opacity: 1;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--login-nav-gray) 0 calc(12.5% - 1px),
+      transparent calc(12.5% - 1px) 12.5%
+    );
+    transform: scaleY(1);
+    transform-origin: center bottom;
+  }
+  100% {
+    opacity: 0;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--login-nav-gray) 0 calc(12.5% - 1px),
+      transparent calc(12.5% - 1px) 12.5%
+    );
+    transform: scaleY(1);
+  }
+}
+
+@keyframes loginGradeCellTextIn {
+  0%,
+  78% {
+    opacity: 1;
+    color: transparent;
+    transform: translateY(0);
+  }
+  82% {
+    opacity: 1;
+    color: #000;
+    transform: translateY(1px) scaleY(0.96);
+  }
+  88% {
+    opacity: 1;
+    color: #000;
+    transform: translate(-0.6px, 0.35px) scaleX(1.018);
+  }
+  94% {
+    opacity: 1;
+    color: #000;
+    transform: translate(0.55px, -0.3px) scaleX(0.985);
+  }
+  100% {
+    opacity: 1;
+    color: #000;
+    transform: translate(0, 0) scaleX(1) scaleY(1);
+  }
+}
+
+@keyframes loginGradeCellLineOut {
+  0% {
+    opacity: 0;
+    transform: scaleX(0);
+    transform-origin: left center;
+  }
+  18% {
+    opacity: 1;
+    transform: scaleX(1);
+    transform-origin: left center;
+  }
+  74% {
+    opacity: 1;
+    transform: scaleX(1);
+    transform-origin: right center;
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(0);
+    transform-origin: right center;
+  }
+}
+
+@keyframes loginGradeCellTeethOut {
+  0%,
+  16% {
+    opacity: 0;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--login-nav-gray) 0 calc(12.5% - 1px),
+      transparent calc(12.5% - 1px) 12.5%
+    );
+    transform: scaleY(0);
+    transform-origin: center bottom;
+  }
+  40% {
+    opacity: 1;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--login-nav-gray) 0 calc(12.5% - 1px),
+      transparent calc(12.5% - 1px) 12.5%
+    );
+    transform: scaleY(1);
+    transform-origin: center bottom;
+  }
+  41% {
+    opacity: 1;
+    background: repeating-linear-gradient(
+      90deg,
+      #000 0 calc(12.5% - 1px),
+      transparent calc(12.5% - 1px) 12.5%
+    );
+    transform: scaleY(0);
+    transform-origin: center bottom;
+  }
+  76% {
+    opacity: 1;
+    background: repeating-linear-gradient(
+      90deg,
+      #000 0 calc(12.5% - 1px),
+      transparent calc(12.5% - 1px) 12.5%
+    );
+    transform: scaleY(1);
+    transform-origin: center bottom;
+  }
+  100% {
+    opacity: 0;
+    background: repeating-linear-gradient(
+      90deg,
+      #000 0 calc(12.5% - 1px),
+      transparent calc(12.5% - 1px) 12.5%
+    );
+    transform: scaleY(1);
+  }
+}
+
+@keyframes loginGradeCellTextOut {
+  0%,
+  38% {
+    opacity: 1;
+    color: #000;
+    transform: translate(0, 0) scaleX(1) scaleY(1);
+  }
+  46% {
+    opacity: 1;
+    color: #000;
+    transform: translate(-0.5px, 0.25px) scaleX(1.012);
+  }
+  62% {
+    opacity: 1;
+    color: transparent;
+    transform: translateY(1px) scaleY(0.94);
+  }
+  100% {
+    opacity: 0;
+    color: transparent;
+    transform: translateY(2px) scaleY(0.2);
+  }
+}
+
+@keyframes loginGradeSwapOutUp {
+  0% {
+    opacity: 1;
+    filter: none;
+    transform: translate(0, 0) scaleX(1) scaleY(1);
+  }
+  100% {
+    opacity: 0;
+    filter: blur(0.65px);
+    transform: translate(0, -8px) scaleX(1.018) scaleY(0.9);
+  }
+}
+
+@keyframes loginGradeSwapOutDown {
+  0% {
+    opacity: 1;
+    filter: none;
+    transform: translate(0, 0) scaleX(1) scaleY(1);
+  }
+  100% {
+    opacity: 0;
+    filter: blur(0.65px);
+    transform: translate(0, 8px) scaleX(1.018) scaleY(0.9);
+  }
+}
+
+@keyframes loginGradeSwapInUp {
+  0% {
+    opacity: 0;
+    filter: blur(0.65px);
+    transform: translate(0, 8px) scaleX(1.018) scaleY(0.9);
+  }
+  62% {
+    opacity: 1;
+    filter: blur(0.18px);
+    transform: translate(-1px, -1px) scaleX(0.988) scaleY(1.04);
+  }
+  100% {
+    opacity: 1;
+    filter: none;
+    transform: translate(0, 0) scaleX(1) scaleY(1);
+  }
+}
+
+@keyframes loginGradeSwapInDown {
+  0% {
+    opacity: 0;
+    filter: blur(0.65px);
+    transform: translate(0, -8px) scaleX(1.018) scaleY(0.9);
+  }
+  62% {
+    opacity: 1;
+    filter: blur(0.18px);
+    transform: translate(1px, 1px) scaleX(0.988) scaleY(1.04);
+  }
+  100% {
+    opacity: 1;
+    filter: none;
+    transform: translate(0, 0) scaleX(1) scaleY(1);
+  }
+}
+
+
+@keyframes loginHeroPanelLineIn {
+  0% {
+    transform: translateY(-50%) scaleX(0);
+  }
+  100% {
+    transform: translateY(-50%) scaleX(1);
+  }
+}
+
+@keyframes loginHeroPanelLineOut {
+  0% {
+    transform: translateY(-50%) scaleX(1);
+  }
+  100% {
+    transform: translateY(-50%) scaleX(0);
+  }
+}
+
+@keyframes loginHeroPanelSurfaceIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes loginHeroPanelOverlayOut {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes loginHeroPanelToothIn {
+  0% {
+    transform: scaleY(0);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes loginHeroPanelToothOut {
+  0% {
+    transform: scaleY(1);
+  }
+  100% {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes loginHeroMenuImpactShiver {
+  0% {
+    transform: translate(calc(var(--menu-stress-x, 0.6px) * -1), var(--menu-stress-y, 0.35px))
+      scaleX(calc(1 + var(--menu-stress-scale, 0.018)));
+    filter: blur(calc(var(--menu-stress-blur, 0.18px) * 0.64));
+  }
+  50% {
+    transform: translate(var(--menu-stress-x, 0.55px), calc(var(--menu-stress-y, 0.3px) * -1))
+      scaleX(calc(1 - var(--menu-stress-scale, 0.015)));
+    filter: blur(calc(var(--menu-stress-blur, 0.38px) * 1.28));
+  }
+  100% {
+    transform: translate(calc(var(--menu-stress-x, 0.35px) * -0.58), calc(var(--menu-stress-y, 0.15px) * 0.72))
+      scaleX(calc(1 + (var(--menu-stress-scale, 0.01) * 0.72)));
+    filter: blur(calc(var(--menu-stress-blur, 0.22px) * 0.86));
+  }
+}
+
+@keyframes loginHeroMenuImpactTickTop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 1px) scaleY(0.25);
+  }
+  50% {
+    opacity: var(--menu-tick-opacity, 0.54);
+    transform: translate(-50%, -1px) scaleY(1);
+  }
+  100% {
+    opacity: calc(var(--menu-tick-opacity, 0.54) * 0.34);
+    transform: translate(-50%, 0) scaleY(0.52);
+  }
+}
+
+@keyframes loginHeroMenuImpactTickBottom {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -1px) scaleY(0.25);
+  }
+  50% {
+    opacity: calc(var(--menu-tick-opacity, 0.5) * 0.92);
+    transform: translate(-50%, 1px) scaleY(0.9);
+  }
+  100% {
+    opacity: calc(var(--menu-tick-opacity, 0.5) * 0.3);
+    transform: translate(-50%, 0) scaleY(0.48);
+  }
+}
+
+@keyframes loginWaterWaveExpand {
+  0% {
+    r: 2px;
+    stroke-width: 18px;
+    stroke-dasharray: 2 24 1 28;
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.92;
+  }
+  44% {
+    stroke-width: 8px;
+    stroke-dasharray: 36 18 6 30;
+    stroke-dashoffset: -120px;
+    opacity: 0.68;
+  }
+  76% {
+    stroke-width: 3px;
+    stroke-dasharray: 72 34 8 56;
+    opacity: 0.28;
+  }
+  100% {
+    r: 1180px;
+    stroke-width: 0.7px;
+    stroke-dasharray: 96 46 8 76;
+    stroke-dashoffset: -380px;
+    opacity: 0;
+  }
+}
+
+@keyframes loginWaterWaveSwell {
+  0% {
+    r: 2px;
+    stroke-width: 34px;
+    stroke-dasharray: 18 52 12 64;
+    stroke-dashoffset: 20px;
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.28;
+  }
+  58% {
+    stroke-width: 16px;
+    stroke-dasharray: 70 58 22 92;
+    stroke-dashoffset: -170px;
+    opacity: 0.18;
+  }
+  100% {
+    r: 1180px;
+    stroke-width: 4px;
+    stroke-dasharray: 132 64 22 104;
+    stroke-dashoffset: -300px;
+    opacity: 0;
+  }
+}
+
+@keyframes loginWaterWaveWake {
+  0% {
+    r: 2px;
+    stroke-width: 10px;
+    stroke-dasharray: 6 18 3 34;
+    stroke-dashoffset: -12px;
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.56;
+  }
+  50% {
+    stroke-width: 5px;
+    stroke-dasharray: 18 24 5 44;
+    stroke-dashoffset: -220px;
+    opacity: 0.34;
+  }
+  100% {
+    r: 1180px;
+    stroke-width: 1px;
+    stroke-dasharray: 34 30 6 56;
+    stroke-dashoffset: -420px;
+    opacity: 0;
+  }
+}
+
+
+
+
+
+@keyframes loginMenuLineBlackHold {
+  0% {
+    transform: translateY(-50%) scaleX(0);
+    transform-origin: right center;
+    opacity: 1;
+  }
+  58% {
+    transform: translateY(-50%) scaleX(1);
+    transform-origin: right center;
+    opacity: 1;
+  }
+  99% {
+    transform: translateY(-50%) scaleX(1);
+    transform-origin: right center;
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-50%) scaleX(1);
+    transform-origin: right center;
+    opacity: 0;
+  }
+}
+
+@keyframes loginMenuLineNextHold {
+  0% {
+    transform: translateY(-50%) scaleX(0);
+    transform-origin: right center;
+    opacity: 1;
+  }
+  58% {
+    transform: translateY(-50%) scaleX(1);
+    transform-origin: right center;
+    opacity: 1;
+  }
+  92% {
+    transform: translateY(-50%) scaleX(1);
+    transform-origin: right center;
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-50%) scaleX(1);
+    transform-origin: right center;
+    opacity: 0;
+  }
+}
+
+@keyframes loginMenuToothOpen {
+  0% {
+    transform: scaleY(0);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes loginMenuBlackSurfaceCommit {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes loginMenuNextSurfaceCommit {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes loginMenuOverlaySettle {
+  0%,
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes loginRegCollapse {
+  0%,
+  12% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  34%,
+  100% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+}
+
+@keyframes loginRegReveal {
+  0%,
+  28% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+  42% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+@keyframes loginRegOriginLeftStay {
+  0%,
+  34% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+  48%,
+  66% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  84% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+}
+
+@keyframes loginRegOriginMiddleLeft {
+  0%,
+  34% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.35);
+  }
+  48%,
+  66% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  84% {
+    opacity: 1;
+    transform: translate(-49.18px, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-49.18px, 0) scale(0.35);
+  }
+}
+
+@keyframes loginRegOriginRightLeft {
+  0%,
+  34% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.35);
+  }
+  48%,
+  66% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  84% {
+    opacity: 1;
+    transform: translate(-117.73px, 0.66px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-117.73px, 0.66px) scale(0.35);
+  }
+}
+
+@keyframes loginRegOriginLeftReveal {
+  0%,
+  24% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+  38%,
+  62% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+}
+
+@keyframes loginRegOriginMiddleReveal {
+  0%,
+  24% {
+    opacity: 0;
+    transform: translate(-49.18px, 0) scale(0.35);
+  }
+  38% {
+    opacity: 1;
+    transform: translate(-49.18px, 0) scale(1);
+  }
+  68% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.35);
+  }
+}
+
+@keyframes loginRegOriginRightReveal {
+  0%,
+  24% {
+    opacity: 0;
+    transform: translate(-117.73px, 0.66px) scale(0.35);
+  }
+  38% {
+    opacity: 1;
+    transform: translate(-117.73px, 0.66px) scale(1);
+  }
+  68% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.35);
+  }
+}
+
+@keyframes loginLogoutButtonReveal {
+  0% {
+    opacity: 0;
+  }
+  1%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes loginLogoutCoverGenerate {
+  0% {
+    transform: scaleX(0);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes loginLogoutCircleSweep {
+  0% {
+    stroke-dashoffset: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes loginLogoutMaskDrop {
+  0% {
+    transform: scaleY(0);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes loginLogoutLineDrop {
+  0% {
+    transform: scaleY(0);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes loginLogoutButtonHide {
+  0%,
+  92% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes loginLogoutCoverRelease {
+  0% {
+    transform: scaleX(1);
+  }
+  100% {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes loginLogoutCircleUnsweep {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: 1;
+  }
+}
+
+@keyframes loginLogoutMaskLift {
+  0% {
+    transform: scaleY(1);
+  }
+  100% {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes loginLogoutLineLift {
+  0% {
+    transform: scaleY(1);
+  }
+  100% {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes loginTransitionInputCaretBlink {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  46%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes loginTransitionPasswordStarsShift {
+  0% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  45% {
+    transform: translateX(-0.7em);
+    opacity: 0.78;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 900px) {
+  .loginTransitionStage {
+    --login-tab-width: 46vw;
+  }
+}
+
+.loginTransitionForm {
+  display: contents;
+}
+
+.loginTransitionSsoButton:disabled,
+.loginTransitionButton:disabled,
+.loginTransitionUsernameInput:disabled,
+.loginTransitionPasswordInput:disabled {
+  cursor: progress;
+  opacity: 0.74;
+}
+
+.loginTransitionSsoButton:focus-visible,
+.loginTransitionButton:focus-visible,
+.loginTransitionMenuItem:focus-visible,
+.loginTransitionLogout:focus-visible {
+  outline: 1px solid #141414;
+  outline-offset: 3px;
+}
+
+.loginTransitionUsernameInput:focus-visible,
+.loginTransitionPasswordInput:focus-visible {
+  outline: none;
+}
+
+.loginTransitionSsoLabelText,
+.loginTransitionUsernameLabelText,
+.loginTransitionPasswordLabelText {
+  position: absolute;
+  color: #989797;
+  font-family: var(--font-text-me-one), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(10px, 1.953125vh, 20px);
+  font-weight: 400;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.loginTransitionSsoLabelText {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.loginTransitionUsernameLabelText {
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.loginTransitionPasswordLabelText {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.loginTransitionErrorMessage {
+  position: absolute;
+  left: calc(848 / 1440 * 100%);
+  top: calc(558 / 1024 * 100%);
+  z-index: 6;
+  width: calc(238 / 1440 * 100%);
+  margin: 0;
+  color: var(--login-cover-red);
+  font-family: var(--font-prompt), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(11px, 1.24vh, 13px);
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.loginTransitionStage.isRunning .loginTransitionErrorMessage,
+.loginTransitionStage.isComplete .loginTransitionErrorMessage,
+.loginTransitionStage.isLoggingOut .loginTransitionErrorMessage {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.productionHeroStage .loginTransitionButton,
+.productionHeroStage .loginTransitionSsoButton,
+.productionHeroStage .loginTransitionSsoLabel,
+.productionHeroStage .loginTransitionSsoDivider,
+.productionHeroStage .loginTransitionUsernameInput,
+.productionHeroStage .loginTransitionUsernameVisual,
+.productionHeroStage .loginTransitionUsernameLabel,
+.productionHeroStage .loginTransitionPasswordInput,
+.productionHeroStage .loginTransitionPasswordVisual,
+.productionHeroStage .loginTransitionPasswordLabel,
+.productionHeroStage .loginTransitionContractLink {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.productionHeroStage .loginTransitionHeroPanelContent {
+  transition-delay: 0ms;
+}
+
+.productionHeroStage.isProductionInitialRendering .loginTransitionHeroPanelContent {
+  opacity: 0;
+  transform: translateY(14px);
+  transition-delay: 0ms;
+  visibility: hidden;
+}
+
+
+
+.isIdle,
+.isRunning,
+.isComplete,
+.isLoggingOut,
+.isMenuTransitioning,
+.isGradeTeleporting,
+.isGradeWheeling,
+.isGradePreparing,
+.isGradeInitialRendering,
+.isGradeMenuRendering,
+.isProductionInitialRendering,
+.isNavTextRevealing,
+.isGradeFragmentCoarse,
+.isGradeFragmentMid,
+.isGradeFragmentFine,
+.isNav,
+.isMain,
+.isBlack,
+.isNext,
+.isTop,
+.isBottom,
+.isTerm1,
+.isTerm2,
+.isTerm3,
+.isStress1,
+.isStress2,
+.isStress3,
+.isStress4,
+.hasValue,
+.isFocused,
+.isOverflowing,
+.isShifting,
+.isHidden {
+  --login-local-class: 1;
+}
+
+.loginTransitionUsernameInput::placeholder,
+.loginTransitionPasswordInput::placeholder {
+  color: transparent;
+  opacity: 0;
+}
+
+@media (max-width: 900px) {
+  .loginTransitionStage {
+    --login-nav-width: 27vw;
+    --login-tab-width: min(100vw, max(360px, 46vw));
+  }
+
+  .loginTransitionHeroPanel {
+    right: 24px;
+    bottom: 120px;
+    width: calc(100vw - var(--login-nav-width) - 48px);
+    height: min(56vh, 520px);
+  }
+}
+
+@media (max-width: 640px) {
+  .loginTransitionStage {
+    --login-nav-width: 0px;
+    --login-tab-width: 100vw;
+  }
+
+  .loginTransitionHero {
+    grid-template-columns: 1fr;
+  }
+
+  .loginTransitionNav {
+    display: none;
+  }
+
+  .loginTransitionRegLogo,
+  .loginTransitionSsoButton,
+  .loginTransitionSsoDivider,
+  .loginTransitionUsernameInput,
+  .loginTransitionPasswordInput,
+  .loginTransitionButton,
+  .loginTransitionErrorMessage {
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(238px, calc(100vw - 48px));
+  }
+
+  .loginTransitionRegLogo {
+    top: 22dvh;
+    width: 136px;
+  }
+
+  .loginTransitionSsoButton {
+    top: 31dvh;
+    height: 41px;
+  }
+
+  .loginTransitionSsoLabel {
+    left: 50%;
+    top: calc(31dvh + 9px);
+    width: 29px;
+    height: 24px;
+    transform: translateX(-50%);
+  }
+
+  .loginTransitionSsoDivider {
+    top: calc(31dvh + 60px);
+    height: 16px;
+  }
+
+  .loginTransitionUsernameInput,
+  .loginTransitionUsernameVisual {
+    left: 50%;
+    top: calc(31dvh + 99px);
+    width: min(238px, calc(100vw - 48px));
+    height: 41px;
+    transform: translateX(-50%);
+  }
+
+  .loginTransitionUsernameLabel {
+    left: 50%;
+    top: calc(31dvh + 108px);
+    width: 35px;
+    height: 24px;
+    transform: translateX(-50%);
+  }
+
+  .loginTransitionPasswordInput,
+  .loginTransitionPasswordVisual {
+    left: 50%;
+    top: calc(31dvh + 143px);
+    width: min(238px, calc(100vw - 48px));
+    height: 41px;
+    transform: translateX(-50%);
+  }
+
+  .loginTransitionPasswordLabel {
+    left: 50%;
+    top: calc(31dvh + 152px);
+    width: 39px;
+    height: 24px;
+    transform: translateX(-50%);
+  }
+
+  .loginTransitionButton {
+    top: calc(31dvh + 195px);
+    height: 41px;
+  }
+
+  .loginTransitionErrorMessage {
+    top: calc(31dvh + 244px);
+  }
+
+  .loginTransitionContractLink {
+    left: 50%;
+    width: 89px;
+    transform: translateX(-50%);
+  }
+
+  .loginTransitionHeroPanel {
+    display: none;
+  }
+
+  .productionHeroStage.loginTransitionStage {
+    --login-nav-width: min(116px, 30vw);
+    --login-tab-width: 100vw;
+  }
+
+  .productionHeroStage .loginTransitionHero {
+    grid-template-columns: var(--login-nav-width) minmax(0, 1fr);
+  }
+
+  .productionHeroStage .loginTransitionNav {
+    display: block;
+  }
+
+  .productionHeroStage .loginTransitionUserName {
+    top: 16dvh;
+    width: calc(var(--login-nav-width) - 18px);
+    font-size: clamp(8px, 2.5vw, 12px);
+  }
+
+  .productionHeroStage .loginTransitionUserMeta {
+    top: calc(16dvh + 28px);
+    width: calc(var(--login-nav-width) - 18px);
+    font-size: clamp(7px, 2.1vw, 10px);
+  }
+
+  .productionHeroStage .loginTransitionNavGrade {
+    top: 30dvh;
+  }
+
+  .productionHeroStage .loginTransitionNavRegistry {
+    top: 38dvh;
+  }
+
+  .productionHeroStage .loginTransitionNavTextPrimary {
+    top: 46dvh;
+  }
+
+  .productionHeroStage .loginTransitionNavTextSecondary,
+  .productionHeroStage .loginTransitionNavPortfolio {
+    top: 54dvh;
+  }
+
+  .productionHeroStage .loginTransitionNavLoan {
+    top: 61dvh;
+  }
+
+  .productionHeroStage .loginTransitionNavSchedule {
+    top: 68dvh;
+  }
+
+  .productionHeroStage .loginTransitionNavSetting {
+    bottom: 34px;
+  }
+
+  .productionHeroStage .loginTransitionHeroPanel {
+    display: block;
+    left: calc(var(--login-nav-width) + 14px);
+    right: 14px;
+    top: 13dvh;
+    bottom: 78px;
+    width: auto;
+    height: auto;
+  }
+
+  .productionHeroStage .loginTransitionHeroPanelContent {
+    padding: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loginTransitionStage *,
+  .loginTransitionStage *::before,
+  .loginTransitionStage *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 1ms !important;
+  }
+
+  .loginTransitionNavRippleLayer {
+    display: none !important;
+  }
+}

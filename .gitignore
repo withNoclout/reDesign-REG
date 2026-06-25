@@ -54,6 +54,13 @@ ui-ux-skill/
 web-app/logs/
 web-app/public/uploads/
 
+.runtime/
 # Credentials / testing accounts
 **/user_fortesting.txt
 **/userfortesting.txt
+
+# Local agent artifacts
+.agents/
+web-app/.agent-tmp/
+skills-lock.json
+tmp-*.png

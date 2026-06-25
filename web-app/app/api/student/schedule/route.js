@@ -7,7 +7,7 @@ import path from 'path';
 import zlib from 'zlib';
 import { promisify } from 'util';
 import { getAuthContext } from '@/lib/auth';
-
+import { getLogFilePath } from '@/lib/runtimePaths.mjs';
 /**
  * API Route: /api/student/schedule
  * 
@@ -55,8 +55,7 @@ import { getAuthContext } from '@/lib/auth';
 function serverLog(level, message) {
     const timestamp = new Date().toISOString();
     const entry = `[${timestamp}] [${level}] [Schedule API] ${message}\n`;
-    const logPath = path.join(process.cwd(), 'logs', 'app.log');
-    fs.appendFile(logPath, entry).catch(() => { });
+    fs.appendFile(scheduleLogPath, entry).catch(() => { });
     console.log(`[Schedule API] ${message}`);
 }
 
@@ -79,6 +78,9 @@ const ACAD_INFO_TTL_MS = 60 * 60 * 1000; // 1 hour
 const agent = new https.Agent({ rejectUnauthorized: true });
 
 const gunzip = promisify(zlib.gunzip);
+const scheduleLogPath = getLogFilePath();
+fs.mkdir(path.dirname(scheduleLogPath), { recursive: true }).catch(() => { });
+
 
 // Helper: Decode gzip-compressed base64 response from regapiweb1
 async function decodeGzipResponse(base64String) {
@@ -137,6 +139,15 @@ export async function GET() {
     if (!authContext) {
         serverLog('WARN', 'Unauthorized request: Invalid or missing session');
         return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!token) {
+        serverLog('WARN', 'Schedule request has an authenticated session but no REG bearer token');
+        return NextResponse.json({
+            success: false,
+            error: 'ต้องเข้าสู่ระบบด้วย REG credentials เพื่อดึงตารางเรียน',
+            code: 'REG_TOKEN_REQUIRED',
+        }, { status: 409 });
     }
 
     if (userId) {
