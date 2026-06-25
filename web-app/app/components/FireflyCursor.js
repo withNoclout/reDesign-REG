@@ -8,6 +8,15 @@ const TRAIL_TTL_MS = 700;
 const TRAIL_MIN_DISTANCE_PX = 2.2;
 const TRAIL_MAX_POINTS = 140;
 const TRAIL_STROKE_WIDTH_PX = 1.65;
+const IDLE_DELAY_MS = 2000;
+const IDLE_TRANSITION_MS = 280;
+const IDLE_RIPPLE_DURATION_MS = 860;
+const IDLE_RIPPLE_START_RADIUS_PX = 6;
+const IDLE_RIPPLE_END_RADIUS_PX = 34;
+const IDLE_RIPPLE_LINE_WIDTH_PX = 2;
+const IDLE_RIPPLE_DASH = Object.freeze([4, 10]);
+const IDLE_DOT_MIN_SCALE = 0.16;
+const IDLE_HALO_MIN_SCALE = 0.68;
 const MAX_DEVICE_PIXEL_RATIO = 2;
 const INTERACTIVE_SELECTOR = [
     'a',
@@ -39,6 +48,10 @@ function getDistanceSquared(first, second) {
     return dx * dx + dy * dy;
 }
 
+function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+}
+
 export default function FireflyCursor() {
     const rootRef = useRef(null);
     const canvasRef = useRef(null);
@@ -59,14 +72,18 @@ export default function FireflyCursor() {
         const pointerFineQuery = window.matchMedia('(pointer: fine)');
         const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
         const trailPoints = [];
+        const idleRipples = [];
 
         let enabled = false;
         let visible = false;
+        let isIdle = false;
         let headX = -120;
         let headY = -120;
         let canvasWidth = 0;
         let canvasHeight = 0;
         let animationFrame = 0;
+        let lastPointerMoveAt = 0;
+        let idleStartedAt = 0;
 
         const setVisible = (nextVisible) => {
             if (visible === nextVisible) {
@@ -82,8 +99,30 @@ export default function FireflyCursor() {
             }
         };
 
-        const clearTrail = () => {
+        const setIdle = (nextIdle, now = performance.now()) => {
+            if (isIdle === nextIdle) {
+                return;
+            }
+
+            isIdle = nextIdle;
+            root.dataset.idle = nextIdle ? 'true' : 'false';
+
+            if (nextIdle) {
+                idleStartedAt = now;
+
+                if (headX >= 0 && headY >= 0 && root.dataset.textInput !== 'true') {
+                    idleRipples.push({ x: headX, y: headY, startTime: now });
+                }
+
+                return;
+            }
+
+            idleStartedAt = 0;
+        };
+
+        const clearEffects = () => {
             trailPoints.length = 0;
+            idleRipples.length = 0;
             root.dataset.trailPoints = '0';
             context.clearRect(0, 0, canvasWidth, canvasHeight);
         };
@@ -98,7 +137,7 @@ export default function FireflyCursor() {
             canvas.style.width = `${canvasWidth}px`;
             canvas.style.height = `${canvasHeight}px`;
             context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-            clearTrail();
+            clearEffects();
         };
 
         const syncEnabled = () => {
@@ -107,8 +146,10 @@ export default function FireflyCursor() {
             setCursorClass(enabled);
 
             if (!enabled) {
+                setIdle(false);
+                lastPointerMoveAt = 0;
                 setVisible(false);
-                clearTrail();
+                clearEffects();
             }
         };
 
@@ -121,15 +162,40 @@ export default function FireflyCursor() {
             root.dataset.interactive = isInteractive && !isTextInput ? 'true' : 'false';
         };
 
-        const positionHead = () => {
+        const getHeadState = (now) => {
             const isTextInput = root.dataset.textInput === 'true';
             const isInteractive = root.dataset.interactive === 'true';
-            const dotScale = isTextInput ? 1 : (isInteractive ? 1.18 : 1);
-            const haloScale = isTextInput ? 0.56 : (isInteractive ? 1.28 : 1);
+            const baseDotScale = isTextInput ? 1 : (isInteractive ? 1.18 : 1);
+            const baseHaloScale = isTextInput ? 0.56 : (isInteractive ? 1.28 : 1);
+            const baseDotOpacity = isTextInput ? 0.98 : 1;
+            const baseHaloOpacity = isTextInput ? 0 : (isInteractive ? 0.9 : 0.74);
+            const idleProgress = isIdle ? clamp((now - idleStartedAt) / IDLE_TRANSITION_MS, 0, 1) : 0;
+            const dotScale = baseDotScale * (1 - ((1 - IDLE_DOT_MIN_SCALE) * idleProgress));
+            const haloScale = baseHaloScale * (1 - ((1 - IDLE_HALO_MIN_SCALE) * idleProgress));
+            const dotOpacity = baseDotOpacity * (1 - idleProgress);
+            const haloOpacity = baseHaloOpacity * (1 - idleProgress);
+
+            return {
+                dotOpacity,
+                dotScale,
+                haloOpacity,
+                haloScale,
+            };
+        };
+
+        const positionHead = (now = performance.now()) => {
+            const {
+                dotOpacity,
+                dotScale,
+                haloOpacity,
+                haloScale,
+            } = getHeadState(now);
             const baseTransform = `translate3d(${headX}px, ${headY}px, 0) translate(-50%, -50%)`;
 
             dot.style.transform = `${baseTransform} scale(${dotScale})`;
+            dot.style.opacity = `${dotOpacity}`;
             halo.style.transform = `${baseTransform} scale(${haloScale})`;
+            halo.style.opacity = `${haloOpacity}`;
         };
 
         const pushTrailPoint = (x, y, time) => {
@@ -153,21 +219,29 @@ export default function FireflyCursor() {
                 return;
             }
 
+            const now = performance.now();
+
             headX = event.clientX;
             headY = event.clientY;
+            lastPointerMoveAt = now;
             setVisible(true);
             updateInteractiveState(event);
-            pushTrailPoint(headX, headY, performance.now());
-            positionHead();
+            setIdle(false, now);
+            pushTrailPoint(headX, headY, now);
+            positionHead(now);
         };
 
         const handlePointerLeave = () => {
+            setIdle(false);
+            lastPointerMoveAt = 0;
             setVisible(false);
-            clearTrail();
+            clearEffects();
         };
         const handleWindowBlur = () => {
+            setIdle(false);
+            lastPointerMoveAt = 0;
             setVisible(false);
-            clearTrail();
+            clearEffects();
         };
 
         const drawSmoothedTrailPath = (points) => {
@@ -192,12 +266,44 @@ export default function FireflyCursor() {
             context.stroke();
         };
 
+        const drawIdleRipples = (now) => {
+            if (idleRipples.length === 0) {
+                return;
+            }
+
+            context.save();
+            context.lineCap = 'round';
+            context.lineJoin = 'round';
+            context.strokeStyle = 'rgb(2, 6, 23)';
+            context.setLineDash(IDLE_RIPPLE_DASH);
+
+            for (let index = idleRipples.length - 1; index >= 0; index -= 1) {
+                const ripple = idleRipples[index];
+                const progress = clamp((now - ripple.startTime) / IDLE_RIPPLE_DURATION_MS, 0, 1);
+
+                if (progress >= 1) {
+                    idleRipples.splice(index, 1);
+                    continue;
+                }
+
+                const easedProgress = 1 - Math.pow(1 - progress, 3);
+                const radius = IDLE_RIPPLE_START_RADIUS_PX + ((IDLE_RIPPLE_END_RADIUS_PX - IDLE_RIPPLE_START_RADIUS_PX) * easedProgress);
+
+                context.globalAlpha = 0.72 * (1 - progress);
+                context.lineWidth = IDLE_RIPPLE_LINE_WIDTH_PX;
+                context.lineDashOffset = -18 * progress;
+                context.beginPath();
+                context.arc(ripple.x, ripple.y, radius, 0, Math.PI * 2);
+                context.stroke();
+            }
+
+            context.restore();
+        };
+
         const drawTrail = (now) => {
             while (trailPoints.length > 0 && now - trailPoints[0].time > TRAIL_TTL_MS) {
                 trailPoints.shift();
             }
-
-            context.clearRect(0, 0, canvasWidth, canvasHeight);
 
             if (trailPoints.length < 2) {
                 root.dataset.trailPoints = String(trailPoints.length);
@@ -231,16 +337,32 @@ export default function FireflyCursor() {
 
         const render = () => {
             if (enabled) {
-                drawTrail(performance.now());
+                const now = performance.now();
+                const isTextInput = root.dataset.textInput === 'true';
+
+                if (
+                    visible
+                    && !isIdle
+                    && !isTextInput
+                    && lastPointerMoveAt > 0
+                    && now - lastPointerMoveAt >= IDLE_DELAY_MS
+                ) {
+                    setIdle(true, now);
+                }
+
+                context.clearRect(0, 0, canvasWidth, canvasHeight);
+                drawIdleRipples(now);
+                drawTrail(now);
 
                 if (visible) {
-                    positionHead();
+                    positionHead(now);
                 }
             }
 
             animationFrame = window.requestAnimationFrame(render);
         };
 
+        root.dataset.idle = 'false';
         syncViewport();
         syncEnabled();
 
@@ -269,10 +391,10 @@ export default function FireflyCursor() {
             ref={rootRef}
             className={styles.fireflyCursor}
             data-enabled="false"
+            data-idle="false"
             data-interactive="false"
             data-text-input="false"
             data-trail-points="0"
-            data-visible="false"
             aria-hidden="true"
         >
             <canvas ref={canvasRef} className={styles.trailLayer} />

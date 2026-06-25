@@ -33,7 +33,7 @@
     top: 0;
     left: 0;
     border-radius: 999px;
-    will-change: transform;
+    will-change: transform, opacity;
     transform: translate3d(-120px, -120px, 0) translate(-50%, -50%);
 }
 
